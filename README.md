@@ -34,16 +34,16 @@ Graphura CRM is designed to help businesses efficiently manage leads, track sale
 
 **Frontend:**
 
-* React.js / Next.js
+* React.js
 
 **Database:**
 
-* MongoDB / SQL
+* MongoDB
 
 **DevOps:**
 
 * GitHub Actions (CI/CD)
-* Cloud Deployment (AWS / Render / etc.)
+* Cloud Deployment (Render)
 
 ---
 

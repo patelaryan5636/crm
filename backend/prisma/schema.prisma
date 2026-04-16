@@ -1,0 +1,407 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//////////////////////////////
+// 🔐 ROLE & USER SYSTEM
+//////////////////////////////
+
+model Role {
+  id    String @id @default(uuid())
+  name  String @unique
+
+  users User[]
+}
+
+model Department {
+  id    String @id @default(uuid())
+  name  String
+
+  users User[]
+}
+
+model User {
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  password   String
+
+  roleId     String
+  departmentId String?
+
+  managerId  String?
+
+  isActive   Boolean  @default(true)
+  isDeleted  Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
+
+  // hierarchy
+  manager     User?    @relation("UserHierarchy", fields: [managerId], references: [id])
+  subordinates User[]  @relation("UserHierarchy")
+
+  // relations
+  leadsAssigned Lead[] @relation("LeadAssigned")
+  activities    LeadActivity[]
+  tickets       Ticket[]
+  attendance    Attendance[]
+  notifications Notification[]
+  expenses      Expense[]
+  reminders     Reminder[]
+  targets       Target[]
+
+  ledTeams      Team[]   @relation("TeamLeader")
+  teams         Team[]   @relation("TeamMembers")
+}
+
+//////////////////////////////
+// 👥 TEAM SYSTEM
+//////////////////////////////
+
+model Team {
+  id        String @id @default(uuid())
+  name      String
+  leaderId  String
+
+  createdAt DateTime @default(now())
+
+  leader    User   @relation("TeamLeader", fields: [leaderId], references: [id])
+  members   User[] @relation("TeamMembers")
+}
+
+//////////////////////////////
+// 📞 CLIENT SYSTEM
+//////////////////////////////
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String?
+  email     String?
+  mobile    String   @unique
+
+  isDeleted Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads     Lead[]
+  projects  Project[]
+}
+
+//////////////////////////////
+// 📊 LEAD SYSTEM
+//////////////////////////////
+
+model Lead {
+  id          String   @id @default(uuid())
+  clientId    String
+  assignedTo  String
+
+  status      LeadStatus
+  talkCount   Int      @default(0)
+  isDumped    Boolean  @default(false)
+  isDeleted   Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  client      Client   @relation(fields: [clientId], references: [id])
+  assignedUser User    @relation("LeadAssigned", fields: [assignedTo], references: [id])
+
+  activities  LeadActivity[]
+  reminders   Reminder[]
+  assignments LeadAssignment[]
+  dumps       LeadDump[]
+
+  @@index([clientId])
+  @@index([assignedTo])
+}
+
+enum LeadStatus {
+  UNTOUCHED
+  TALK
+  NOT_TALK
+  INTERESTED
+  CONVERTED
+  DUMP
+}
+
+//////////////////////////////
+// 📝 LEAD ACTIVITY
+//////////////////////////////
+
+model LeadActivity {
+  id        String   @id @default(uuid())
+  leadId    String
+  userId    String
+
+  comment   String?
+  status    LeadStatus
+
+  createdAt DateTime @default(now())
+
+  lead      Lead @relation(fields: [leadId], references: [id])
+  user      User @relation(fields: [userId], references: [id])
+}
+
+//////////////////////////////
+// 🔁 LEAD ASSIGNMENT HISTORY
+//////////////////////////////
+
+model LeadAssignment {
+  id         String @id @default(uuid())
+  leadId     String
+  assignedBy String
+  assignedTo String
+
+  createdAt  DateTime @default(now())
+
+  lead       Lead @relation(fields: [leadId], references: [id])
+}
+
+//////////////////////////////
+// ⏰ REMINDER SYSTEM
+//////////////////////////////
+
+model Reminder {
+  id        String   @id @default(uuid())
+  leadId    String
+  userId    String
+
+  note      String?
+  remindAt  DateTime
+  isDone    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  lead      Lead @relation(fields: [leadId], references: [id])
+  user      User @relation(fields: [userId], references: [id])
+}
+
+//////////////////////////////
+// 🗑️ DUMP SYSTEM
+//////////////////////////////
+
+model LeadDump {
+  id        String @id @default(uuid())
+  leadId    String
+  reason    String?
+  dumpedBy  String
+
+  createdAt DateTime @default(now())
+
+  lead      Lead @relation(fields: [leadId], references: [id])
+}
+
+//////////////////////////////
+// 📁 PROJECT SYSTEM
+//////////////////////////////
+
+model Project {
+  id            String   @id @default(uuid())
+  clientId      String
+  assignedTL    String?
+
+  status        ProjectStatus
+
+  totalAmount   Float
+  paidAmount    Float    @default(0)
+
+  startDate     DateTime?
+  deadline      DateTime?
+
+  isDeleted     Boolean  @default(false)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  client        Client   @relation(fields: [clientId], references: [id])
+
+  payments      Payment[]
+  workOrders    WorkOrder[]
+  invoices      Invoice[]
+
+  @@index([clientId])
+}
+
+enum ProjectStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  REVIEW
+  COMPLETED
+  DELIVERED
+}
+
+//////////////////////////////
+// 💳 PAYMENT SYSTEM
+//////////////////////////////
+
+model Payment {
+  id                  String   @id @default(uuid())
+  projectId           String
+
+  razorpayOrderId     String
+  razorpayPaymentId   String?
+  razorpaySignature   String?
+
+  amount              Float
+  status              PaymentStatus
+  paymentType         PaymentType
+
+  createdAt           DateTime @default(now())
+
+  project             Project  @relation(fields: [projectId], references: [id])
+
+  @@index([projectId])
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum PaymentType {
+  FULL
+  PARTIAL
+}
+
+//////////////////////////////
+// 📄 WORK ORDER
+//////////////////////////////
+
+model WorkOrder {
+  id          String   @id @default(uuid())
+  projectId   String
+
+  isGenerated Boolean  @default(false)
+  isSigned    Boolean  @default(false)
+  signedAt    DateTime?
+
+  createdAt   DateTime @default(now())
+
+  project     Project  @relation(fields: [projectId], references: [id])
+}
+
+//////////////////////////////
+// 🧾 INVOICE SYSTEM
+//////////////////////////////
+
+model Invoice {
+  id        String @id @default(uuid())
+  projectId String
+
+  amount    Float
+  gst       Float
+  total     Float
+
+  createdAt DateTime @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id])
+}
+
+//////////////////////////////
+// 💰 EXPENSE SYSTEM
+//////////////////////////////
+
+model Expense {
+  id         String   @id @default(uuid())
+  amount     Float
+  category   String
+  note       String?
+
+  createdBy  String
+
+  createdAt  DateTime @default(now())
+
+  user       User @relation(fields: [createdBy], references: [id])
+}
+
+//////////////////////////////
+// 🎫 SUPPORT TICKET
+//////////////////////////////
+
+model Ticket {
+  id        String   @id @default(uuid())
+  userId    String
+
+  message   String
+  status    TicketStatus
+
+  createdAt DateTime @default(now())
+
+  user      User @relation(fields: [userId], references: [id])
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+//////////////////////////////
+// 🔔 NOTIFICATION SYSTEM
+//////////////////////////////
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+
+  title     String
+  message   String
+
+  isRead    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  user      User @relation(fields: [userId], references: [id])
+}
+
+//////////////////////////////
+// 🎯 TARGET SYSTEM
+//////////////////////////////
+
+model Target {
+  id        String @id @default(uuid())
+  userId    String
+
+  type      TargetType
+  value     Int
+
+  startDate DateTime
+  endDate   DateTime
+
+  user      User @relation(fields: [userId], references: [id])
+}
+
+enum TargetType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+//////////////////////////////
+// 🕒 HRM SYSTEM
+//////////////////////////////
+
+model Attendance {
+  id        String   @id @default(uuid())
+  userId    String
+
+  clockIn   DateTime?
+  clockOut  DateTime?
+
+  createdAt DateTime @default(now())
+
+  user      User @relation(fields: [userId], references: [id])
+}

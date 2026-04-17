@@ -32,17 +32,13 @@ function Navbar() {
 
         {/* Profile */}
         <div className="flex items-center gap-2 cursor-pointer">
-          <img
-            src="https://i.pravatar.cc/40"
-            alt="user"
-            className="w-8 h-8 rounded-full"
-          />
+          
           <div className="leading-tight">
             <p className="text-sm font-semibold text-gray-800">
-              Madhav
+              
             </p>
             <p className="text-[11px] text-gray-500">
-              Super Admin
+              
             </p>
           </div>
         </div>

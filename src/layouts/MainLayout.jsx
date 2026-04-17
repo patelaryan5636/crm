@@ -7,9 +7,9 @@ function MainLayout() {
     <div className="flex h-screen w-screen overflow-hidden bg-[#F7F8F0]">
 
       {/* Sidebar */}
-      <div className="w-[16%] min-w-[220px] max-w-[260px] h-full">
+      <div className="w-[18%] min-w-[230px] max-w-[280px] h-full">
         <Sidebar />
-      </div>
+    </div>
 
       {/* Right Section */}
       <div className="flex-1 flex flex-col">

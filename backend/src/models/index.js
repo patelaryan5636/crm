@@ -87,30 +87,43 @@ UserSchema.index({ manager: 1 });
 // 5. REFRESH TOKEN (JWT Hardening)
 // ─────────────────────────────────────────────
 const RefreshTokenSchema = new Schema({
-  user:      { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  token:     { type: String, required: true, unique: true }, 
-  expiresAt: { type: Date,   required: true },
-  isRevoked: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now },
+  user:            { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  token:           { type: String, required: true, unique: true },
+  jti:             { type: String, required: true, unique: true },
+  tokenFamily:     { type: String, required: true },
+  rotatedFromJti:  { type: String },
+  expiresAt:       { type: Date, required: true },
+  isRevoked:       { type: Boolean, default: false },
+  revokedAt:       Date,
+  revokedReason:   String,
+  replacedByJti:   String,
+  createdAt:       { type: Date, default: Date.now },
 });
 
 RefreshTokenSchema.index({ user: 1 });
+RefreshTokenSchema.index({ tokenFamily: 1, createdAt: -1 });
 RefreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); 
 
 // ─────────────────────────────────────────────
 // 6. LOGIN LOG
 // ─────────────────────────────────────────────
 const LoginLogSchema = new Schema({
-  user:      { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  ipAddress: String,
-  latitude:  Number,
-  longitude: Number,
-  userAgent: String,
-  device:    String,
-  createdAt: { type: Date, default: Date.now },
+  user:          { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  emailSnapshot: { type: String, lowercase: true },
+  roleSnapshot:  { type: String, enum: ROLES },
+  ipAddress:     String,
+  latitude:      Number,
+  longitude:     Number,
+  userAgent:     String,
+  device:        String,
+  loginMethod:   { type: String, enum: ['PASSWORD', 'REFRESH_TOKEN'], default: 'PASSWORD' },
+  status:        { type: String, enum: ['SUCCESS', 'FAILED'], default: 'SUCCESS' },
+  failureReason: String,
+  createdAt:     { type: Date, default: Date.now },
 });
 
 LoginLogSchema.index({ user: 1, createdAt: -1 });
+LoginLogSchema.index({ roleSnapshot: 1, createdAt: -1 });
 
 // ─────────────────────────────────────────────
 // 7. TEAM
@@ -124,6 +137,8 @@ const TeamSchema = new Schema({
     joinedAt: { type: Date, default: Date.now },
   }],
 }, { timestamps: true });
+
+TeamSchema.index({ name: 1, department: 1 }, { unique: true });
 
 // ─────────────────────────────────────────────
 // 8. CLIENT
@@ -270,11 +285,13 @@ const ProjectSchema = new Schema({
 
   driveLink:         String,
   handoverLink:      String,  
+  publicTrackingId:  { type: String, unique: true, sparse: true },
 }, { timestamps: true });
 
 ProjectSchema.index({ client: 1 });
 ProjectSchema.index({ assignedTL: 1 });
 ProjectSchema.index({ status: 1 });
+ProjectSchema.index({ publicTrackingId: 1 });
 
 // ─────────────────────────────────────────────
 // 16. PROJECT UPDATE (timeline log)
@@ -294,19 +311,32 @@ ProjectUpdateSchema.index({ project: 1, createdAt: -1 });
 // 17. PAYMENT
 // ─────────────────────────────────────────────
 const PaymentSchema = new Schema({
-  project:            { type: Schema.Types.ObjectId, ref: 'Project', required: true },
+  project:            { type: Schema.Types.ObjectId, ref: 'Project' },
+  client:             { type: Schema.Types.ObjectId, ref: 'Client', required: true },
+  payerName:          String,
+  payerEmail:         { type: String, required: true, lowercase: true },
+  payerMobile:        { type: String, required: true, match: /^\d{10}$/ },
+  serviceName:        String,
   razorpayOrderId:    { type: String, required: true, unique: true },
   razorpayPaymentId:  String,
   razorpaySignature:  String,
+  webhookEventId:     { type: String, unique: true, sparse: true },
+  webhookVerified:    { type: Boolean, default: false },
   amount:             { type: Number, required: true },
+  currency:           { type: String, default: 'INR' },
   status:             { type: String, enum: PAY_STATUS, default: 'PENDING' },
   paymentType:        { type: String, enum: ['FULL','PARTIAL'], required: true },
   failureReason:      String,
   retryCount:         { type: Number, default: 0 },
+  paidAt:             Date,
 }, { timestamps: true });
 
 PaymentSchema.index({ project: 1 });
+PaymentSchema.index({ client: 1, createdAt: -1 });
+PaymentSchema.index({ payerMobile: 1, createdAt: -1 });
+PaymentSchema.index({ payerEmail: 1, createdAt: -1 });
 PaymentSchema.index({ razorpayOrderId: 1 });
+PaymentSchema.index({ razorpayPaymentId: 1 });
 
 // ─────────────────────────────────────────────
 // 18. WORK ORDER
@@ -364,12 +394,15 @@ ExpenseSchema.index({ category: 1 });
 const TicketSchema = new Schema({
   raisedBy:   { type: Schema.Types.ObjectId, ref: 'User', required: true },
   assignedTo: { type: Schema.Types.ObjectId, ref: 'User' },
+  escalatedTo:{ type: Schema.Types.ObjectId, ref: 'User' },
   subject:    { type: String, required: true },
   message:    { type: String, required: true },
   status:     { type: String, enum: TICKET_STATUS, default: 'OPEN' },
   priority:   { type: String, enum: ['LOW','NORMAL','HIGH','URGENT'], default: 'NORMAL' },
-  refType:    { type: String, enum: ['CLIENT_DATA', 'SALES_MANAGER', 'TEAM_LEAD', 'EXECUTIVE', 'SYSTEM'] }, 
+  refType:    { type: String, enum: ['CLIENT_DATA', 'SALES_MANAGER', 'TEAM_LEAD', 'EXECUTIVE', 'FINANCE_MANAGER', 'MANAGEMENT_MANAGER', 'ADMIN', 'SYSTEM'] }, 
   refId:      Schema.Types.ObjectId,
+  resolvedAt: Date,
+  resolutionNote: String,
   replies: [{
     user:      { type: Schema.Types.ObjectId, ref: 'User' },
     message:   String,
@@ -378,6 +411,7 @@ const TicketSchema = new Schema({
 }, { timestamps: true });
 
 TicketSchema.index({ raisedBy: 1, status: 1 });
+TicketSchema.index({ assignedTo: 1, status: 1 });
 
 // ─────────────────────────────────────────────
 // 22. ATTENDANCE
@@ -442,8 +476,13 @@ NotificationSchema.index({ user: 1, isRead: 1, createdAt: -1 });
 // 26. API CONFIG (Super Admin)
 // ─────────────────────────────────────────────
 const ApiConfigSchema = new Schema({
-  key:   { type: String, required: true, unique: true },
-  value: { type: String, required: true }, 
+  key:         { type: String, required: true, unique: true },
+  value:       { type: String, required: true },
+  provider:    { type: String, enum: ['RAZORPAY', 'BREVO', 'FIREBASE', 'JWT', 'OTHER'], default: 'OTHER' },
+  isEncrypted: { type: Boolean, default: true },
+  isActive:    { type: Boolean, default: true },
+  rotatedAt:   Date,
+  lastUsedAt:  Date,
 }, { timestamps: true });
 
 // ─────────────────────────────────────────────
@@ -451,9 +490,14 @@ const ApiConfigSchema = new Schema({
 // ─────────────────────────────────────────────
 const SubscriptionSchema = new Schema({
   planName:   { type: String, required: true },
+  planCode:   { type: String, unique: true, sparse: true },
   maxUsers:   { type: Number, default: 40 }, // Admin Role limit 
   maxClients: { type: Number, default: 6000 },
   storageGB:  { type: Number, default: 10 },
+  storageUsedGB: { type: Number, default: 0 },
+  billingCycle:  { type: String, enum: ['MONTHLY', 'YEARLY', 'LIFETIME'], default: 'MONTHLY' },
+  amount:        { type: Number, default: 0 },
+  currency:      { type: String, default: 'INR' },
   isActive:   { type: Boolean, default: true },
   startDate:  { type: Date, required: true },
   endDate:    Date,

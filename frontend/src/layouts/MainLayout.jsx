@@ -1,5 +1,5 @@
-import Sidebar from "./Sidebar";
-import Navbar from "./Navbar";
+import Sidebar from "../components/Sidebar";
+import Navbar from "../components/Navbar";
 import { Outlet } from "react-router-dom";
 import { useState } from "react";
 
@@ -7,7 +7,7 @@ function MainLayout() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-[#F7F8F0] overflow-hidden">
+    <div className="flex h-screen bg-offWhite overflow-hidden">
 
       {/* Overlay (mobile only) */}
       {isOpen && (
@@ -27,21 +27,16 @@ function MainLayout() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
 
         {/* Navbar */}
-        <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-3">
+        <div className="px-6 py-2 border-b border-gray-200/50">
           <Navbar toggleSidebar={() => setIsOpen(!isOpen)} />
         </div>
 
         {/* Page Content */}
-        <div className="flex-1 p-4 md:p-6 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 min-h-full">
-
-            {/* 🔥 Page content */}
-            <Outlet />
-
-          </div>
+        <div className="flex-1 p-4 md:p-6 overflow-y-auto w-full max-w-7xl mx-auto overflow-x-hidden">
+          <Outlet />
         </div>
 
       </div>

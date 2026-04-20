@@ -15,7 +15,7 @@ import {
   GPieChart,
   GRadarChart,
   GAreaChart,
-} from "./Commons";
+} from "./Common_Components";
 import { TrendingDown, Users } from "lucide-react";
 
 const Page = () => {
@@ -88,7 +88,7 @@ const Page = () => {
     { subject: "Finance", teamA: 75, teamB: 90 },
   ];
 
-    const areadata = [
+  const areadata = [
     { name: "Jan", visits: 2400, signups: 400 },
     { name: "Feb", visits: 1398, signups: 210 },
     { name: "Mar", visits: 5800, signups: 890 },
@@ -117,7 +117,6 @@ const Page = () => {
     { name: "Nov", revenue: 3000, cost: 1398 },
     { name: "Dec", revenue: 5000, cost: 3200 },
   ];
-
 
   return (
     <Grid cols={12} gap={4}>
@@ -318,16 +317,16 @@ const Page = () => {
       />
 
       <GLineChart
-    title="Revenue vs Cost"
-    subtitle="Monthly breakdown"
-    data={linedata}
-    lines={[
-      { key: "revenue", label: "Revenue", color: "#3b82f6" },
-      { key: "cost",    label: "Cost",    color: "#f43f5e" },
-    ]}
-    size={6}
-    height={260}
-  />
+        title="Revenue vs Cost"
+        subtitle="Monthly breakdown"
+        data={linedata}
+        lines={[
+          { key: "revenue", label: "Revenue", color: "#3b82f6" },
+          { key: "cost", label: "Cost", color: "#f43f5e" },
+        ]}
+        size={6}
+        height={260}
+      />
     </Grid>
   );
 };

@@ -1,5 +1,5 @@
-import Sidebar from "./Sidebar";
-import Navbar from "./Navbar";
+import Sidebar from "../components/Sidebar";
+import Navbar from "../components/Navbar";
 import { Outlet } from "react-router-dom";
 import { useState } from "react";
 
@@ -7,43 +7,37 @@ function MainLayout() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-[#F7F8F0] overflow-hidden">
-
+    <div className="flex h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_#fff7ed_0%,_#f7f8f0_40%,_#eef4f7_100%)]">
       {/* Overlay (mobile only) */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-30 md:hidden"
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
           onClick={() => setIsOpen(false)}
         ></div>
       )}
 
       {/* Sidebar */}
       <div
-        className={`fixed md:static z-40 h-full w-64 shadow-lg transform 
-        ${isOpen ? "translate-x-0" : "-translate-x-full"} 
-        md:translate-x-0 transition-transform duration-300`}
+        className={`fixed z-40 h-full w-64 transform shadow-lg md:static
+        ${isOpen ? "translate-x-0" : "-translate-x-full"}
+        transition-transform duration-300 md:translate-x-0`}
       >
         <Sidebar />
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-
+      <div className="flex min-w-0 flex-1 flex-col">
         {/* Navbar */}
-        <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-3">
+        <div className="border-b border-white/60 bg-white/45 px-4 py-2 shadow-sm backdrop-blur md:px-6">
           <Navbar toggleSidebar={() => setIsOpen(!isOpen)} />
         </div>
 
         {/* Page Content */}
-        <div className="flex-1 p-4 md:p-6 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 min-h-full">
-
-            {/* 🔥 Page content */}
+        <div className="mx-auto flex-1 w-full max-w-7xl overflow-x-hidden overflow-y-auto p-4 md:p-6">
+          <div className="min-h-full rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,_rgba(255,255,255,0.88)_0%,_rgba(250,252,253,0.96)_100%)] p-4 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur md:p-6">
             <Outlet />
-
           </div>
         </div>
-
       </div>
     </div>
   );

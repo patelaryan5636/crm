@@ -20,10 +20,27 @@ import {
   GDoughnutChart,
   DataTable,
   Button,
-} from "./Commons";
+  Modal,
+  openModal,
+  closeModal,
+  DataField,
+  ModalData,
+  P,
+} from "./Common_Components";
 
 export default function Dashboard() {
   const [timeRange, setTimeRange] = useState("This Year");
+  const [selectedTx, setSelectedTx] = useState(null);
+
+  const handleView = (row) => {
+    setSelectedTx(row);
+    openModal("view-modal");
+  };
+
+  const handleEdit = (row) => {
+    setSelectedTx({ ...row, originalId: row.id });
+    openModal("edit-modal");
+  };
 
   // ─── Mock Data ─────────────────────────────────────────────────────────────
 
@@ -55,7 +72,7 @@ export default function Dashboard() {
     { name: "Support", target: 80, achieved: 85 },
   ];
 
-  const recentTransactions = [
+  const [recentTransactions, setRecentTransactions] = useState([
     {
       id: "#TRX-8291",
       customer: "Alice Johnson",
@@ -68,7 +85,7 @@ export default function Dashboard() {
       customer: "Acme Corp",
       date: "Oct 12, 2023",
       amount: "$8,400.00",
-      status: "Pending",
+      status: "In Progress",
     },
     {
       id: "#TRX-8293",
@@ -82,7 +99,7 @@ export default function Dashboard() {
       customer: "Sarah Williams",
       date: "Oct 10, 2023",
       amount: "$450.00",
-      status: "Failed",
+      status: "Cancelled",
     },
     {
       id: "#TRX-8295",
@@ -103,7 +120,7 @@ export default function Dashboard() {
       customer: "Acme Corp",
       date: "Oct 12, 2023",
       amount: "$8,400.00",
-      status: "Pending",
+      status: "In Progress",
     },
     {
       id: "#TRX-8293",
@@ -138,7 +155,7 @@ export default function Dashboard() {
       customer: "Acme Corp",
       date: "Oct 12, 2023",
       amount: "$8,400.00",
-      status: "Pending",
+      status: "In Progress",
     },
     {
       id: "#TRX-8293",
@@ -173,7 +190,7 @@ export default function Dashboard() {
       customer: "Acme Corp",
       date: "Oct 12, 2023",
       amount: "$8,400.00",
-      status: "Pending",
+      status: "In Progress",
     },
     {
       id: "#TRX-8293",
@@ -208,7 +225,7 @@ export default function Dashboard() {
       customer: "Acme Corp",
       date: "Oct 12, 2023",
       amount: "$8,400.00",
-      status: "Pending",
+      status: "In Progress",
     },
     {
       id: "#TRX-8293",
@@ -231,7 +248,7 @@ export default function Dashboard() {
       amount: "$12,000.00",
       status: "Completed",
     },
-  ];
+  ]);
 
   const tableColumns = [
     { key: "id", label: "Transaction ID" },
@@ -251,9 +268,10 @@ export default function Dashboard() {
             secondaryText="Dashboard"
             size={12}
           />
-          <p className="text-slate-500 font-medium text-sm mt-1">
-            Welcome back! Here is what's happening with your business today.
-          </p>
+          <P
+            text="Welcome back! Here is what's happening with your business today."
+            size="sm"
+          />
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -346,25 +364,89 @@ export default function Dashboard() {
           height={280}
         />
 
-        {/* Data Table Section */}
-        <div className="col-span-12 mt-4">
-          <DataTable
-            title="Recent Transactions"
-            columns={tableColumns}
-            rows={recentTransactions}
-            size={12}
-            pageSize={5}
-            searchable={true}
-            actions={[
-              {
-                label: "View",
-                variant: "primary",
-                onClick: (row) => alert(`Viewing transaction ${row.id}`),
-              },
-            ]}
-          />
-        </div>
+        <DataTable
+          title="Recent Transactions"
+          columns={tableColumns}
+          rows={recentTransactions}
+          size={12}
+          pageSize={5}
+          searchable={true}
+          actions={[
+            {
+              label: "View",
+              variant: "primary",
+              onClick: handleView,
+            },
+            {
+              label: "Edit",
+              variant: "ghost",
+              onClick: handleEdit,
+            },
+          ]}
+        />
       </DashGrid>
+
+      <Modal id="view-modal" title="View Transaction">
+        {selectedTx && (
+          <div className="space-y-4 text-slate-600">
+            <ModalData label="Transaction ID" value={selectedTx.id} />
+            <ModalData label="Customer" value={selectedTx.customer} />
+            <ModalData label="Amount" value={selectedTx.amount} />
+          </div>
+        )}
+      </Modal>
+
+      <Modal id="edit-modal" title="Edit Transaction">
+        {selectedTx && (
+          <div className="space-y-4 text-slate-600">
+            <DataField
+              label="Transaction ID"
+              id="transaction_id"
+              value={selectedTx.id}
+              onChange={(e) =>
+                setSelectedTx({ ...selectedTx, id: e.target.value })
+              }
+            />
+            <DataField
+              label="Customer"
+              id="customer"
+              value={selectedTx.customer}
+              onChange={(e) =>
+                setSelectedTx({ ...selectedTx, customer: e.target.value })
+              }
+            />
+            <DataField
+              label="Amount"
+              id="amount"
+              value={selectedTx.amount}
+              onChange={(e) =>
+                setSelectedTx({ ...selectedTx, amount: e.target.value })
+              }
+            />
+            <div className="pt-4 mt-2 flex justify-end gap-2 border-t border-slate-100">
+              <div onClick={() => closeModal("edit-modal")}>
+                <Button variant="ghost" text="Cancel" />
+              </div>
+              <div
+                onClick={() => {
+                  setRecentTransactions((prev) =>
+                    prev.map((tx) => {
+                      if (tx.id === selectedTx.originalId) {
+                        const { originalId, ...updatedTx } = selectedTx;
+                        return updatedTx;
+                      }
+                      return tx;
+                    }),
+                  );
+                  closeModal("edit-modal");
+                }}
+              >
+                <Button variant="primary" text="Save Changes" />
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

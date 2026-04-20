@@ -1,13 +1,13 @@
 import { NavLink } from "react-router-dom";
 import {
-  Users,
-  LayoutDashboard,
+  BarChart2,
+  Briefcase,
   DollarSign,
   FolderOpen,
-  Briefcase,
+  LayoutDashboard,
   LifeBuoy,
-  BarChart2,
   Settings,
+  Users,
 } from "lucide-react";
 
 const menu = [

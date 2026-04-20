@@ -1,0 +1,417 @@
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import {
+  User,
+  Layers3,
+  Activity,
+  BriefcaseBusiness,
+  Mail,
+  ShieldCheck,
+  Zap,
+  CalendarDays,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
+
+const FloatingBackground = () => (
+  <div className="absolute inset-0 z-0 overflow-hidden opacity-5 pointer-events-none">
+    <Layers3
+      className="w-20 h-20 text-slate-900 absolute top-10 left-10 animate-[spin_25s_linear_infinite]"
+      strokeWidth={1}
+    />
+    <Activity
+      className="w-24 h-24 text-slate-900 absolute top-20 right-20 animate-[pulse_4s_ease-in-out_infinite]"
+      strokeWidth={1}
+    />
+    <User
+      className="w-16 h-16 text-slate-900 absolute bottom-32 left-40 animate-[spin_22s_linear_infinite]"
+      strokeWidth={1}
+    />
+    <BriefcaseBusiness
+      className="w-20 h-20 text-slate-900 absolute -bottom-10 right-40 animate-[pulse_5s_ease-in-out_infinite]"
+      strokeWidth={1}
+    />
+    <Mail
+      className="w-28 h-28 text-slate-900 absolute top-[40%] left-[20%] animate-[spin_18s_linear_infinite]"
+      strokeWidth={1}
+    />
+    <ShieldCheck
+      className="w-18 h-18 text-slate-900 absolute top-28 left-[45%] animate-[spin_30s_linear_infinite]"
+      strokeWidth={1}
+    />
+    <Zap
+      className="w-16 h-16 text-slate-900 absolute bottom-20 right-28 animate-[pulse_3s_ease-in-out_infinite]"
+      strokeWidth={1}
+    />
+    <CalendarDays
+      className="w-24 h-24 text-slate-900 absolute top-[55%] right-10 animate-[spin_28s_linear_infinite]"
+      strokeWidth={1}
+    />
+  </div>
+);
+
+const AdminLogin = () => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [statusType, setStatusType] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [captchaCode, setCaptchaCode] = useState(generateCaptcha());
+  const [captchaInput, setCaptchaInput] = useState("");
+  const [captchaError, setCaptchaError] = useState("");
+
+  function generateCaptcha() {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+  }
+
+  const refreshCaptcha = () => {
+    setCaptchaCode(generateCaptcha());
+    setCaptchaInput("");
+    setCaptchaError("");
+  };
+
+  const validateEmail = (value) => {
+    const emailRegex = /^\S+@\S+\.\S+$/;
+    return emailRegex.test(value);
+  };
+
+  useEffect(() => {
+    if (!statusType) return;
+
+    const timeout = setTimeout(() => {
+      setStatusType("");
+      setStatusMessage("");
+    }, 4000);
+
+    return () => clearTimeout(timeout);
+  }, [statusType]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    let valid = true;
+
+    if (!email.trim()) {
+      setEmailError("Email is required.");
+      valid = false;
+    } else if (!validateEmail(email)) {
+      setEmailError("Enter a valid email address.");
+      valid = false;
+    } else {
+      setEmailError("");
+    }
+
+    if (!password.trim()) {
+      setPasswordError("Password is required.");
+      valid = false;
+    } else {
+      setPasswordError("");
+    }
+
+    if (!captchaInput.trim()) {
+      setCaptchaError("Please enter the CAPTCHA code.");
+      valid = false;
+    } else if (captchaInput !== captchaCode) {
+      setCaptchaError("CAPTCHA code is incorrect. Please try again.");
+      setCaptchaCode(generateCaptcha());
+      setCaptchaInput("");
+      valid = false;
+    } else {
+      setCaptchaError("");
+    }
+
+    if (!valid) {
+      setStatusType(
+        email.trim() === "" ||
+          password.trim() === "" ||
+          captchaInput.trim() === ""
+          ? "alert"
+          : "error",
+      );
+      setStatusMessage(
+        email.trim() === "" ||
+          password.trim() === "" ||
+          captchaInput.trim() === ""
+          ? "Please fill in all fields before signing in."
+          : "There are issues with your information. Please correct them and try again.",
+      );
+      return;
+    }
+
+    // Get user's location and IP address
+    try {
+      // Get Geolocation
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+
+            // Get IP Address
+            try {
+              const ipResponse = await fetch(
+                "https://api.ipify.org?format=json",
+              );
+              const ipData = await ipResponse.json();
+              const ipAddress = ipData.ip;
+
+              console.log("=== USER LOGIN INFORMATION ===");
+              console.log("Latitude:", latitude);
+              console.log("Longitude:", longitude);
+              console.log("IP Address:", ipAddress);
+              console.log("==============================");
+            } catch (error) {
+              console.error("Error fetching IP address:", error);
+              console.log(
+                "Location - Latitude:",
+                latitude,
+                "Longitude:",
+                longitude,
+              );
+            }
+          },
+          (error) => {
+            console.error("Error getting geolocation:", error.message);
+            // Fallback: Try to get IP address anyway
+            fetch("https://api.ipify.org?format=json")
+              .then((response) => response.json())
+              .then((data) => {
+                console.log("IP Address:", data.ip);
+                console.log("Note: Geolocation permission denied by user");
+              })
+              .catch((err) => console.error("Error fetching IP:", err));
+          },
+        );
+      } else {
+        console.log("Geolocation is not supported by this browser.");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+
+    setStatusType("success");
+    setStatusMessage("Credentials look good. You're ready to sign in.");
+  };
+
+  return (
+    <div className="min-h-screen bg-crm-off-white flex items-center justify-center p-4 relative overflow-hidden">
+      <FloatingBackground />
+
+      {/* Main Login Card */}
+      <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl flex overflow-hidden z-10 min-h-[600px]">
+        {/* Left Panel */}
+        <div className="hidden lg:flex w-5/12 bg-slate-50 p-12 flex-col justify-between border-r border-slate-100">
+          <div>
+            <div className="mb-10">
+              <img src={GraphuraLogo} alt="Graphura Logo" className="h-20" />
+            </div>
+            <h2 className="text-3xl font-extrabold text-crm-navy leading-tight mb-4">
+              Manage Customers. Empower Teams. Grow Faster.
+            </h2>
+            <p className="text-slate-500 text-sm leading-relaxed">
+              Empower your business with one smart platform to manage leads,
+              teams, tasks, and customer relationships effortlessly.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button className="text-[11px] font-bold px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100">
+              Terms of Service
+            </button>
+            <button className="text-[11px] font-bold px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100">
+              Privacy Policy
+            </button>
+          </div>
+        </div>
+
+        {/* Right Panel */}
+        <div className="w-full lg:w-7/12 p-8 md:p-16 flex flex-col justify-center">
+          <div className="max-w-md mx-auto w-full">
+            <div className="lg:hidden mb-8 mx-auto">
+              <img
+                src={GraphuraLogo}
+                alt="Graphura Logo"
+                className="w-40 h-15 mx-auto"
+              />
+            </div>
+            <h1 className="text-3xl font-black text-crm-navy mb-8 text-center tracking-tight">
+              Welcome back! 👋
+            </h1>
+
+            {/* Input Form */}
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              {statusType ? (
+                <div
+                  className={`rounded-2xl px-4 py-3 text-sm ${
+                    statusType === "success"
+                      ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+                      : statusType === "alert"
+                        ? "border border-yellow-200 bg-yellow-50 text-yellow-800"
+                        : "border border-red-200 bg-red-50 text-red-800"
+                  }`}
+                >
+                  {statusMessage}
+                </div>
+              ) : null}
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="email_login"
+                  className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]"
+                >
+                  Work Email
+                </label>
+                <div className="relative rounded-2xl border border-slate-200 bg-slate-50/90 focus-within:ring-2 focus-within:ring-crm-blue/20 mt-1 transition">
+                  <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
+                    <Mail size={18} />
+                  </div>
+                  <input
+                    type="email"
+                    id="email_login"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailError) setEmailError("");
+                    }}
+                    className="w-full rounded-2xl bg-transparent py-4 pl-12 pr-4 text-crm-navy placeholder:text-slate-400 focus:outline-none"
+                  />
+                </div>
+                {emailError ? (
+                  <p className="text-xs text-rose-600">{emailError}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="password_login"
+                  className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]"
+                >
+                  Password
+                </label>
+                <div className="relative mt-1 rounded-2xl border border-slate-200 bg-slate-50/90 focus-within:ring-2 focus-within:ring-crm-blue/20 transition">
+                  <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="password_login"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (passwordError) setPasswordError("");
+                    }}
+                    className="w-full rounded-2xl bg-transparent py-4 pl-12 pr-14 text-crm-navy placeholder:text-slate-400 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-crm-navy transition"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+                {passwordError ? (
+                  <p className="text-xs text-rose-600">{passwordError}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-3">
+                <label
+                  htmlFor="captcha_login"
+                  className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]"
+                >
+                  Security Verification
+                </label>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-2 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 rounded-xl border border-dashed border-slate-300 bg-white py-2 text-center shadow-sm">
+                      <p className="text-3xl font-black text-slate-800 tracking-[0.35em]">
+                        {captchaCode}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={refreshCaptcha}
+                      className="h-12 w-12 rounded-3xl border border-slate-200 bg-white text-slate-600 shadow-sm flex items-center justify-center hover:bg-slate-100 transition"
+                      title="Refresh CAPTCHA"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="relative rounded-2xl border border-slate-200 bg-slate-50/90 focus-within:ring-2 focus-within:ring-crm-blue/20 transition">
+                  <input
+                    type="text"
+                    id="captcha_login"
+                    placeholder="Enter the 4-digit number above"
+                    value={captchaInput}
+                    onChange={(e) => {
+                      setCaptchaInput(e.target.value);
+                      if (captchaError) setCaptchaError("");
+                    }}
+                    maxLength="4"
+                    className="w-full rounded-2xl bg-transparent py-4 px-4 text-crm-navy placeholder:text-slate-400 focus:outline-none text-center tracking-[0.25em] text-md font-semibold"
+                  />
+                </div>
+                {captchaError ? (
+                  <p className="text-xs text-rose-600">{captchaError}</p>
+                ) : null}
+                <p className="text-xs text-slate-400">
+                  Enter the 4-digit number shown above
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between text-xs font-bold pt-2">
+                <label className="flex items-center gap-2 text-slate-500 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-slate-300 accent-crm-navy"
+                  />
+                  Remember me
+                </label>
+                <a href="#" className="text-crm-navy hover:underline">
+                  Forgot password?
+                </a>
+              </div>
+
+              {/* Visible Sign In Button */}
+              <button
+                type="submit"
+                className="w-full mt-4 py-4 bg-[#2a465a] text-white font-bold rounded-2xl shadow-xl shadow-crm-navy/20 transition duration-300 ease-out transform hover:bg-gradient-to-r hover:from-[#1e3a52] hover:to-[#2b5a7a] hover:shadow-2xl hover:-translate-y-0.5 active:scale-95"
+              >
+                Sign in →
+              </button>
+            </form>
+
+            <p className="mt-8 text-center text-slate-500 text-sm">
+              Don't have an account?{" "}
+              <Link
+                to="/register"
+                className="text-crm-navy font-bold hover:underline"
+              >
+                Register your company
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminLogin;

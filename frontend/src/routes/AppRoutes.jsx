@@ -1,11 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminRoutes from "./adminRoutes";
-// import SuperAdminRoutes from "./superAdminRoutes"; ❌ abhi use nahi kar rahe
+import AdminLogin from "../pages/auth/AdminLogin";
+import AdminRegister from "../pages/auth/AdminRegister";
 
 function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Auth */}
+        <Route path="/login" element={<AdminLogin />} />
+        <Route path="/register" element={<AdminRegister />} />
 
         {/* Default → Admin */}
         <Route path="/" element={<Navigate to="/admin" />} />
@@ -15,7 +19,6 @@ function AppRoutes() {
 
         {/* Super Admin (future use) */}
         {/* <Route path="/super-admin/*" element={<SuperAdminRoutes />} /> */}
-
       </Routes>
     </BrowserRouter>
   );

@@ -517,7 +517,7 @@ export const DataTable = ({
   date = false,
   // filterSize — controls the width of the filter modal
   // "sm" | "md" (default) | "lg" | "xl" | "2xl"
-  filterSize = "md",
+  filterSize = "xl",
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);

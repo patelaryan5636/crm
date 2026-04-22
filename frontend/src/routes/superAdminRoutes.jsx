@@ -146,17 +146,15 @@ function SuperAdminRoutes() {
   return (
     <Routes>
       <Route element={<MainLayout />}>
-      <Route index element={<Navigate to="dashboard" replace />} />
-      <Route path="dashboard" element={<Page name="Dashboard" />} />
-      <Route path="admins" element={<Page name="Admin Management" />} />
-      <Route path="departments" element={<Page name="Department Management" />} />
-      <Route path="billing" element={<Page name="Billing & Payments" />} />
-      <Route path="communication" element={<Page name="Communication Center" />} />
-      <Route path="login-logs" element={<Page name="Login Logs" />} />
-      <Route path="support" element={<Page name="Support & Tickets" />} />
-      <Route path="api-config" element={<Page name="API Configuration" />} />
-      <Route path="data-management" element={<Page name="Data Management" />} />
-      <Route path="*" element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="admins" element={<Admins />} />
+        <Route path="departments" element={<Departments />} />
+        <Route path="billing" element={<Billing />} />
+        <Route path="communication" element={<Communication />} />
+        <Route path="login-logs" element={<LoginLogs />} />
+        <Route path="support" element={<Support />} />
+        <Route path="api-config" element={<ApiConfig />} />
+        <Route path="data-management" element={<DataManagement />} />
       </Route>
     </Routes>
   );

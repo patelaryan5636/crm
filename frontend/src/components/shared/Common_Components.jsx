@@ -5,6 +5,7 @@ import {
   ChevronRight,
   ChevronDown,
   ArrowUpDown,
+  X,
 } from "lucide-react";
 
 import {
@@ -655,14 +656,43 @@ export const DataTable = ({
                     i % 2 === 0 ? "bg-white" : "bg-slate-50/60"
                   } hover:bg-blue-50/40`}
                 >
-                  {columns.map((col) => (
-                    <td
-                      key={col.key}
-                      className="py-3.5 px-5 text-[#2a465a] font-medium whitespace-nowrap"
-                    >
-                      {row[col.key] ?? "—"}
-                    </td>
-                  ))}
+                  {columns.map((col) => {
+                    if (col.key === "status") {
+                      const val = row[col.key];
+                      let statusBg = "bg-slate-100";
+                      let statusText = "text-slate-600";
+                      if (val === "Completed") {
+                        statusBg = "bg-emerald-100";
+                        statusText = "text-emerald-700";
+                      } else if (val === "Pending" || val === "In Progress") {
+                        statusBg = "bg-amber-100";
+                        statusText = "text-amber-700";
+                      } else if (val === "Failed" || val === "Cancelled") {
+                        statusBg = "bg-rose-100";
+                        statusText = "text-rose-700";
+                      }
+                      return (
+                        <td
+                          key={col.key}
+                          className="py-3.5 px-5 whitespace-nowrap"
+                        >
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-bold ${statusBg} ${statusText}`}
+                          >
+                            {val ?? "—"}
+                          </span>
+                        </td>
+                      );
+                    }
+                    return (
+                      <td
+                        key={col.key}
+                        className="py-3.5 px-5 text-[#2a465a] font-medium whitespace-nowrap"
+                      >
+                        {row[col.key] ?? "—"}
+                      </td>
+                    );
+                  })}
                   {actions.length > 0 && (
                     <td className="py-3 px-5">
                       <div className="flex items-center gap-2">
@@ -766,13 +796,13 @@ export const DataTable = ({
     { key: "name",    label: "Name" },
     { key: "email",   label: "Email" },
     { key: "role",    label: "Role" },
-    { key: "status",  label: "Status" },
+    { key: "status",  label: "Status" }, // 'status' key renders as a colored badge
   ];
 
   const rows = [
-    { name: "Alice Johnson", email: "alice@acme.com", role: "Admin",   status: "Active" },
-    { name: "Bob Smith",     email: "bob@acme.com",   role: "Manager", status: "Active" },
-    { name: "Carol White",   email: "carol@acme.com", role: "Staff",   status: "Inactive" },
+    { name: "Alice Johnson", email: "alice@acme.com", role: "Admin",   status: "Completed" },
+    { name: "Bob Smith",     email: "bob@acme.com",   role: "Manager", status: "In Progress" },
+    { name: "Carol White",   email: "carol@acme.com", role: "Staff",   status: "Failed" },
   ];
 
   const actions = [
@@ -798,7 +828,7 @@ export const DataTable = ({
   />
 
   Props:
-  • columns    — array of { key, label } defining table headers & data keys
+  • columns    — array of { key, label } defining table headers & data keys (key 'status' will render a colored badge)
   • rows       — array of data objects (keys must match column keys)
   • actions    — array of { label, variant, onClick, icon? } action buttons per row
   • size       — 1–12 grid columns  (default: 12)
@@ -1029,6 +1059,16 @@ export const DashCard = ({
   size = 4, // This will now act as the "Desktop" size
   accentColor = "#1e293b",
 }) => {
+  const valueStr = String(value);
+  let fontSize = "28px";
+  if (valueStr.length > 12) {
+    fontSize = "18px";
+  } else if (valueStr.length > 8) {
+    fontSize = "22px";
+  } else if (valueStr.length > 6) {
+    fontSize = "24px";
+  }
+
   return (
     <div
       // Mobile: col-span-12 (Full width)
@@ -1041,7 +1081,6 @@ export const DashCard = ({
         boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.04)",
       }}
     >
-      {/* ... rest of your existing component code ... */}
       <div
         className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full blur-3xl opacity-10 pointer-events-none"
         style={{ background: accentColor }}
@@ -1077,16 +1116,17 @@ export const DashCard = ({
           <span
             style={{
               color: "#0f172a",
-              fontSize: "28px",
+              fontSize: fontSize,
               fontWeight: 800,
               letterSpacing: "-0.01em",
               lineHeight: "1",
+              transition: "font-size 0.3s ease",
             }}
           >
             {value}
           </span>
           <div
-            className="w-2 h-2 rounded-full"
+            className="w-2 h-2 rounded-full flex-shrink-0"
             style={{ background: accentColor, opacity: 0.2 }}
           />
         </div>
@@ -1712,3 +1752,173 @@ export const DashGrid = ({ children, cols = 12, gap = 4 }) => {
     );
   }
 */
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 19. MODAL
+// Props: isOpen, onClose, title, children
+// ─────────────────────────────────────────────────────────────────────────────
+export const openModal = (id) => {
+  window.dispatchEvent(new CustomEvent("open-modal", { detail: { id } }));
+};
+
+export const closeModal = (id) => {
+  window.dispatchEvent(new CustomEvent("close-modal", { detail: { id } }));
+};
+
+export const Modal = ({ id, title, children }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [show, setShow] = useState(false);
+  const [render, setRender] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = (e) => {
+      if (e.detail.id === id) {
+        setIsOpen(true);
+      }
+    };
+    const handleClose = (e) => {
+      if (!e.detail.id || e.detail.id === id) {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("open-modal", handleOpen);
+    window.addEventListener("close-modal", handleClose);
+
+    return () => {
+      window.removeEventListener("open-modal", handleOpen);
+      window.removeEventListener("close-modal", handleClose);
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setRender(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setShow(true));
+      });
+    } else {
+      setShow(false);
+      const timer = setTimeout(() => setRender(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  const handleCloseClick = () => {
+    setIsOpen(false);
+  };
+
+  if (!render) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${
+          show ? "opacity-100" : "opacity-0"
+        }`}
+        onClick={handleCloseClick}
+      />
+
+      {/* Modal Dialog */}
+      <div
+        className={`relative w-full max-w-lg bg-white rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ease-out transform ${
+          show
+            ? "opacity-100 translate-y-0 scale-100"
+            : "opacity-0 translate-y-4 scale-95"
+        }`}
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h3 className="text-lg font-bold text-[#2a465a]">{title}</h3>
+          <button
+            onClick={handleCloseClick}
+            className="p-1.5 rounded-full text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto max-h-[70vh]">{children}</div>
+      </div>
+    </div>
+  );
+};
+
+/*
+  ── HOW TO USE Modal ────────────────────────────────────────────────────────
+
+  import { Modal, Button, openModal, closeModal } from "./Common_Components";
+
+  export default function MyPage() {
+    return (
+      <div>
+        <Button text="Open Modal" onClick={() => openModal("new-user-modal")} />
+
+        <Modal id="new-user-modal" title="Create New User">
+          <div className="space-y-4">
+            <p className="text-slate-600">
+              Please fill out the form below to add a new user to the system.
+            </p>
+            {"Your form or content here"}
+            
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="ghost" text="Cancel" onClick={() => closeModal("new-user-modal")} />
+              <Button variant="primary" text="Save" onClick={() => { alert("Saved"); closeModal("new-user-modal"); }} />
+            </div>
+          </div>
+        </Modal>
+      </div>
+    );
+  }
+
+  Props:
+  • id       — unique string to identify and trigger this modal
+  • title    — string for the modal header
+  • children — React nodes to render inside the modal body
+
+  Functions:
+  • openModal(id)  — dispatch event to open the modal with the specified id
+  • closeModal(id) — dispatch event to close the modal with the specified id
+*/
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 20. MODAL DATA
+// Props: label, value
+// ─────────────────────────────────────────────────────────────────────────────
+export const ModalData = ({ label, value }) => (
+  <div>
+    <span className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+      {label}
+    </span>
+    <span className="text-[#2a465a] font-medium bg-slate-50 px-3 py-2 rounded-xl block border border-slate-100">
+      {value}
+    </span>
+  </div>
+);
+
+/*
+  ── HOW TO USE ModalData ────────────────────────────────────────────────────
+
+  <ModalData label="Customer Name" value="Alice Johnson" />
+*/
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 21. PARAGRAPH
+// Props: text, size
+// ─────────────────────────────────────────────────────────────────────────────
+export const P = ({ text, size = "sm" }) => {
+  const sizeMap = {
+    xs: "text-xs",
+    sm: "text-sm",
+    base: "text-base",
+    lg: "text-lg",
+    xl: "text-xl",
+  };
+  return (
+    <p
+      className={`text-slate-500 font-medium mt-1 ${sizeMap[size] || "text-sm"}`}
+    >
+      {text}
+    </p>
+  );
+};

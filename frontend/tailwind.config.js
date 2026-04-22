@@ -1,14 +1,30 @@
+/** @type {import('tailwindcss').Config} */
 export default {
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
   theme: {
     extend: {
       colors: {
-        primary: "#355872",
-        secondary: "#7AAACE",
-        lightBlue: "#9CD5FF",
-        bgLight: "#F7F8F0",
+        primary: {
+          dark: '#355872',
+          DEFAULT: '#7AAACE',
+          light: '#9CD5FF',
+        },
+        offWhite: '#F7F8F0',
+        sidebar: {
+          DEFAULT: '#355872',
+          hover: '#2a455a',
+          active: '#7AAACE',
+          text: '#ffffff',
+          textMuted: '#e2e8f0'
+        }
       },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+      }
     },
   },
   plugins: [],
-};
+}

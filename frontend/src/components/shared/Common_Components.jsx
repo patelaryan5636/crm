@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Search,
   ChevronLeft,
@@ -481,18 +482,42 @@ export const Option = ({ value, label, disabled = false }) => (
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 7. DATA TABLE
-// Props: columns (Th array), rows (TD array), actions, size (1–12),
-//        pageSize, searchable
+// Props: columns, rows, actions, size (1–12), pageSize, searchable,
+//        filters, date
+//
+// filters — array of custom filter objects:
+//   [{ title: "Status", fn: (row, value) => boolean }]
+//   Each filter gets a text input in the Filter modal; the user types a value
+//   and your fn(row, value) decides whether the row passes.
+//
+// date — "on" (default) | "off"
+//   When "on", two date pickers (From / To) appear in the filter modal.
+//   The table expects each row to have a `date` field (ISO string or Date).
+//   Pass date="off" to hide the date range pickers entirely.
 // ─────────────────────────────────────────────────────────────────────────────
 export const DataTable = ({
-  columns = [], // [{ key: "name", label: "Name" }, ...]
-  rows = [], // [{ name: "Alice", email: "..." }, ...]
-  actions = [], // [{ label: "Edit", icon, onClick: (row) => void, variant? }]
+  columns = [],        // [{ key: "name", label: "Name" }, ...]
+  rows = [],           // [{ name: "Alice", email: "..." }, ...]
+  actions = [],        // [{ label: "Edit", icon, onClick: (row) => void, variant? }]
   title,
   size = 12,
   pageSize = 10,
   pageSizeOptions = [5, 10, 20, 50],
   searchable = true,
+  // filters — pass an array of filter definitions; each filter shows as a
+  // labeled text input inside the Filter modal. Example:
+  //   filters={[
+  //     { title: "Status", fn: (row, value) => row.status === value },
+  //     { title: "Role",   fn: (row, value) => row.role.toLowerCase().includes(value.toLowerCase()) },
+  //   ]}
+  filters = [],
+  // date — true | false  (default false)
+  // true  → shows From / To date pickers in the filter modal
+  // false → hides date range pickers
+  date = false,
+  // filterSize — controls the width of the filter modal
+  // "sm" | "md" (default) | "lg" | "xl" | "2xl"
+  filterSize = "md",
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -503,6 +528,90 @@ export const DataTable = ({
     key: columns?.[0]?.key || null,
     direction: "asc",
   });
+
+  // ── Filter modal state ──────────────────────────────────────────────────────
+  const [filterModalOpen, setFilterModalOpen]   = useState(false);
+  const [filterModalShow, setFilterModalShow]   = useState(false);
+  const [filterModalRender, setFilterModalRender] = useState(false);
+
+  // filterValues holds the current live input value per filter title
+  // For "toggle" type: value is an array of selected labels []
+  // For "select" type: value is a single string ""
+  // For "text"   type: value is a single string ""
+  const [filterValues, setFilterValues] = useState(
+    () => Object.fromEntries(
+      filters.map((f) => [f.title, f.type === "toggle" ? [] : ""])
+    ),
+  );
+  const [appliedFilters, setAppliedFilters] = useState(
+    () => Object.fromEntries(
+      filters.map((f) => [f.title, f.type === "toggle" ? [] : ""])
+    ),
+  );
+
+  // Resolve fn: if caller omits fn, auto-generate from key + type
+  const resolvedFilters = useMemo(() =>
+    filters.map((f) => {
+      if (f.fn) return f;
+      const key = f.key;
+      if (f.type === "toggle") {
+        return { ...f, fn: (row, selected) => selected.includes(row[key]) };
+      }
+      if (f.type === "select") {
+        return { ...f, fn: (row, value) => row[key] === value };
+      }
+      // text (default)
+      return { ...f, fn: (row, value) => String(row[key] ?? "").toLowerCase().includes(value.toLowerCase()) };
+    }),
+  [filters]);
+
+  // Date range state (only used when date !== "off")
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo,   setDateTo]   = useState("");
+  const [appliedDateFrom, setAppliedDateFrom] = useState("");
+  const [appliedDateTo,   setAppliedDateTo]   = useState("");
+
+  // Count how many filters are currently active (non-empty)
+  const activeFilterCount = useMemo(() => {
+    const customActive = Object.values(appliedFilters).filter((v) =>
+      Array.isArray(v) ? v.length > 0 : v.trim() !== ""
+    ).length;
+    const dateActive =
+      date === true ? (appliedDateFrom ? 1 : 0) + (appliedDateTo ? 1 : 0) : 0;
+    return customActive + dateActive;
+  }, [appliedFilters, appliedDateFrom, appliedDateTo, date]);
+
+  // Open / close filter modal with animation
+  const openFilterModal = () => {
+    setFilterModalRender(true);
+    requestAnimationFrame(() => requestAnimationFrame(() => setFilterModalShow(true)));
+    setFilterModalOpen(true);
+  };
+  const closeFilterModal = () => {
+    setFilterModalShow(false);
+    setTimeout(() => { setFilterModalRender(false); setFilterModalOpen(false); }, 260);
+  };
+
+  const handleApplyFilters = () => {
+    setAppliedFilters({ ...filterValues });
+    setAppliedDateFrom(dateFrom);
+    setAppliedDateTo(dateTo);
+    setPage(1);
+    closeFilterModal();
+  };
+
+  const handleClearFilters = () => {
+    const cleared = Object.fromEntries(
+      filters.map((f) => [f.title, f.type === "toggle" ? [] : ""])
+    );
+    setFilterValues(cleared);
+    setAppliedFilters(cleared);
+    setDateFrom("");
+    setDateTo("");
+    setAppliedDateFrom("");
+    setAppliedDateTo("");
+    setPage(1);
+  };
 
   useEffect(() => {
     setCurrentPageSize(Number(pageSize) || 10);
@@ -520,6 +629,7 @@ export const DataTable = ({
   const filtered = useMemo(() => {
     let result = rows;
 
+    // Text search
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter((row) =>
@@ -529,6 +639,35 @@ export const DataTable = ({
             .includes(q),
         ),
       );
+    }
+
+    // Custom filters (only applied ones, not live input values)
+    resolvedFilters.forEach((f) => {
+      const val = appliedFilters[f.title];
+      const isEmpty = Array.isArray(val) ? val.length === 0 : val.trim() === "";
+      if (!isEmpty) {
+        result = result.filter((row) => f.fn(row, val));
+      }
+    });
+
+    // Date range filter (only when date={true})
+    if (date === true) {
+      if (appliedDateFrom) {
+        const from = new Date(appliedDateFrom);
+        result = result.filter((row) => {
+          const rowDate = row.date ? new Date(row.date) : null;
+          return rowDate && rowDate >= from;
+        });
+      }
+      if (appliedDateTo) {
+        // Include the full "To" day by setting time to end of day
+        const to = new Date(appliedDateTo);
+        to.setHours(23, 59, 59, 999);
+        result = result.filter((row) => {
+          const rowDate = row.date ? new Date(row.date) : null;
+          return rowDate && rowDate <= to;
+        });
+      }
     }
 
     if (sortConfig.key) {
@@ -549,7 +688,7 @@ export const DataTable = ({
     }
 
     return result;
-  }, [rows, search, columns, sortConfig]);
+  }, [rows, search, columns, sortConfig, appliedFilters, appliedDateFrom, appliedDateTo, resolvedFilters, date]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / currentPageSize));
   const paginated = filtered.slice(
@@ -563,6 +702,8 @@ export const DataTable = ({
     ghost: "bg-slate-100 text-slate-600 hover:bg-slate-200",
   };
 
+  const showFilterButton = filters.length > 0 || date === true;
+
   return (
     <div
       className={`${colSpan(size)} flex bg-[#efefefb1] rounded-xl p-3 flex-col gap-3`}
@@ -571,7 +712,7 @@ export const DataTable = ({
         <Heading primaryText={title} secondaryText="Data table" size={12} />
       ) : null}
 
-      {/* Search + page size */}
+      {/* Search + page size + filter button */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {searchable ? (
           <div className="relative flex-1">
@@ -592,6 +733,26 @@ export const DataTable = ({
         ) : null}
 
         <div className="flex items-center gap-2 whitespace-nowrap">
+          {/* Filter button — only shown when filters array is provided or date is "on" */}
+          {showFilterButton && (
+            <button
+              type="button"
+              onClick={openFilterModal}
+              className="relative flex items-center gap-1.5 px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-[#2a465a] hover:bg-slate-50 transition"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+              </svg>
+              Filters
+              {/* Badge showing count of active filters */}
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[#2a465a] text-white text-[10px] font-bold flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          )}
+
           <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
             Show
           </span>
@@ -610,6 +771,188 @@ export const DataTable = ({
           <span className="text-xs text-slate-400">rows</span>
         </div>
       </div>
+
+      {/* ── Filter Modal — rendered via portal into document.body so it is
+           always fixed to the true viewport and never moves with page scroll,
+           regardless of any CSS transform or overflow on ancestor elements. ── */}
+      {filterModalRender && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className={`fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-260 ease-in-out ${
+              filterModalShow ? "opacity-100" : "opacity-0"
+            }`}
+            onClick={closeFilterModal}
+          />
+          {/* Dialog */}
+          <div
+            className={`relative w-full ${{ sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl", "2xl": "max-w-2xl" }[filterSize] ?? "max-w-md"} bg-white rounded-2xl shadow-2xl flex flex-col transition-all duration-260 ease-out transform ${
+              filterModalShow
+                ? "opacity-100 translate-y-0 scale-100"
+                : "opacity-0 translate-y-4 scale-95"
+            }`}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-[#2a465a]">Filters</h3>
+              <button
+                onClick={closeFilterModal}
+                className="p-1.5 rounded-full text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto max-h-[70vh] flex flex-col gap-5">
+              {/* Date Range — shown only when date={true} */}
+              {date === true && (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">
+                    Date Range
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        From
+                      </label>
+                      <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50/90 py-2.5 px-3 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 transition"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        To
+                      </label>
+                      <input
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => setDateTo(e.target.value)}
+                        min={dateFrom || undefined}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50/90 py-2.5 px-3 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Custom filters — toggle chips, select dropdown, or text input */}
+              {filters.map((f) => (
+                <div key={f.title} className="flex flex-col gap-2.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">
+                    {f.title}
+                  </label>
+
+                  {/* ── TOGGLE: pill chips with circle checkbox ── */}
+                  {f.type === "toggle" && (
+                    <div className="flex flex-wrap gap-2">
+                      {f.options.map((opt) => {
+                        const selected = (filterValues[f.title] ?? []).includes(opt);
+                        return (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() =>
+                              setFilterValues((prev) => {
+                                const cur = prev[f.title] ?? [];
+                                return {
+                                  ...prev,
+                                  [f.title]: selected
+                                    ? cur.filter((v) => v !== opt)
+                                    : [...cur, opt],
+                                };
+                              })
+                            }
+                            className={`flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-full border text-xs font-semibold transition-all duration-150 select-none ${
+                              selected
+                                ? "border-[#2a465a] text-[#2a465a] bg-white"
+                                : "border-slate-200 text-slate-500 bg-white hover:border-slate-300"
+                            }`}
+                          >
+                            {/* Circle indicator */}
+                            <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-150 ${
+                              selected
+                                ? "bg-[#2a465a] border-[#2a465a]"
+                                : "bg-white border-slate-300"
+                            }`}>
+                              {selected && (
+                                <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
+                                  <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </span>
+                            {opt}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* ── SELECT: dropdown ── */}
+                  {f.type === "select" && (
+                    <select
+                      value={filterValues[f.title] ?? ""}
+                      onChange={(e) =>
+                        setFilterValues((prev) => ({ ...prev, [f.title]: e.target.value }))
+                      }
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/90 py-2.5 px-3 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 transition"
+                    >
+                      <option value="">All</option>
+                      {f.options.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  )}
+
+                  {/* ── TEXT: plain input (default) ── */}
+                  {(!f.type || f.type === "text") && (
+                    <input
+                      type="text"
+                      placeholder={`Filter by ${f.title}…`}
+                      value={filterValues[f.title] ?? ""}
+                      onChange={(e) =>
+                        setFilterValues((prev) => ({ ...prev, [f.title]: e.target.value }))
+                      }
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/90 py-2.5 px-3 text-sm text-[#2a465a] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 transition"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Footer actions */}
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="text-sm font-semibold text-slate-400 hover:text-rose-500 transition-colors"
+              >
+                Clear all
+              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={closeFilterModal}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold text-[#2a465a] hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyFilters}
+                  className="px-4 py-2 rounded-xl bg-[#2a465a] text-white text-sm font-bold hover:bg-[#1e3a52] transition active:scale-95"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Table wrapper */}
       <div className="data-table-scroll overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-md">
@@ -797,12 +1140,13 @@ export const DataTable = ({
     { key: "email",   label: "Email" },
     { key: "role",    label: "Role" },
     { key: "status",  label: "Status" }, // 'status' key renders as a colored badge
+    { key: "date",    label: "Date" },   // 'date' field is used by the built-in date range filter
   ];
 
   const rows = [
-    { name: "Alice Johnson", email: "alice@acme.com", role: "Admin",   status: "Completed" },
-    { name: "Bob Smith",     email: "bob@acme.com",   role: "Manager", status: "In Progress" },
-    { name: "Carol White",   email: "carol@acme.com", role: "Staff",   status: "Failed" },
+    { name: "Alice Johnson", email: "alice@acme.com", role: "Admin",   status: "Completed", date: "2024-03-15" },
+    { name: "Bob Smith",     email: "bob@acme.com",   role: "Manager", status: "In Progress", date: "2024-04-01" },
+    { name: "Carol White",   email: "carol@acme.com", role: "Staff",   status: "Failed", date: "2024-04-10" },
   ];
 
   const actions = [
@@ -818,6 +1162,7 @@ export const DataTable = ({
     },
   ];
 
+  // With filters and date range (date is ON by default)
   <DataTable
     columns={columns}
     rows={rows}
@@ -825,15 +1170,33 @@ export const DataTable = ({
     size={12}
     pageSize={10}
     searchable={true}
+    filters={[
+      { title: "Status", fn: (row, value) => row.status === value },
+      { title: "Role",   fn: (row, value) => row.role.toLowerCase().includes(value.toLowerCase()) },
+    ]}
+  />
+
+  // To hide the date range pickers, pass date="off"
+  <DataTable
+    columns={columns}
+    rows={rows}
+    size={12}
+    date="off"
   />
 
   Props:
-  • columns    — array of { key, label } defining table headers & data keys (key 'status' will render a colored badge)
+  • columns    — array of { key, label } defining table headers & data keys (key 'status' renders a colored badge)
   • rows       — array of data objects (keys must match column keys)
   • actions    — array of { label, variant, onClick, icon? } action buttons per row
   • size       — 1–12 grid columns  (default: 12)
   • pageSize   — rows per page  (default: 10)
   • searchable — show search bar  (default: true)
+  • filters    — array of { title, fn } filter definitions shown in the Filter modal
+                   title: string label for the filter input
+                   fn: (row, value) => boolean — return true if the row should pass
+  • date       — "on" | "off"  (default: "on")
+                   "on"  → shows From / To date pickers in the filter modal; filters on row.date field
+                   "off" → hides date range pickers entirely
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1021,36 +1384,130 @@ const tooltipStyle = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // SHARED CHART WRAPPER (title bar + responsive container)
 // ─────────────────────────────────────────────────────────────────────────────
-const ChartCard = ({ title, subtitle, size, height = 260, children }) => (
-  <div
-    className={`${dashColSpan(size)} rounded-2xl p-5 flex flex-col gap-4`}
-    style={{
-      background: T.bg,
-      border: `1px solid ${T.border}`,
-      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.04)",
-    }}
-  >
-    <div>
-      <p style={{ color: T.textPrimary, fontWeight: 700, fontSize: 15 }}>
-        {title}
-      </p>
-      {subtitle && (
-        <p style={{ color: T.textMuted, fontSize: 12, marginTop: 2 }}>
-          {subtitle}
-        </p>
-      )}
+
+// ChartFilter — renders a row of toggle buttons from a filters array
+// filters: [{ label: "This Week", onClick: fn }, ...]
+const ChartFilter = ({ filters }) => {
+  const [active, setActive] = useState(filters?.[0]?.label ?? null);
+
+  if (!filters || filters.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap justify-end gap-1.5">
+      {filters.map((f) => (
+        <button
+          key={f.label}
+          type="button"
+          onClick={() => {
+            setActive(f.label);
+            if (f.onClick) f.onClick(f.label);
+          }}
+          className={`shrink-0 px-3 py-1 text-[10px] sm:text-xs whitespace-nowrap font-bold rounded-lg transition-all duration-200 ${
+            active === f.label
+              ? "bg-[#2a465a] text-white shadow-sm"
+              : "bg-[#dde8ee] text-[#475569] hover:bg-[#c8d8e2]"
+          }`}
+        >
+          {f.label}
+        </button>
+      ))}
     </div>
-    <ResponsiveContainer width="100%" height={height}>
-      {children}
-    </ResponsiveContainer>
-  </div>
-);
+  );
+};
+
+const ChartCard = ({
+  title,
+  subtitle,
+  size,
+  height = 260,
+  filters,   // [{ label, onClick }] — omit or pass [] to hide filter bar
+  // dataKey is a stable string/number that represents the current data slice.
+  // ChartCard uses it to know WHEN the data actually changed so it can run
+  // the fade-swap transition. Passing the raw `children` object as a dep
+  // would fire on every parent render (new JSX object reference each time),
+  // causing all charts to flash whenever any unrelated state updates.
+  dataKey,
+  children,
+}) => {
+  const [visible, setVisible] = useState(true);
+  const [displayed, setDisplayed] = useState(children);
+  const pendingRef = useRef(null);
+  const timerRef  = useRef(null);
+  // Track the previously rendered dataKey so we only animate on real changes.
+  const prevDataKeyRef = useRef(dataKey);
+
+  useEffect(() => {
+    // Skip the transition if dataKey hasn't changed — this prevents all charts
+    // from re-animating when an unrelated parent state update causes a re-render.
+    if (prevDataKeyRef.current === dataKey) {
+      // Data is the same; just keep the displayed content in sync without animation.
+      setDisplayed(children);
+      return;
+    }
+    prevDataKeyRef.current = dataKey;
+
+    // Cancel any in-flight transition
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    // Fade out
+    setVisible(false);
+    pendingRef.current = children;
+
+    timerRef.current = setTimeout(() => {
+      // Swap data and fade back in
+      setDisplayed(pendingRef.current);
+      setVisible(true);
+    }, 180);
+
+    return () => clearTimeout(timerRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataKey]); // Only animate when dataKey changes, NOT on every children re-render
+
+  return (
+    <div
+      className={`${dashColSpan(size)} rounded-2xl p-5 flex flex-col gap-4`}
+      style={{
+        background: T.bg,
+        border: `1px solid ${T.border}`,
+        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.04)",
+      }}
+    >
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap justify-between items-start gap-2">
+          <div>
+            <p style={{ color: T.textPrimary, fontWeight: 700, fontSize: 15 }}>
+              {title}
+            </p>
+            {subtitle && (
+              <p style={{ color: T.textMuted, fontSize: 12, marginTop: 2 }}>
+                {subtitle}
+              </p>
+            )}
+          </div>
+        </div>
+        {filters && filters.length > 0 && <ChartFilter filters={filters} />}
+      </div>
+      <div
+        style={{
+          opacity: visible ? 1 : 0,
+          transform: visible ? "translateY(0)" : "translateY(6px)",
+          transition: "opacity 180ms ease, transform 180ms ease",
+        }}
+      >
+        <ResponsiveContainer width="100%" height={height}>
+          {displayed}
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. DASH CARD
-// Props: title, value, trend (+10% / -3% / 0%), trendLabel, icon, size, accentColor
+// Props: title, value, icon, size, accentColor
 // ─────────────────────────────────────────────────────────────────────────────
 export const DashCard = ({
   title = "Total Employees",
@@ -1059,6 +1516,23 @@ export const DashCard = ({
   size = 4, // This will now act as the "Desktop" size
   accentColor = "#1e293b",
 }) => {
+  const titleRef = useRef(null);
+
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+
+    // Reset to max font size first
+    el.style.fontSize = "12px";
+
+    // Shrink until text fits in one line (no overflow)
+    let fs = 12;
+    while (el.scrollWidth > el.offsetWidth && fs > 7) {
+      fs -= 0.5;
+      el.style.fontSize = `${fs}px`;
+    }
+  });
+
   const valueStr = String(value);
   let fontSize = "28px";
   if (valueStr.length > 12) {
@@ -1099,8 +1573,10 @@ export const DashCard = ({
         </div>
       )}
 
-      <div className="flex flex-col justify-center">
+      <div className="flex flex-col justify-center min-w-0 w-full pr-2">
         <h3
+          ref={titleRef}
+          className="w-full whitespace-nowrap overflow-hidden"
           style={{
             color: "#64748b",
             fontSize: "12px",
@@ -1171,12 +1647,14 @@ export const DashCard = ({
 export const GLineChart = ({
   title = "Line Chart",
   subtitle,
-  data = [], // [{ name: "Jan", revenue: 4000, cost: 2400 }, ...]
-  lines = [], // [{ key: "revenue", color: "#3b82f6", label: "Revenue" }]
+  data = [],
+  lines = [],
   size = 6,
   height = 260,
+  filters,
 }) => (
-  <ChartCard title={title} subtitle={subtitle} size={size} height={height}>
+  // dataKey is derived from the data so ChartCard only animates when data actually changes.
+  <ChartCard title={title} subtitle={subtitle} size={size} height={height} filters={filters} dataKey={JSON.stringify(data)}>
     <LineChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
       <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
       <XAxis
@@ -1249,11 +1727,13 @@ export const GBarChart = ({
   title = "Bar Chart",
   subtitle,
   data = [],
-  bars = [], // [{ key, color, label }]
+  bars = [],
   size = 6,
   height = 260,
+  filters,
 }) => (
-  <ChartCard title={title} subtitle={subtitle} size={size} height={height}>
+  // dataKey is derived from the data so ChartCard only animates when data actually changes.
+  <ChartCard title={title} subtitle={subtitle} size={size} height={height} filters={filters} dataKey={JSON.stringify(data)}>
     <BarChart
       data={data}
       layout="vertical"
@@ -1328,8 +1808,10 @@ export const GColumnChart = ({
   bars = [],
   size = 6,
   height = 260,
+  filters,
 }) => (
-  <ChartCard title={title} subtitle={subtitle} size={size} height={height}>
+  // dataKey is derived from the data so ChartCard only animates when data actually changes.
+  <ChartCard title={title} subtitle={subtitle} size={size} height={height} filters={filters} dataKey={JSON.stringify(data)}>
     <BarChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
       <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
       <XAxis
@@ -1389,12 +1871,14 @@ export const GAreaChart = ({
   title = "Area Chart",
   subtitle,
   data = [],
-  areas = [], // [{ key, color, label }]
+  areas = [],
   size = 6,
   height = 260,
   stacked = false,
+  filters,
 }) => (
-  <ChartCard title={title} subtitle={subtitle} size={size} height={height}>
+  // dataKey is derived from the data so ChartCard only animates when data actually changes.
+  <ChartCard title={title} subtitle={subtitle} size={size} height={height} filters={filters} dataKey={JSON.stringify(data)}>
     <AreaChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
       <defs>
         {areas.map((a, i) => {
@@ -1468,6 +1952,16 @@ export const GAreaChart = ({
     size={6}
     height={260}
   />
+
+  Props:
+  • title    — card title
+  • subtitle — small muted text below title
+  • data     — array of objects; "name" key used for X axis
+  • areas    — array of { key, label?, color? } — one per area series
+  • stacked  — true | false  (default: false) — stack areas on top of each other
+  • size     — 1–12 grid columns  (default: 6)
+  • height   — chart height in px  (default: 260)
+  • filters  — array of { label, onClick } filter buttons shown above the chart
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1503,13 +1997,15 @@ const renderCustomLabel = ({
 export const GDoughnutChart = ({
   title = "Doughnut Chart",
   subtitle,
-  data = [], // [{ name: "Category A", value: 400 }]
+  data = [],
   colors = CHART_COLORS,
   size = 4,
   height = 260,
   innerRadius = 60,
+  filters,
 }) => (
-  <ChartCard title={title} subtitle={subtitle} size={size} height={height}>
+  // dataKey is derived from the data so ChartCard only animates when data actually changes.
+  <ChartCard title={title} subtitle={subtitle} size={size} height={height} filters={filters} dataKey={JSON.stringify(data)}>
     <PieChart>
       <Pie
         data={data}
@@ -1566,8 +2062,10 @@ export const GPieChart = ({
   colors = CHART_COLORS,
   size = 4,
   height = 260,
+  filters,
 }) => (
-  <ChartCard title={title} subtitle={subtitle} size={size} height={height}>
+  // dataKey is derived from the data so ChartCard only animates when data actually changes.
+  <ChartCard title={title} subtitle={subtitle} size={size} height={height} filters={filters} dataKey={JSON.stringify(data)}>
     <PieChart>
       <Pie
         data={data}
@@ -1617,12 +2115,14 @@ export const GPieChart = ({
 export const GRadarChart = ({
   title = "Radar Chart",
   subtitle,
-  data = [], // [{ subject: "Sales", A: 80, B: 60 }]
-  radars = [], // [{ key: "A", label: "Team A", color: "#3b82f6" }]
+  data = [],
+  radars = [],
   size = 4,
   height = 280,
+  filters,
 }) => (
-  <ChartCard title={title} subtitle={subtitle} size={size} height={height}>
+  // dataKey is derived from the data so ChartCard only animates when data actually changes.
+  <ChartCard title={title} subtitle={subtitle} size={size} height={height} filters={filters} dataKey={JSON.stringify(data)}>
     <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
       <PolarGrid stroke={T.border} />
       <PolarAngleAxis
@@ -1708,11 +2208,12 @@ export const DashGrid = ({ children, cols = 12, gap = 4 }) => {
     Users, Briefcase, TrendingUp, DollarSign
   } from "lucide-react";
 
+  // Import from the actual file — NOT from "./GDashComponents" (old/incorrect name)
   import {
     DashGrid, DashCard,
     GLineChart, GColumnChart, GBarChart,
     GAreaChart, GDoughnutChart, GPieChart, GRadarChart,
-  } from "./GDashComponents";
+  } from "./Common_Components";
 
   export default function Dashboard() {
     const monthlyData = [
@@ -1732,11 +2233,11 @@ export const DashGrid = ({ children, cols = 12, gap = 4 }) => {
       <div className="p-6 bg-[#141c28] min-h-screen">
         <DashGrid cols={12} gap={4}>
 
-          // ── Stat Cards ──
-          <DashCard title="Total Employees" value="313"  trend="+10%" icon={<Users size={22}/>}       accentColor="#3b82f6" size={3} />
-          <DashCard title="Open Deals"      value="87"   trend="+5%"  icon={<Briefcase size={22}/>}   accentColor="#14b8a6" size={3} />
-          <DashCard title="Revenue"         value="$92K" trend="+18%" icon={<DollarSign size={22}/>}  accentColor="#22c55e" size={3} />
-          <DashCard title="Churn Rate"      value="3.1%" trend="-1%"  icon={<TrendingUp size={22}/>}  accentColor="#f43f5e" size={3} />
+          // ── Stat Cards — DashCard has no trend prop; use icon + accentColor only ──
+          <DashCard title="Total Employees" value="313"  icon={<Users size={22}/>}       accentColor="#3b82f6" size={3} />
+          <DashCard title="Open Deals"      value="87"   icon={<Briefcase size={22}/>}   accentColor="#14b8a6" size={3} />
+          <DashCard title="Revenue"         value="$92K" icon={<DollarSign size={22}/>}  accentColor="#22c55e" size={3} />
+          <DashCard title="Churn Rate"      value="3.1%" icon={<TrendingUp size={22}/>}  accentColor="#f43f5e" size={3} />
 
           // ── Charts ──
           <GLineChart   title="Revenue vs Cost"     data={monthlyData} lines={[{key:"revenue",color:"#3b82f6"},{key:"cost",color:"#f43f5e"}]} size={6} />
@@ -1755,7 +2256,10 @@ export const DashGrid = ({ children, cols = 12, gap = 4 }) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 19. MODAL
-// Props: isOpen, onClose, title, children
+// Props: id, title, children, size
+// Note: Modal is rendered via React Portal into document.body — it is always
+//       fixed to the true viewport and will never move with page scroll.
+//       Use openModal(id) / closeModal(id) helper functions to show/hide it.
 // ─────────────────────────────────────────────────────────────────────────────
 export const openModal = (id) => {
   window.dispatchEvent(new CustomEvent("open-modal", { detail: { id } }));
@@ -1765,10 +2269,21 @@ export const closeModal = (id) => {
   window.dispatchEvent(new CustomEvent("close-modal", { detail: { id } }));
 };
 
-export const Modal = ({ id, title, children }) => {
+export const Modal = ({ id, title, children, size = "xl" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [show, setShow] = useState(false);
   const [render, setRender] = useState(false);
+
+  // Size → max-width mapping
+  // sm: 384px  md: 512px  lg: 672px  xl: 896px  2xl: 1152px (max)
+  const sizeMap = {
+    sm:  "max-w-sm",
+    md:  "max-w-lg",
+    lg:  "max-w-2xl",
+    xl:  "max-w-4xl",
+    "2xl": "max-w-5xl",
+  };
+  const maxW = sizeMap[size] ?? sizeMap.md;
 
   useEffect(() => {
     const handleOpen = (e) => {
@@ -1810,9 +2325,12 @@ export const Modal = ({ id, title, children }) => {
 
   if (!render) return null;
 
-  return (
+  // Rendered via portal into document.body so the modal is always anchored
+  // to the true viewport — it will never scroll, shift, or be clipped by any
+  // ancestor's overflow, transform, or position context.
+  return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      {/* Backdrop */}
+      {/* Backdrop — covers the entire screen regardless of scroll position */}
       <div
         className={`fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${
           show ? "opacity-100" : "opacity-0"
@@ -1822,7 +2340,7 @@ export const Modal = ({ id, title, children }) => {
 
       {/* Modal Dialog */}
       <div
-        className={`relative w-full max-w-lg bg-white rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ease-out transform ${
+        className={`relative w-full ${maxW} bg-white rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ease-out transform ${
           show
             ? "opacity-100 translate-y-0 scale-100"
             : "opacity-0 translate-y-4 scale-95"
@@ -1840,7 +2358,8 @@ export const Modal = ({ id, title, children }) => {
 
         <div className="p-6 overflow-y-auto max-h-[70vh]">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -1854,16 +2373,22 @@ export const Modal = ({ id, title, children }) => {
       <div>
         <Button text="Open Modal" onClick={() => openModal("new-user-modal")} />
 
-        <Modal id="new-user-modal" title="Create New User">
+        {/*
+          The Modal renders via a React Portal directly into document.body,
+          so it is ALWAYS fixed to the viewport — it will never scroll, shift,
+          or be clipped by any ancestor's overflow or CSS transform.
+          Place <Modal> anywhere in your JSX tree; position doesn't matter.
+        *\/}
+        <Modal id="new-user-modal" title="Create New User" size="md">
           <div className="space-y-4">
             <p className="text-slate-600">
               Please fill out the form below to add a new user to the system.
             </p>
             {"Your form or content here"}
-            
+
             <div className="flex justify-end gap-2 mt-6">
-              <Button variant="ghost" text="Cancel" onClick={() => closeModal("new-user-modal")} />
-              <Button variant="primary" text="Save" onClick={() => { alert("Saved"); closeModal("new-user-modal"); }} />
+              <Button variant="ghost"   text="Cancel" onClick={() => closeModal("new-user-modal")} />
+              <Button variant="primary" text="Save"   onClick={() => { alert("Saved"); closeModal("new-user-modal"); }} />
             </div>
           </div>
         </Modal>
@@ -1872,13 +2397,19 @@ export const Modal = ({ id, title, children }) => {
   }
 
   Props:
-  • id       — unique string to identify and trigger this modal
-  • title    — string for the modal header
-  • children — React nodes to render inside the modal body
+  • id       — unique string used to open/close this specific modal
+  • title    — string shown in the modal header
+  • children — any React content rendered in the scrollable modal body
+  • size     — controls the max-width of the dialog  (default: "md")
+                 "sm"  → max-w-sm  (~384px)   — compact confirmations
+                 "md"  → max-w-lg  (~512px)   — default forms & info
+                 "lg"  → max-w-2xl (~672px)   — wider forms
+                 "xl"  → max-w-4xl (~896px)   — dashboards / rich content
+                 "2xl" → max-w-5xl (~1152px)  — maximum width
 
   Functions:
-  • openModal(id)  — dispatch event to open the modal with the specified id
-  • closeModal(id) — dispatch event to close the modal with the specified id
+  • openModal(id)  — call anywhere to open the modal with the given id
+  • closeModal(id) — call anywhere to close the modal with the given id
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1922,3 +2453,115 @@ export const P = ({ text, size = "sm" }) => {
     </p>
   );
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 22. TOGGLE BUTTON  (ON / OFF switch)
+// Props: checked, onChange, label, labelOff, size, disabled
+// ─────────────────────────────────────────────────────────────────────────────
+export const ToggleButton = ({
+  // checked — boolean controlling whether the toggle is ON (true) or OFF (false)
+  checked = false,
+  // onChange — called with the new boolean value when the user clicks
+  //   (newValue) => void
+  onChange,
+  // label — text shown next to the toggle when it is ON
+  //   Leave empty to show no label text.
+  label = "",
+  // labelOff — text shown next to the toggle when it is OFF (falls back to label)
+  labelOff,
+  // size — "sm" | "md" | "lg"  (default: "md")
+  size = "md",
+  // disabled — when true the toggle is greyed out and non-interactive
+  disabled = false,
+}) => {
+  const sizeMap = {
+    sm: { track: "w-8 h-4",  thumb: "w-3 h-3",  translate: "translate-x-4",  text: "text-xs" },
+    md: { track: "w-11 h-6", thumb: "w-4 h-4",  translate: "translate-x-5",  text: "text-sm" },
+    lg: { track: "w-14 h-7", thumb: "w-5 h-5",  translate: "translate-x-7",  text: "text-base" },
+  };
+  const s = sizeMap[size] ?? sizeMap.md;
+  const currentLabel = checked ? label : (labelOff ?? label);
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => !disabled && onChange && onChange(!checked)}
+      className={`inline-flex items-center gap-2.5 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2a465a]/40 rounded-full
+        ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+    >
+      {/* Track */}
+      <span
+        className={`relative inline-flex flex-shrink-0 rounded-full transition-colors duration-200 ease-in-out
+          ${s.track}
+          ${checked ? "bg-[#2a465a]" : "bg-slate-300"}`}
+      >
+        {/* Thumb */}
+        <span
+          className={`inline-block rounded-full bg-white shadow-sm
+            transition-transform duration-200 ease-in-out
+            absolute top-[2px] left-[2px]
+            ${s.thumb}
+            ${checked ? s.translate : "translate-x-0"}`}
+        />
+      </span>
+
+      {/* Label */}
+      {currentLabel && (
+        <span className={`font-semibold ${s.text} ${checked ? "text-[#2a465a]" : "text-slate-400"} transition-colors duration-200`}>
+          {currentLabel}
+        </span>
+      )}
+    </button>
+  );
+};
+
+/*
+  ── HOW TO USE ToggleButton ──────────────────────────────────────────────────
+
+  import { ToggleButton } from "./Common_Components";
+  import { useState } from "react";
+
+  // Basic controlled toggle
+  const [isEnabled, setIsEnabled] = useState(false);
+
+  <ToggleButton
+    checked={isEnabled}
+    onChange={(newValue) => setIsEnabled(newValue)}
+    label="Enabled"
+  />
+
+  // Different ON and OFF labels
+  <ToggleButton
+    checked={isEnabled}
+    onChange={setIsEnabled}
+    label="Active"
+    labelOff="Inactive"
+  />
+
+  // Small size, no label
+  <ToggleButton
+    checked={isEnabled}
+    onChange={setIsEnabled}
+    size="sm"
+  />
+
+  // Large, disabled
+  <ToggleButton
+    checked={true}
+    onChange={setIsEnabled}
+    label="Always On"
+    size="lg"
+    disabled={true}
+  />
+
+  Props:
+  • checked   — boolean; true = ON, false = OFF  (controlled)
+  • onChange  — (newValue: boolean) => void  — called with the toggled value on click
+  • label     — text shown beside the toggle when ON (also used for OFF if labelOff omitted)
+  • labelOff  — text shown beside the toggle when OFF (optional; falls back to label)
+  • size      — "sm" | "md" | "lg"  (default: "md")
+  • disabled  — true | false  (default: false) — greys out and blocks interaction
+*/

@@ -23,18 +23,11 @@ import {
 } from "lucide-react";
 
 export default function Dashboard() {
-  // ── Period filter states (one per chart that supports filtering) ────────────
-  const [growthPeriod,        setGrowthPeriod]        = useState("This Year");
-  const [revenuePeriod,       setRevenuePeriod]       = useState("This Year");
-  const [mrrPeriod,           setMrrPeriod]           = useState("This Year");
-  const [churnPeriod,         setChurnPeriod]         = useState("This Year");
-  const [planStatusPeriod,    setPlanStatusPeriod]    = useState("This Year");
-  const [companyStatusPeriod, setCompanyStatusPeriod] = useState("This Year");
-  const [storagePeriod,       setStoragePeriod]       = useState("This Year");
-  const [ticketsPeriod,       setTicketsPeriod]       = useState("This Year");
-  const [apiHealthPeriod,     setApiHealthPeriod]     = useState("This Year");
+  // ── Period filter states (only for charts that show the filter bar) ──────────
+  const [growthPeriod,  setGrowthPeriod]  = useState("This Year");
+  const [revenuePeriod, setRevenuePeriod] = useState("This Year");
 
-  // Shared period labels reused across all chart filter bars
+  // Shared period labels
   const PERIODS = ["This Week", "This Month", "This Quarter", "This Year", "Overall"];
 
   // Helper — builds a filters array for a given setter function
@@ -290,13 +283,14 @@ export default function Dashboard() {
   // ── Derived (period-selected) data ───────────────────────────────────────────
   const companyGrowthData = companyGrowthAll[growthPeriod];
   const revenueData        = revenueAll[revenuePeriod];
-  const mrrData            = mrrAll[mrrPeriod];
-  const churnData          = churnAll[churnPeriod];
-  const planStatusData     = planStatusAll[planStatusPeriod];
-  const companyStatusData  = companyStatusAll[companyStatusPeriod];
-  const storageData        = storageAll[storagePeriod];
-  const ticketsData        = ticketsAll[ticketsPeriod];
-  const apiHealthData      = apiHealthAll[apiHealthPeriod];
+  // Static data for charts without period filters
+  const mrrData           = mrrAll["This Year"];
+  const churnData         = churnAll["This Year"];
+  const planStatusData    = planStatusAll["This Year"];
+  const companyStatusData = companyStatusAll["This Year"];
+  const storageData       = storageAll["This Year"];
+  const ticketsData       = ticketsAll["This Year"];
+  const apiHealthData     = apiHealthAll["This Year"];
 
   // ── Top Companies Table ──────────────────────────────────────────────────────
   const companyCols = [
@@ -388,6 +382,7 @@ export default function Dashboard() {
           primaryText="Super Admin Dashboard"
           secondaryText="Multi-company CRM platform overview"
           size={12}
+          fontSize="3xl"
         />
 
         {/* ── 2. Top KPI Cards ── */}
@@ -408,7 +403,7 @@ export default function Dashboard() {
           subtitle="New companies onboarded per period"
           data={companyGrowthData}
           lines={[{ key: "companies", label: "New Companies", color: "#3b82f6" }]}
-          size={4}
+          size={5}
           height={300}
           filters={makePeriodFilters(setGrowthPeriod)}
         />
@@ -421,7 +416,7 @@ export default function Dashboard() {
             { key: "expense", label: "Expense", color: "#f43f5e" },
             { key: "profit",  label: "Profit",  color: "#38bdf8" },
           ]}
-          size={8}
+          size={7}
           height={300}
           filters={makePeriodFilters(setRevenuePeriod)}
         />
@@ -439,7 +434,6 @@ export default function Dashboard() {
           ]}
           size={8}
           height={300}
-          filters={makePeriodFilters(setMrrPeriod)}
         />
         <GColumnChart
           title="Churn vs Retention"
@@ -451,7 +445,6 @@ export default function Dashboard() {
           ]}
           size={4}
           height={300}
-          filters={makePeriodFilters(setChurnPeriod)}
         />
       </Grid>
 
@@ -464,7 +457,6 @@ export default function Dashboard() {
           colors={["#22c55e", "#38bdf8", "#f59e0b", "#f43f5e"]}
           size={4}
           height={300}
-          filters={makePeriodFilters(setPlanStatusPeriod)}
         />
         <GDoughnutChart
           title="Company Status"
@@ -473,7 +465,6 @@ export default function Dashboard() {
           colors={["#3b82f6", "#8b5cf6", "#64748b", "#f43f5e"]}
           size={4}
           height={300}
-          filters={makePeriodFilters(setCompanyStatusPeriod)}
         />
         <GDoughnutChart
           title="Storage Usage"
@@ -482,7 +473,6 @@ export default function Dashboard() {
           colors={["#f43f5e", "#22c55e"]}
           size={4}
           height={300}
-          filters={makePeriodFilters(setStoragePeriod)}
         />
       </Grid>
 
@@ -495,7 +485,6 @@ export default function Dashboard() {
           colors={["#f43f5e", "#f59e0b", "#38bdf8", "#22c55e"]}
           size={4}
           height={300}
-          filters={makePeriodFilters(setTicketsPeriod)}
         />
         <GBarChart
           title="API & Integration Health"
@@ -507,7 +496,6 @@ export default function Dashboard() {
           ]}
           size={8}
           height={300}
-          filters={makePeriodFilters(setApiHealthPeriod)}
         />
       </Grid>
 

@@ -1207,16 +1207,30 @@ export const Heading = ({
   primaryText = "",
   secondaryText = "",
   size = 12,
-}) => (
-  <div className={`${colSpan(size)}`}>
-    <h2 className="text-2xl font-black tracking-tight leading-tight">
-      <span className="text-[#2a465a]">{primaryText}</span>
-      {secondaryText && (
-        <span className="text-slate-400 font-extrabold"> {secondaryText}</span>
-      )}
-    </h2>
-  </div>
-);
+  fontSize = "2xl", // "sm" | "md" | "lg" | "xl" | "2xl" (default) | "3xl" | "4xl"
+}) => {
+  const fontSizeMap = {
+    sm:  "text-sm",
+    md:  "text-base",
+    lg:  "text-lg",
+    xl:  "text-xl",
+    "2xl": "text-2xl",
+    "3xl": "text-3xl",
+    "4xl": "text-4xl",
+  };
+  const cls = fontSizeMap[fontSize] ?? "text-2xl";
+  return (
+    <div className={`${colSpan(size)}`}>
+      <h2 className={`${cls} font-black tracking-tight leading-tight`}>
+        <span className="text-[#2a465a]">{primaryText}</span>
+        {secondaryText && (
+          <span className="text-slate-400 font-extrabold"> {secondaryText}</span>
+        )}
+      </h2>
+      <hr className="mt-3"/>
+    </div>
+  );
+};
 
 /*
   ── HOW TO USE Heading ──────────────────────────────────────────────────────

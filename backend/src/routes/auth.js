@@ -1,0 +1,62 @@
+/**
+ * AUTH ROUTES — Registration and authentication endpoints
+ * Handles multi-step registration flow with OTP verification
+ */
+const express = require('express');
+const authController = require('../controllers/auth.controller');
+const validate = require('../middleware/validate');
+const {
+  sendOTPSchema,
+  verifyOTPSchema,
+  createAccountSchema,
+  resendOTPSchema,
+} = require('../validators/auth.validator');
+
+const router = express.Router();
+
+/**
+ * POST /api/auth/send-otp
+ * Send OTP to email for registration
+ * Body: { email, adminName }
+ */
+router.post(
+  '/send-otp',
+  validate(sendOTPSchema, 'body'),
+  authController.sendOTP
+);
+
+/**
+ * POST /api/auth/verify-otp
+ * Verify OTP entered by user
+ * Body: { email, otp }
+ */
+router.post(
+  '/verify-otp',
+  validate(verifyOTPSchema, 'body'),
+  authController.verifyOTP
+);
+
+/**
+ * POST /api/auth/register
+ * Complete registration and create admin account
+ * Requires: OTP verification completed
+ * Body: { companyName, companyEmail, companyPhone, companyAddress, adminName, adminEmail, adminPhone, password, confirmPassword, securityCode }
+ */
+router.post(
+  '/register',
+  validate(createAccountSchema, 'body'),
+  authController.registerAdmin
+);
+
+/**
+ * POST /api/auth/resend-otp
+ * Resend OTP if user didn't receive it
+ * Body: { email, adminName }
+ */
+router.post(
+  '/resend-otp',
+  validate(resendOTPSchema, 'body'),
+  authController.resendOTP
+);
+
+module.exports = router;

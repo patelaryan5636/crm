@@ -155,12 +155,13 @@ function Tooltip({ label, children }) {
 // NAV ITEM — memoized so it only re-renders when its own props change,
 // not when sibling items or the sidebar expand state changes.
 // ─────────────────────────────────────────────────────────────────────────────
-const NavItem = memo(function NavItem({ item, expanded, onExpand }) {
+const NavItem = memo(function NavItem({ item, expanded, onExpand, onNavClick }) {
   const Icon = item.icon;
 
   const handleClick = useCallback(() => {
-    if (!expanded) onExpand();
-  }, [expanded, onExpand]);
+    if (!expanded && onExpand) onExpand();
+    if (onNavClick) onNavClick();
+  }, [expanded, onExpand, onNavClick]);
 
   if (expanded) {
     return (
@@ -179,22 +180,19 @@ const NavItem = memo(function NavItem({ item, expanded, onExpand }) {
     </Tooltip>
   );
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// NAV GROUP — collapsible section (e.g. Leads & Sales)
 // KEY FIX: Uses `grid-template-rows: 0fr / 1fr` instead of `max-height`
 // transition. max-height animates through potentially hundreds of intermediate
 // pixel values; grid-template-rows collapses to exactly 0 in one step and is
 // fully GPU-composited — buttery smooth.
 // ─────────────────────────────────────────────────────────────────────────────
-const NavGroup = memo(function NavGroup({ group, expanded, onExpand }) {
+const NavGroup = memo(function NavGroup({ group, expanded, onExpand, onNavClick }) {
   const { pathname } = useLocation();
   const isGroupActive = group.children.some((c) => pathname.startsWith(c.path));
   const [open, setOpen] = useState(isGroupActive);
   const Icon = group.icon;
 
   const handleTrigger = useCallback(() => {
-    if (!expanded) {
+    if (!expanded && onExpand) {
       onExpand();
       setOpen(true);
     } else {
@@ -251,6 +249,7 @@ const NavGroup = memo(function NavGroup({ group, expanded, onExpand }) {
                   <NavLink
                     key={child.path}
                     to={child.path}
+                    onClick={onNavClick ?? undefined}
                     className={({ isActive }) =>
                       `flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 ${
                         isActive
@@ -277,13 +276,12 @@ const NavGroup = memo(function NavGroup({ group, expanded, onExpand }) {
 // The sidebar content itself does NOT animate — only its wrapper in MainLayout
 // changes width. This means no Sidebar re-render is triggered by the animation.
 // ─────────────────────────────────────────────────────────────────────────────
-function Sidebar({ expanded, onExpand }) {
+function Sidebar({ expanded, onExpand, onNavClick }) {
   const role = useRole();
   const menu = MENUS[role] ?? MENUS.admin;
 
-  // Stable callback ref — prevents NavItem/NavGroup from re-rendering when
-  // Sidebar itself re-renders for an unrelated reason.
-  const stableOnExpand = useCallback(() => onExpand(), [onExpand]);
+  const stableOnExpand  = useCallback(() => onExpand?.(), [onExpand]);
+  const stableOnNavClick = useCallback(() => onNavClick?.(), [onNavClick]);
 
   return (
     <div className="flex h-full w-full flex-col border-r border-[#152532] bg-[#1e3445] pb-4 font-sans text-gray-300">
@@ -313,6 +311,7 @@ function Sidebar({ expanded, onExpand }) {
               group={item}
               expanded={expanded}
               onExpand={stableOnExpand}
+              onNavClick={stableOnNavClick}
             />
           ) : (
             <NavItem
@@ -320,6 +319,7 @@ function Sidebar({ expanded, onExpand }) {
               item={item}
               expanded={expanded}
               onExpand={stableOnExpand}
+              onNavClick={stableOnNavClick}
             />
           )
         )}

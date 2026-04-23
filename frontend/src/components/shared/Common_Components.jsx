@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   Search,
@@ -1591,57 +1591,96 @@ export const DashCard = ({
   title = "Total Employees",
   value = "0",
   icon,
-  size = 4, // This will now act as the "Desktop" size
+  size = 4,
   accentColor = "#1e293b",
 }) => {
-  const titleRef = useRef(null);
+  const titleRef     = useRef(null);
+  const valueRef     = useRef(null);
+  const containerRef = useRef(null);
+  const iconBoxRef   = useRef(null);
 
-  useEffect(() => {
-    const el = titleRef.current;
+  const fitText = useCallback((el, maxPx, minPx) => {
     if (!el) return;
-
-    // Reset to max font size first
-    el.style.fontSize = "12px";
-
-    // Shrink until text fits in one line (no overflow)
-    let fs = 12;
-    while (el.scrollWidth > el.offsetWidth && fs > 7) {
+    el.style.fontSize = `${maxPx}px`;
+    let fs = maxPx;
+    while (el.scrollWidth > el.offsetWidth + 1 && fs > minPx) {
       fs -= 0.5;
       el.style.fontSize = `${fs}px`;
     }
-  });
+  }, []);
 
-  const valueStr = String(value);
-  let fontSize = "28px";
-  if (valueStr.length > 12) {
-    fontSize = "18px";
-  } else if (valueStr.length > 8) {
-    fontSize = "22px";
-  } else if (valueStr.length > 6) {
-    fontSize = "24px";
-  }
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const run = () => {
+      const w = container.offsetWidth;
+
+      // ── Responsive padding: 8px at 80px wide → 20px at 240px+ ──
+      const pad = Math.round(Math.min(20, Math.max(8, (w / 240) * 20)));
+      container.style.padding = `${pad}px`;
+
+      // ── Responsive gap between icon and text ──
+      const gap = Math.round(Math.min(16, Math.max(6, (w / 240) * 16)));
+      container.style.gap = `${gap}px`;
+
+      // ── Responsive icon box: 32px at 80px → 48px at 240px+ ──
+      if (iconBoxRef.current) {
+        const iconSz = Math.round(Math.min(48, Math.max(28, (w / 240) * 48)));
+        iconBoxRef.current.style.width  = `${iconSz}px`;
+        iconBoxRef.current.style.height = `${iconSz}px`;
+        // Scale the icon SVG inside proportionally (icon is ~18-22px at full size)
+        const svgSz = Math.round(Math.min(20, Math.max(12, (w / 240) * 20)));
+        iconBoxRef.current.style.fontSize = `${svgSz}px`;
+        // Pass size down to the SVG via CSS — lucide icons respect `width`/`height` on the wrapper
+        const svgEl = iconBoxRef.current.querySelector("svg");
+        if (svgEl) {
+          svgEl.setAttribute("width",  svgSz);
+          svgEl.setAttribute("height", svgSz);
+        }
+      }
+
+      // ── Fit title text ──
+      fitText(titleRef.current, 12, 7);
+
+      // ── Fit value text ──
+      const vStr = String(value);
+      const maxV = vStr.length > 12 ? 18 : vStr.length > 8 ? 22 : vStr.length > 6 ? 24 : 28;
+      fitText(valueRef.current, maxV, 10);
+    };
+
+    run();
+    const ro = new ResizeObserver(run);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [value, fitText]);
 
   return (
     <div
-      // Mobile: col-span-12 (Full width)
-      // Tablet: col-span-6 (Half width)
-      // Desktop: col-span-{size} (Your custom size)
-      className={`col-span-12 md:col-span-6 lg:col-span-${size} rounded-2xl p-5 flex items-center gap-4 relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group cursor-pointer`}
+      ref={containerRef}
+      className={`col-span-12 md:col-span-6 lg:col-span-${size} rounded-2xl flex items-center relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group cursor-pointer`}
       style={{
         background: "#ffffff",
         border: "1px solid #e2e8f0",
         boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+        padding: "20px",
+        gap: "16px",
       }}
     >
+      {/* Accent glow */}
       <div
         className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full blur-2xl opacity-10 pointer-events-none transition-opacity duration-300 group-hover:opacity-20"
         style={{ background: accentColor }}
       />
 
+      {/* Icon box */}
       {icon && (
         <div
-          className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-105"
+          ref={iconBoxRef}
+          className="flex-shrink-0 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-105"
           style={{
+            width: "48px",
+            height: "48px",
             background: "#f8fafc",
             border: "1px solid #f1f5f9",
             color: accentColor,
@@ -1651,10 +1690,11 @@ export const DashCard = ({
         </div>
       )}
 
-      <div className="flex flex-col justify-center min-w-0 w-full pr-2">
+      {/* Text */}
+      <div className="flex flex-col justify-center min-w-0 w-full">
         <h3
           ref={titleRef}
-          className="w-full whitespace-nowrap overflow-hidden"
+          className="whitespace-nowrap"
           style={{
             color: "#64748b",
             fontSize: "12px",
@@ -1662,30 +1702,29 @@ export const DashCard = ({
             textTransform: "uppercase",
             letterSpacing: "0.05em",
             marginBottom: "2px",
+            overflow: "visible",
           }}
-          title={title}
         >
           {title}
         </h3>
-        <div className="flex items-center gap-2">
-          <span
-            className="truncate"
-            style={{
-              color: "#0f172a",
-              fontSize: fontSize,
-              fontWeight: 800,
-              letterSpacing: "-0.01em",
-              lineHeight: "1",
-              transition: "font-size 0.3s ease",
-            }}
-          >
-            {value}
-          </span>
-        </div>
+        <span
+          ref={valueRef}
+          className="whitespace-nowrap"
+          style={{
+            color: "#0f172a",
+            fontSize: "28px",
+            fontWeight: 800,
+            letterSpacing: "-0.01em",
+            lineHeight: "1",
+            overflow: "visible",
+          }}
+        >
+          {value}
+        </span>
       </div>
     </div>
   );
-};
+};;
 /*
   ── HOW TO USE DashCard ─────────────────────────────────────────────────────
 

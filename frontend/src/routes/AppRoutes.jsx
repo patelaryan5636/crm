@@ -3,6 +3,7 @@ import AdminRoutes from "./adminRoutes";
 import SuperAdminRoutes from "./superAdminRoutes";
 import AdminLogin from "../pages/auth/AdminLogin";
 import AdminRegister from "../pages/auth/AdminRegister";
+import SalesManagerRoutes from "./Sales/salesManagerRoutes";
 
 
 function AppRoutes() {
@@ -18,6 +19,8 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/admin" replace />} />
         {/* Super_Admin Routes */}
         <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
+        {/* Sales manager Routes */}
+        <Route path="/sales-manager/*" element={<SalesManagerRoutes />} />
       </Routes>
     </BrowserRouter>
   );

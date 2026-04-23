@@ -518,6 +518,10 @@ export const DataTable = ({
   // filterSize — controls the width of the filter modal
   // "sm" | "md" (default) | "lg" | "xl" | "2xl"
   filterSize = "xl",
+  // onDateFilter — true | false (default false)
+  // true → shows a single date picker between the search bar and filter button
+  //        Filters rows where row.date matches the selected date (YYYY-MM-DD)
+  onDateFilter = false,
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -570,6 +574,9 @@ export const DataTable = ({
   const [dateTo,   setDateTo]   = useState("");
   const [appliedDateFrom, setAppliedDateFrom] = useState("");
   const [appliedDateTo,   setAppliedDateTo]   = useState("");
+
+  // Single date filter (toolbar date picker — onDateFilter={true})
+  const [singleDate, setSingleDate] = useState("");
 
   // Count how many filters are currently active (non-empty)
   const activeFilterCount = useMemo(() => {
@@ -670,6 +677,15 @@ export const DataTable = ({
       }
     }
 
+    // Single date toolbar filter (onDateFilter={true})
+    if (onDateFilter && singleDate) {
+      result = result.filter((row) => {
+        if (!row.date) return false;
+        // Compare only the date part (YYYY-MM-DD) so time doesn't matter
+        return String(row.date).slice(0, 10) === singleDate;
+      });
+    }
+
     if (sortConfig.key) {
       result = [...result].sort((a, b) => {
         const aVal = a[sortConfig.key] ?? "";
@@ -688,7 +704,7 @@ export const DataTable = ({
     }
 
     return result;
-  }, [rows, search, columns, sortConfig, appliedFilters, appliedDateFrom, appliedDateTo, resolvedFilters, date]);
+  }, [rows, search, columns, sortConfig, appliedFilters, appliedDateFrom, appliedDateTo, resolvedFilters, date, singleDate, onDateFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / currentPageSize));
   const paginated = filtered.slice(
@@ -712,8 +728,8 @@ export const DataTable = ({
         <HeadingForDataTable primaryText={title} secondaryText="Data table" size={12} />
       ) : null}
 
-      {/* Search + page size + filter button */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Search + date picker + page size + filter button */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {searchable ? (
           <div className="relative flex-1">
             <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
@@ -731,6 +747,18 @@ export const DataTable = ({
             />
           </div>
         ) : null}
+
+        {/* Single date picker — shown only when onDateFilter={true} */}
+        {onDateFilter && (
+          <div className="relative flex items-center gap-1.5">
+            <input
+              type="date"
+              value={singleDate}
+              onChange={(e) => { setSingleDate(e.target.value); setPage(1); }}
+              className="rounded-2xl border border-slate-200 bg-white py-3 px-4 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 transition cursor-pointer"
+            />
+          </div>
+        )}
 
         <div className="flex items-center gap-2 whitespace-nowrap">
           {/* Filter button — only shown when filters array is provided or date is "on" */}
@@ -1234,7 +1262,7 @@ export const Heading = ({
   secondaryText = "",
   size = 12,
   fontSize = "2xl", // "sm" | "md" | "lg" | "xl" | "2xl" (default) | "3xl" | "4xl"
-  showAnimations = false, // Added to toggle floating squares and wave drops
+  showAnimations = true, // Added to toggle floating squares and wave drops
 }) => {
   const fontSizeMap = {
     sm:  "text-sm",

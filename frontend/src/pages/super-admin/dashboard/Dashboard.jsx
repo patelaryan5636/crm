@@ -9,6 +9,7 @@ import {
   GBarChart,
   GDoughnutChart,
   GPieChart,
+  GRadarChart,
   DataTable,
   Modal,
   ModalData,
@@ -334,6 +335,16 @@ export default function Dashboard() {
   const ticketsData       = ticketsAll["This Year"];
   const apiHealthData     = apiHealthAll["This Year"];
 
+  // ── Ticket Resolution Status (radar chart in the ticket/API row) ─────────────
+  const ticketResolutionData = [
+    { subject: "Critical", resolved: 72, pending: 28 },
+    { subject: "High",     resolved: 81, pending: 19 },
+    { subject: "Medium",   resolved: 91, pending: 9  },
+    { subject: "Low",      resolved: 96, pending: 4  },
+    { subject: "Billing",  resolved: 85, pending: 15 },
+    { subject: "Tech",     resolved: 78, pending: 22 },
+  ];
+
   // ── Top Companies Table ──────────────────────────────────────────────────────
   const companyCols = [
     { key: "company", label: "Company" },
@@ -425,6 +436,7 @@ export default function Dashboard() {
           secondaryText="Dashboard"
           size={12}
           fontSize="3xl"
+          showAnimations={true}
         />
 
         {/* ── 2. Top KPI Cards ── */}
@@ -516,16 +528,23 @@ export default function Dashboard() {
           size={4}
           height={300}
         />
-      </Grid>
-
-      {/* ── Ticket Priority + API Health ── */}
-      <Grid cols={12} gap={4}>
         <GPieChart
           title="Tickets by Priority"
           subtitle="Open support tickets breakdown"
           data={ticketsData}
           colors={["#f43f5e", "#f59e0b", "#38bdf8", "#22c55e"]}
-          size={4}
+          size={3}
+          height={300}
+        />
+        <GRadarChart
+          title="Ticket Resolution Rate"
+          subtitle="Resolved vs pending % by category"
+          data={ticketResolutionData}
+          radars={[
+            { key: "resolved", label: "Resolved (%)", color: "#22c55e" },
+            { key: "pending",  label: "Pending (%)",  color: "#f43f5e" },
+          ]}
+          size={3}
           height={300}
         />
         <GBarChart
@@ -536,7 +555,7 @@ export default function Dashboard() {
             { key: "uptime",  label: "Uptime (%)",   color: "#22c55e" },
             { key: "latency", label: "Latency (ms)", color: "#f59e0b" },
           ]}
-          size={8}
+          size={6}
           height={300}
         />
       </Grid>
@@ -555,6 +574,7 @@ export default function Dashboard() {
           pageSize={5}
           date={true}
           filterSize="xl"
+          // onDateFilter={true}
           filters={[
             {
               title: "Plan",

@@ -709,7 +709,7 @@ export const DataTable = ({
       className={`${colSpan(size)} flex bg-[#efefefb1] rounded-xl p-3 flex-col gap-3`}
     >
       {title ? (
-        <Heading primaryText={title} secondaryText="Data table" size={12} />
+        <HeadingForDataTable primaryText={title} secondaryText="Data table" size={12} />
       ) : null}
 
       {/* Search + page size + filter button */}
@@ -1302,6 +1302,21 @@ export const Heading = ({
   • secondaryText — secondary text rendered in slate-400 (muted)
   • size          — 1–12 grid columns  (default: 12)
 */
+
+export const HeadingForDataTable = ({
+  primaryText = "",
+  secondaryText = "",
+  size = 12,
+}) => (
+  <div className={`${colSpan(size)}`}>
+    <h2 className="text-2xl font-black tracking-tight leading-tight">
+      <span className="text-[#2a465a]">{primaryText}</span>
+      {secondaryText && (
+        <span className="text-slate-400 font-extrabold"> {secondaryText}</span>
+      )}
+    </h2>
+  </div>
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GRID WRAPPER  (convenience wrapper — use this to wrap all components)

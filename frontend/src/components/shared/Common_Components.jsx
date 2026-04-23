@@ -698,8 +698,8 @@ export const DataTable = ({
 
   const actionVariantCls = {
     primary: "bg-[#2a465a] text-white hover:bg-[#1e3a52]",
-    danger: "bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100",
-    ghost: "bg-slate-100 text-slate-600 hover:bg-slate-200",
+    danger:  "bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100",
+    ghost:   "bg-slate-100 text-slate-600 hover:bg-slate-200",
   };
 
   const showFilterButton = filters.length > 0 || date === true;
@@ -1038,24 +1038,52 @@ export const DataTable = ({
                   })}
                   {actions.length > 0 && (
                     <td className="py-3 px-5">
-                      <div className="flex items-center gap-2">
-                        {actions.map((action, ai) => (
-                          <button
-                            key={ai}
-                            type="button"
-                            onClick={() => action.onClick(row)}
-                            className={`
-                              flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
-                              transition duration-150 active:scale-95
-                              ${actionVariantCls[action.variant ?? "ghost"]}
-                            `}
-                          >
-                            {action.icon && (
-                              <span className="w-3.5 h-3.5">{action.icon}</span>
-                            )}
-                            {action.label}
-                          </button>
-                        ))}
+                      <div className="flex items-center gap-1.5">
+                        {actions.map((action, ai) => {
+                          const isIconOnly = action.icon && !action.label;
+                          return (
+                            <div key={ai} className="relative group/tip">
+                              <button
+                                type="button"
+                                onClick={() => action.onClick(row)}
+                                className={`
+                                  flex items-center justify-center gap-1.5
+                                  transition duration-150 active:scale-95
+                                  ${isIconOnly
+                                    ? `w-8 h-8 rounded-xl ${actionVariantCls[action.variant ?? "ghost"]}`
+                                    : `px-3 py-1.5 rounded-xl text-xs font-bold ${actionVariantCls[action.variant ?? "ghost"]}`
+                                  }
+                                `}
+                              >
+                                {action.icon && (
+                                  <span className={isIconOnly ? "w-4 h-4" : "w-3.5 h-3.5"}>
+                                    {action.icon}
+                                  </span>
+                                )}
+                                {action.label && (
+                                  <span className="text-xs font-bold">{action.label}</span>
+                                )}
+                              </button>
+
+                              {/* Tooltip — only shown when icon-only */}
+                              {isIconOnly && action.tooltip && (
+                                <div className="
+                                  pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2
+                                  opacity-0 group-hover/tip:opacity-100
+                                  translate-y-1 group-hover/tip:translate-y-0
+                                  transition-all duration-150 ease-out
+                                  z-50 whitespace-nowrap
+                                ">
+                                  <div className="bg-[#1e293b] text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-lg">
+                                    {action.tooltip}
+                                  </div>
+                                  {/* Arrow */}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1e293b]" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </td>
                   )}

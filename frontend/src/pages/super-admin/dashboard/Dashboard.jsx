@@ -20,6 +20,12 @@ import {
   DollarSign,
   Wallet,
   HeadphonesIcon,
+  Eye,
+  Pencil,
+  MessageSquareReply,
+  FileText,
+  RefreshCw,
+  Bell,
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -506,8 +512,8 @@ export default function Dashboard() {
           columns={companyCols}
           rows={companyRows}
           actions={[
-            { label: "View", variant: "ghost",   onClick: (row) => console.log("View", row) },
-            { label: "Edit", variant: "primary", onClick: (row) => console.log("Edit", row) },
+            { icon: <Eye size={15} />,    tooltip: "View",  variant: "ghost",   onClick: (row) => console.log("View", row) },
+            { icon: <Pencil size={15} />, tooltip: "Edit",  variant: "primary", onClick: (row) => console.log("Edit", row) },
           ]}
           size={12}
           pageSize={5}
@@ -536,8 +542,8 @@ export default function Dashboard() {
           columns={ticketCols}
           rows={ticketRows}
           actions={[
-            { label: "View",  variant: "ghost",   onClick: (row) => console.log("View", row) },
-            { label: "Reply", variant: "primary", onClick: (row) => console.log("Reply", row) },
+            { icon: <Eye size={15} />,                tooltip: "View",  variant: "ghost",   onClick: (row) => console.log("View", row) },
+            { icon: <MessageSquareReply size={15} />, tooltip: "Reply", variant: "primary", onClick: (row) => console.log("Reply", row) },
           ]}
           size={12}
           pageSize={5}
@@ -566,9 +572,9 @@ export default function Dashboard() {
           columns={renewalCols}
           rows={renewalRows}
           actions={[
-            { label: "Invoice", variant: "ghost",   onClick: (row) => console.log("Invoice", row) },
-            { label: "Renew",   variant: "primary", onClick: (row) => console.log("Renew", row) },
-            { label: "Remind",  variant: "ghost",   onClick: (row) => console.log("Remind", row) },
+            { icon: <FileText size={15} />,  tooltip: "Invoice", variant: "ghost",   onClick: (row) => console.log("Invoice", row) },
+            { icon: <RefreshCw size={15} />, tooltip: "Renew",   variant: "primary", onClick: (row) => console.log("Renew", row) },
+            { icon: <Bell size={15} />,      tooltip: "Remind",  variant: "ghost",   onClick: (row) => console.log("Remind", row) },
           ]}
           size={12}
           pageSize={5}
@@ -597,7 +603,7 @@ export default function Dashboard() {
           columns={activityCols}
           rows={activityRows}
           actions={[
-            { label: "View", variant: "primary", onClick: (row) => console.log("View", row) },
+            { icon: <Eye size={15} />, tooltip: "View", variant: "primary", onClick: (row) => console.log("View", row) },
           ]}
           size={12}
           pageSize={5}

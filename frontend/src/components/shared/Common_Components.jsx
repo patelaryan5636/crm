@@ -522,6 +522,12 @@ export const DataTable = ({
   // true → shows a single date picker between the search bar and filter button
   //        Filters rows where row.date matches the selected date (YYYY-MM-DD)
   onDateFilter = false,
+  // bulkAction — true | false (default false)
+  // true → adds a checkbox column; when rows are selected a bulk action bar
+  //         appears below the table.
+  // bulkActions — array of { title, icon, onClick: (selectedRows) => void }
+  bulkAction = false,
+  bulkActions = [],
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -537,6 +543,7 @@ export const DataTable = ({
   const [filterModalOpen, setFilterModalOpen]   = useState(false);
   const [filterModalShow, setFilterModalShow]   = useState(false);
   const [filterModalRender, setFilterModalRender] = useState(false);
+  const filterCloseTimerRef = useRef(null);
 
   // filterValues holds the current live input value per filter title
   // For "toggle" type: value is an array of selected labels []
@@ -578,6 +585,9 @@ export const DataTable = ({
   // Single date filter (toolbar date picker — onDateFilter={true})
   const [singleDate, setSingleDate] = useState("");
 
+  // Bulk selection state — stores indices into `filtered` (not `paginated`)
+  const [selectedRows, setSelectedRows] = useState(new Set());
+
   // Count how many filters are currently active (non-empty)
   const activeFilterCount = useMemo(() => {
     const customActive = Object.values(appliedFilters).filter((v) =>
@@ -590,14 +600,23 @@ export const DataTable = ({
 
   // Open / close filter modal with animation
   const openFilterModal = () => {
+    if (filterCloseTimerRef.current) clearTimeout(filterCloseTimerRef.current);
     setFilterModalRender(true);
     requestAnimationFrame(() => requestAnimationFrame(() => setFilterModalShow(true)));
     setFilterModalOpen(true);
   };
   const closeFilterModal = () => {
     setFilterModalShow(false);
-    setTimeout(() => { setFilterModalRender(false); setFilterModalOpen(false); }, 260);
+    filterCloseTimerRef.current = setTimeout(() => {
+      setFilterModalRender(false);
+      setFilterModalOpen(false);
+    }, 260);
   };
+
+  // Cancel any pending filter-close timer on unmount
+  useEffect(() => () => {
+    if (filterCloseTimerRef.current) clearTimeout(filterCloseTimerRef.current);
+  }, []);
 
   const handleApplyFilters = () => {
     setAppliedFilters({ ...filterValues });
@@ -624,6 +643,11 @@ export const DataTable = ({
     setCurrentPageSize(Number(pageSize) || 10);
     setPage(1);
   }, [pageSize]);
+
+  // Clear bulk selection whenever filters or search change
+  useEffect(() => {
+    setSelectedRows(new Set());
+  }, [search, appliedFilters, appliedDateFrom, appliedDateTo, singleDate]);
 
   const handleSort = (key) => {
     let direction = "asc";
@@ -719,6 +743,34 @@ export const DataTable = ({
   };
 
   const showFilterButton = filters.length > 0 || date === true;
+
+  // ── Bulk selection helpers ────────────────────────────────────────────────
+  // We key rows by their index in `filtered` so selection survives pagination.
+  const paginatedIndices = paginated.map((_, i) => (page - 1) * currentPageSize + i);
+  const allPageSelected  = paginatedIndices.length > 0 && paginatedIndices.every((idx) => selectedRows.has(idx));
+  const someSelected     = selectedRows.size > 0;
+
+  const toggleRow = (idx) => {
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      next.has(idx) ? next.delete(idx) : next.add(idx);
+      return next;
+    });
+  };
+
+  const toggleAllPage = () => {
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        paginatedIndices.forEach((idx) => next.delete(idx));
+      } else {
+        paginatedIndices.forEach((idx) => next.add(idx));
+      }
+      return next;
+    });
+  };
+
+  const selectedRowData = [...selectedRows].map((idx) => filtered[idx]).filter(Boolean);
 
   return (
     <div
@@ -987,6 +1039,32 @@ export const DataTable = ({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gradient-to-r from-[#2a465a] to-[#3a5a7a] border-b border-[#2a465a]/10">
+              {/* Bulk select — header checkbox */}
+              {bulkAction && (
+                <th className="py-4 pl-5 pr-2 w-10">
+                  <button
+                    type="button"
+                    onClick={toggleAllPage}
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all duration-150 ${
+                      allPageSelected
+                        ? "bg-white border-white"
+                        : "bg-transparent border-white/40 hover:border-white/80"
+                    }`}
+                  >
+                    {allPageSelected && (
+                      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6l3 3 5-5" stroke="#2a465a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                    {/* Indeterminate dash — some but not all on this page selected */}
+                    {!allPageSelected && selectedRows.size > 0 && paginatedIndices.some(idx => selectedRows.has(idx)) && (
+                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 6h7" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+                      </svg>
+                    )}
+                  </button>
+                </th>
+              )}
               {columns.map((col) => (
                 <th
                   key={col.key}
@@ -1013,19 +1091,45 @@ export const DataTable = ({
             {paginated.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length + (actions.length > 0 ? 1 : 0)}
+                  colSpan={columns.length + (actions.length > 0 ? 1 : 0) + (bulkAction ? 1 : 0)}
                   className="py-10 text-center text-slate-400 text-sm"
                 >
                   No records found.
                 </td>
               </tr>
             ) : (
-              paginated.map((row, i) => (
+              paginated.map((row, i) => {
+                const filteredIdx = (page - 1) * currentPageSize + i;
+                const isSelected  = selectedRows.has(filteredIdx);
+                return (
                 <tr
                   key={i}
-                  className={`border-b border-slate-100 transition ${i % 2 === 0 ? "bg-white" : "bg-slate-50/60"
-                    } hover:bg-blue-50/40`}
+                  className={`border-b border-slate-100 transition ${
+                    isSelected
+                      ? "bg-blue-50/70"
+                      : i % 2 === 0 ? "bg-white" : "bg-slate-50/60"
+                  } hover:bg-blue-50/40`}
                 >
+                  {/* Row checkbox */}
+                  {bulkAction && (
+                    <td className="py-3.5 pl-5 pr-2 w-10">
+                      <button
+                        type="button"
+                        onClick={() => toggleRow(filteredIdx)}
+                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all duration-150 ${
+                          isSelected
+                            ? "bg-[#2a465a] border-[#2a465a]"
+                            : "bg-white border-slate-300 hover:border-[#2a465a]/60"
+                        }`}
+                      >
+                        {isSelected && (
+                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </button>
+                    </td>
+                  )}
                   {columns.map((col) => {
                     if (col.key === "status") {
                       const val = row[col.key];
@@ -1115,11 +1219,42 @@ export const DataTable = ({
                     </td>
                   )}
                 </tr>
-              ))
+              );
+              })
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Bulk action bar — slides up when rows are selected */}
+      {bulkAction && someSelected && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#2a465a] text-white shadow-lg">
+          <span className="text-sm font-semibold whitespace-nowrap">
+            {selectedRows.size} row{selectedRows.size > 1 ? "s" : ""} selected
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {bulkActions.map((ba, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => ba.onClick(selectedRowData)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors duration-150 active:scale-95"
+              >
+                {ba.icon && <span className="w-3.5 h-3.5 flex-shrink-0">{ba.icon}</span>}
+                {ba.title}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setSelectedRows(new Set())}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs font-semibold transition-colors duration-150"
+            >
+              <X size={13} />
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Pagination */}
       <div className="flex items-center justify-between px-1">
@@ -2452,9 +2587,16 @@ export const Modal = ({ id, title, children, size = "xl" }) => {
   useEffect(() => {
     if (isOpen) {
       setRender(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setShow(true));
+      // Double-rAF to ensure the element is painted before we trigger the
+      // enter transition. We track the IDs so we can cancel on cleanup.
+      let raf1, raf2;
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setShow(true));
       });
+      return () => {
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
+      };
     } else {
       setShow(false);
       const timer = setTimeout(() => setRender(false), 300);
@@ -2573,6 +2715,128 @@ export const ModalData = ({ label, value }) => (
   ── HOW TO USE ModalData ────────────────────────────────────────────────────
 
   <ModalData label="Customer Name" value="Alice Johnson" />
+*/
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODAL PROFILE
+// Renders a styled profile card inside a modal.
+//
+// Props:
+//   name       — full name (required) — initials are auto-generated
+//   subtitle   — e.g. "Senior Executive · Mumbai"
+//   meta       — e.g. "Joined 2023-03-15"
+//   avatarColor — background color of the initials circle (default: "#2a465a")
+// ─────────────────────────────────────────────────────────────────────────────
+export const ModalProfile = ({
+  name = "",
+  subtitle = "",
+  meta = "",
+  avatarColor = "#2a465a",
+}) => {
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0].toUpperCase())
+    .slice(0, 2)
+    .join("");
+
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+      {/* Avatar */}
+      <div
+        className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-black flex-shrink-0 select-none"
+        style={{ background: avatarColor }}
+      >
+        {initials}
+      </div>
+      {/* Info */}
+      <div className="min-w-0">
+        <p className="text-lg font-bold text-[#2a465a] leading-tight truncate">{name}</p>
+        {subtitle && (
+          <p className="text-sm text-slate-500 mt-0.5 truncate">{subtitle}</p>
+        )}
+        {meta && (
+          <p className="text-xs text-slate-400 mt-0.5 truncate">{meta}</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/*
+  ── HOW TO USE ModalProfile ─────────────────────────────────────────────────
+
+  <ModalProfile
+    name="Riya Sharma"
+    subtitle="Senior Executive · Mumbai"
+    meta="Joined 2023-03-15"
+    avatarColor="#3b82f6"
+  />
+*/
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODAL GRID
+// Groups a set of ModalData fields under a labelled section inside a modal.
+// Visually separates sections with a title bar and a subtle card background.
+//
+// Props:
+//   title    — section heading (e.g. "Contact", "Lead Stats")
+//   cols     — number of columns in the inner grid: 1 | 2 | 3 (default: 2)
+//   children — <ModalData> items
+// ─────────────────────────────────────────────────────────────────────────────
+export const ModalGrid = ({ title = "", cols = 2, children }) => {
+  // Mobile always 1 col; sm+ uses the requested cols value
+  const colsMap = {
+    1: "grid-cols-1",
+    2: "grid-cols-1 sm:grid-cols-2",
+    3: "grid-cols-1 sm:grid-cols-3",
+  };
+  const gridCls = colsMap[cols] ?? "grid-cols-1 sm:grid-cols-2";
+
+  return (
+    <div className="rounded-2xl border border-slate-100 overflow-hidden">
+      {/* Section title bar */}
+      {title && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-[#2a465a]/5 border-b border-slate-100">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#3e8ca7] flex-shrink-0" />
+          <p className="text-xs font-black text-[#2a465a] uppercase tracking-[0.18em]">
+            {title}
+          </p>
+        </div>
+      )}
+      {/* Fields grid */}
+      <div className={`grid ${gridCls} gap-px bg-slate-100`}>
+        {React.Children.map(children, (child) =>
+          child ? (
+            <div className="bg-white p-3">{child}</div>
+          ) : null
+        )}
+      </div>
+    </div>
+  );
+};
+
+/*
+  ── HOW TO USE ModalGrid ────────────────────────────────────────────────────
+
+  <ModalGrid title="Contact" cols={2}>
+    <ModalData label="Phone" value="+91 98101 11001" />
+    <ModalData label="Email" value="riya@crm.in" />
+  </ModalGrid>
+
+  <ModalGrid title="Lead Stats" cols={3}>
+    <ModalData label="Total Leads"   value="148" />
+    <ModalData label="Conversions"   value="42" />
+    <ModalData label="Conv. Rate"    value="28.4%" />
+    <ModalData label="Open Leads"    value="12" />
+    <ModalData label="Follow-ups Done"   value="61" />
+    <ModalData label="Follow-ups Missed" value="4" />
+  </ModalGrid>
+
+  Props:
+  • title    — section label shown in the header bar
+  • cols     — 1 | 2 | 3  (default: 2)
+  • children — <ModalData> components
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2797,37 +3061,59 @@ export const EnhancedModal = ({ id, title, children, isVisible, onClose }) => {
   const [show, setShow] = useState(false);
   const [render, setRender] = useState(false);
 
+  const closeTimerRef = useRef(null);
+
   useEffect(() => {
-    const handleOpen = (e) => { if (e.detail.id === id) { setRender(true); } };
-    const handleClose = (e) => { if (!e.detail.id || e.detail.id === id) { setShow(false); setTimeout(() => setRender(false), 300); } };
+    const handleOpen  = (e) => { if (e.detail.id === id) { setRender(true); } };
+    const handleClose = (e) => {
+      if (!e.detail.id || e.detail.id === id) {
+        setShow(false);
+        // Track timer so it can be cancelled on unmount
+        closeTimerRef.current = setTimeout(() => setRender(false), 300);
+      }
+    };
 
     window.addEventListener("open-modal", handleOpen);
     window.addEventListener("close-modal", handleClose);
 
     if (isVisible !== undefined) {
-      if (isVisible) { setRender(true); }
-      else if (render && !isVisible) { setShow(false); setTimeout(() => setRender(false), 300); }
+      if (isVisible) {
+        setRender(true);
+      } else {
+        setShow(false);
+        closeTimerRef.current = setTimeout(() => setRender(false), 300);
+      }
     }
 
     return () => {
       window.removeEventListener("open-modal", handleOpen);
       window.removeEventListener("close-modal", handleClose);
+      // Cancel any pending close animation on cleanup
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     };
   }, [id, isVisible]);
 
   useEffect(() => {
     if (render) {
-      document.body.style.overflow = 'hidden';
-      requestAnimationFrame(() => requestAnimationFrame(() => setShow(true)));
+      document.body.style.overflow = "hidden";
+      let raf1, raf2;
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setShow(true));
+      });
+      return () => {
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
+      };
     } else {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => { document.body.style.overflow = ""; };
   }, [render]);
 
   const handleCloseClick = () => {
     setShow(false);
-    setTimeout(() => {
+    // Track so it can be cancelled if component unmounts before it fires
+    closeTimerRef.current = setTimeout(() => {
       setRender(false);
       if (onClose) onClose();
       else closeModal(id);

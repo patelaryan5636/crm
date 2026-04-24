@@ -1761,6 +1761,10 @@ export const DashCard = ({
   const valueRef     = useRef(null);
   const containerRef = useRef(null);
   const iconBoxRef   = useRef(null);
+  // Guard against ResizeObserver re-entrancy: our own DOM writes (padding, gap,
+  // icon size) change the observed element's layout, which would re-fire the
+  // observer and create an infinite loop. The flag breaks the cycle.
+  const isRunningRef = useRef(false);
 
   const fitText = useCallback((el, maxPx, minPx) => {
     if (!el) return;
@@ -1777,6 +1781,10 @@ export const DashCard = ({
     if (!container) return;
 
     const run = () => {
+      // Skip if we triggered this observation ourselves
+      if (isRunningRef.current) return;
+      isRunningRef.current = true;
+
       const w = container.offsetWidth;
 
       // ── Responsive padding: 8px at 80px wide → 20px at 240px+ ──
@@ -1792,10 +1800,8 @@ export const DashCard = ({
         const iconSz = Math.round(Math.min(48, Math.max(28, (w / 240) * 48)));
         iconBoxRef.current.style.width  = `${iconSz}px`;
         iconBoxRef.current.style.height = `${iconSz}px`;
-        // Scale the icon SVG inside proportionally (icon is ~18-22px at full size)
         const svgSz = Math.round(Math.min(20, Math.max(12, (w / 240) * 20)));
         iconBoxRef.current.style.fontSize = `${svgSz}px`;
-        // Pass size down to the SVG via CSS — lucide icons respect `width`/`height` on the wrapper
         const svgEl = iconBoxRef.current.querySelector("svg");
         if (svgEl) {
           svgEl.setAttribute("width",  svgSz);
@@ -1810,6 +1816,10 @@ export const DashCard = ({
       const vStr = String(value);
       const maxV = vStr.length > 12 ? 18 : vStr.length > 8 ? 22 : vStr.length > 6 ? 24 : 28;
       fitText(valueRef.current, maxV, 10);
+
+      // Release the guard after the current microtask queue drains so any
+      // layout recalculation triggered by our writes is already settled.
+      Promise.resolve().then(() => { isRunningRef.current = false; });
     };
 
     run();

@@ -318,16 +318,6 @@ export default function SalesManagerDashboard() {
                 />
             </Grid>
 
-            {/* ── 6. Quick Actions ── */}
-            <Grid cols={12} gap={3}>
-                <Heading primaryText="Quick Actions" fontSize="xl" size={12} />
-                <Button text="Add Lead" size={2} variant="primary" />
-                <Button text="Assign Leads" size={2} variant="secondary" />
-                <Button text="Set Target" size={2} variant="secondary" />
-                <Button text="View Reports" size={2} variant="secondary" />
-                <Button text="Export Data" size={2} variant="ghost" />
-            </Grid>
-
             {/* ── 7. Top Performers Table ── */}
             <Grid cols={12} gap={4}>
                 <DataTable

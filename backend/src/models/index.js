@@ -765,6 +765,61 @@ BulkLeadUploadSchema.index({ admin: 1, uploadedBy: 1, createdAt: -1 });
 
 
 // ════════════════════════════════════════════════════════════
+// MODEL 24A — BULK USER UPLOAD
+// Tracks bulk member onboarding jobs (CSV/Excel).
+// Used by Admin panel to preview/commit/review uploads.
+// ════════════════════════════════════════════════════════════
+const BulkUserUploadSchema = new Schema({
+  admin:          { type: Schema.Types.ObjectId, ref: 'Admin', required: true },
+  uploadedBy:     { type: Schema.Types.ObjectId, required: true },
+  uploadedByType: { type: String, enum: ['ADMIN', 'USER'], default: 'ADMIN' },
+
+  fileType: { type: String, enum: ['CSV', 'EXCEL'], required: true },
+  fileName: { type: String, trim: true, required: true },
+  fileUrl:  { type: String, default: null },
+
+  totalRows:   { type: Number, default: 0 },
+  validRows:   { type: Number, default: 0 },
+  imported:    { type: Number, default: 0 },
+  duplicates:  { type: Number, default: 0 },
+  invalidRows: { type: Number, default: 0 },
+
+  failedRows: [{
+    rowNumber: { type: Number, required: true },
+    rawData:   { type: Schema.Types.Mixed, default: {} },
+    reason:    { type: String, required: true },
+    fieldErrors: [{
+      field:   { type: String, trim: true },
+      message: { type: String, trim: true },
+      _id: false,
+    }],
+    _id: false,
+  }],
+
+  errorMessages: [String],
+
+  status: {
+    type: String,
+    enum: ['UPLOADED', 'PROCESSING', 'DONE', 'PARTIAL', 'FAILED'],
+    default: 'UPLOADED',
+  },
+
+  options: {
+    skipDuplicates: { type: Boolean, default: true },
+    strictMode:     { type: Boolean, default: false },
+    _id: false,
+  },
+
+  startedAt:   { type: Date, default: null },
+  completedAt: { type: Date, default: null },
+}, { timestamps: true });
+
+BulkUserUploadSchema.index({ admin: 1, createdAt: -1 });
+BulkUserUploadSchema.index({ admin: 1, status: 1, createdAt: -1 });
+BulkUserUploadSchema.index({ admin: 1, uploadedBy: 1, createdAt: -1 });
+
+
+// ════════════════════════════════════════════════════════════
 // MODEL 25 — PROSPECT FORM
 // Filled by Sales Executive for interested leads.
 // suggestedServices → sent to Finance Manager.
@@ -1386,6 +1441,7 @@ module.exports = {
   LeadAssignmentHistory:   mongoose.model('LeadAssignmentHistory',   LeadAssignmentHistorySchema),
   LeadActivity:            mongoose.model('LeadActivity',            LeadActivitySchema),
   BulkLeadUpload:          mongoose.model('BulkLeadUpload',          BulkLeadUploadSchema),
+  BulkUserUpload:          mongoose.model('BulkUserUpload',          BulkUserUploadSchema),
   ProspectForm:            mongoose.model('ProspectForm',            ProspectFormSchema),
   Reminder:                mongoose.model('Reminder',                ReminderSchema),
   SalesTarget:             mongoose.model('SalesTarget',             SalesTargetSchema),

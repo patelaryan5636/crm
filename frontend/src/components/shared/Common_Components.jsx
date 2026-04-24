@@ -345,17 +345,18 @@ export const Select = ({
   return (
     <div className={`${colSpan(size)} relative`} ref={selectRef}>
       <button
+        id={id}
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen((open) => !open)}
         className={`
-          w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-4 pr-8 text-sm font-medium text-[#0f172a] text-left
+          w-full min-h-[52px] rounded-2xl border border-slate-200 bg-white py-3.5 pl-4 pr-4 text-sm font-medium text-[#0f172a] text-left
           focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40
           disabled:opacity-50 disabled:cursor-not-allowed transition duration-200 flex items-center justify-between gap-2
         `}
       >
         <span
-          className={`${selectedLabel ? "text-[#0f172a]" : "text-slate-400"}`}
+          className={`min-w-0 flex-1 truncate ${selectedLabel ? "text-[#0f172a]" : "text-slate-400"}`}
         >
           {selectedLabel || placeholder}
         </span>
@@ -504,30 +505,6 @@ export const DataTable = ({
   pageSize = 5,
   pageSizeOptions = [5, 10, 20, 50],
   searchable = true,
-  // filters — pass an array of filter definitions; each filter shows as a
-  // labeled text input inside the Filter modal. Example:
-  //   filters={[
-  //     { title: "Status", fn: (row, value) => row.status === value },
-  //     { title: "Role",   fn: (row, value) => row.role.toLowerCase().includes(value.toLowerCase()) },
-  //   ]}
-  filters = [],
-  // date — true | false  (default false)
-  // true  → shows From / To date pickers in the filter modal
-  // false → hides date range pickers
-  date = false,
-  // filterSize — controls the width of the filter modal
-  // "sm" | "md" (default) | "lg" | "xl" | "2xl"
-  filterSize = "xl",
-  // onDateFilter — true | false (default false)
-  // true → shows a single date picker between the search bar and filter button
-  //        Filters rows where row.date matches the selected date (YYYY-MM-DD)
-  onDateFilter = false,
-  // bulkAction — true | false (default false)
-  // true → adds a checkbox column; when rows are selected a bulk action bar
-  //         appears below the table.
-  // bulkActions — array of { title, icon, onClick: (selectedRows) => void }
-  bulkAction = false,
-  bulkActions = [],
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -644,12 +621,10 @@ export const DataTable = ({
     setPage(1);
   }, [pageSize]);
 
-  // Clear bulk selection whenever filters or search change
-  useEffect(() => {
-    setSelectedRows(new Set());
-  }, [search, appliedFilters, appliedDateFrom, appliedDateTo, singleDate]);
-
   const handleSort = (key) => {
+    const column = columns.find((col) => col.key === key);
+    if (column?.sortable === false) return;
+
     let direction = "asc";
     if (sortConfig.key === key && sortConfig.direction === "asc") {
       direction = "desc";
@@ -665,7 +640,7 @@ export const DataTable = ({
       const q = search.toLowerCase();
       result = result.filter((row) =>
         columns.some((col) =>
-          String(row[col.key] ?? "")
+          String(getSearchValue(row, col) ?? "")
             .toLowerCase()
             .includes(q),
         ),
@@ -711,9 +686,12 @@ export const DataTable = ({
     }
 
     if (sortConfig.key) {
+      const activeColumn = columns.find((col) => col.key === sortConfig.key);
+      if (!activeColumn) return result;
+
       result = [...result].sort((a, b) => {
-        const aVal = a[sortConfig.key] ?? "";
-        const bVal = b[sortConfig.key] ?? "";
+        const aVal = getSortValue(a, activeColumn) ?? "";
+        const bVal = getSortValue(b, activeColumn) ?? "";
 
         if (typeof aVal === "string" && typeof bVal === "string") {
           return sortConfig.direction === "asc"
@@ -735,6 +713,9 @@ export const DataTable = ({
     (page - 1) * currentPageSize,
     page * currentPageSize,
   );
+  const missingRows =
+    paginated.length > 0 ? Math.max(0, currentPageSize - paginated.length) : 0;
+  const fillerRowHeight = 57;
 
   const actionVariantCls = {
     primary: "bg-[#2a465a] text-white hover:bg-[#1e3a52]",
@@ -774,7 +755,7 @@ export const DataTable = ({
 
   return (
     <div
-      className={`${colSpan(size)} flex bg-[#efefefb1] rounded-xl p-3 flex-col gap-3`}
+      className={`${colSpan(size)} flex bg-[#efefefb1] rounded-xl p-5 flex-col gap-3`}
     >
       {title ? (
         <HeadingForDataTable primaryText={title} secondaryText="Data table" size={12} />
@@ -1035,8 +1016,10 @@ export const DataTable = ({
       )}
 
       {/* Table wrapper */}
-      <div className="data-table-scroll overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-md">
-        <table className="w-full text-sm">
+      <div
+        className={`data-table-scroll overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-md ${wrapperClassName}`}
+      >
+        <table className={`w-full text-sm ${tableClassName}`}>
           <thead>
             <tr className="bg-gradient-to-r from-[#2a465a] to-[#3a5a7a] border-b border-[#2a465a]/10">
               {/* Bulk select — header checkbox */}
@@ -1069,14 +1052,16 @@ export const DataTable = ({
                 <th
                   key={col.key}
                   onClick={() => handleSort(col.key)}
-                  className="group py-4 px-5 text-left text-xs font-black text-white uppercase tracking-[0.2em] whitespace-nowrap cursor-pointer hover:bg-white/5 transition-colors select-none"
+                  className={`group py-4 px-5 text-left text-xs font-black text-white uppercase tracking-[0.2em] cursor-pointer hover:bg-white/5 hover:text-sky-100 transition-all duration-200 select-none ${col.headerClassName ?? "whitespace-nowrap"}`}
                 >
                   <div className="flex items-center gap-2">
                     {col.label}
-                    <ArrowUpDown
-                      size={14}
-                      className={`transition-all duration-200 ${sortConfig.key === col.key ? "opacity-100 text-[#38bdf8]" : "opacity-40 group-hover:opacity-100"}`}
-                    />
+                    {col.sortable === false ? null : (
+                      <ArrowUpDown
+                        size={14}
+                        className={`transition-all duration-200 ${sortConfig.key === col.key ? "opacity-100 text-[#38bdf8]" : "opacity-40 group-hover:opacity-100"}`}
+                      />
+                    )}
                   </div>
                 </th>
               ))}
@@ -1098,129 +1083,46 @@ export const DataTable = ({
                 </td>
               </tr>
             ) : (
-              paginated.map((row, i) => {
-                const filteredIdx = (page - 1) * currentPageSize + i;
-                const isSelected  = selectedRows.has(filteredIdx);
-                return (
+              paginated.map((row, i) => (
                 <tr
                   key={i}
                   className={`border-b border-slate-100 transition ${
-                    isSelected
-                      ? "bg-blue-50/70"
-                      : i % 2 === 0 ? "bg-white" : "bg-slate-50/60"
+                    i % 2 === 0 ? "bg-white" : "bg-slate-50/60"
                   } hover:bg-blue-50/40`}
                 >
-                  {/* Row checkbox */}
-                  {bulkAction && (
-                    <td className="py-3.5 pl-5 pr-2 w-10">
-                      <button
-                        type="button"
-                        onClick={() => toggleRow(filteredIdx)}
-                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all duration-150 ${
-                          isSelected
-                            ? "bg-[#2a465a] border-[#2a465a]"
-                            : "bg-white border-slate-300 hover:border-[#2a465a]/60"
-                        }`}
-                      >
-                        {isSelected && (
-                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                            <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
-                      </button>
+                  {columns.map((col) => (
+                    <td
+                      key={col.key}
+                      className="py-3.5 px-5 text-[#2a465a] font-medium whitespace-nowrap"
+                    >
+                      {row[col.key] ?? "—"}
                     </td>
-                  )}
-                  {columns.map((col) => {
-                    if (col.key === "status") {
-                      const val = row[col.key];
-                      let statusBg = "bg-slate-100";
-                      let statusText = "text-slate-600";
-                      if (val === "Completed") {
-                        statusBg = "bg-emerald-100";
-                        statusText = "text-emerald-700";
-                      } else if (val === "Pending" || val === "In Progress") {
-                        statusBg = "bg-amber-100";
-                        statusText = "text-amber-700";
-                      } else if (val === "Failed" || val === "Cancelled") {
-                        statusBg = "bg-rose-100";
-                        statusText = "text-rose-700";
-                      }
-                      return (
-                        <td
-                          key={col.key}
-                          className="py-3.5 px-5 whitespace-nowrap"
-                        >
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${statusBg} ${statusText}`}
-                          >
-                            {val ?? "—"}
-                          </span>
-                        </td>
-                      );
-                    }
-                    return (
-                      <td
-                        key={col.key}
-                        className="py-3.5 px-5 text-[#2a465a] font-medium whitespace-nowrap"
-                      >
-                        {row[col.key] ?? "—"}
-                      </td>
-                    );
-                  })}
+                  ))}
                   {actions.length > 0 && (
                     <td className="py-3 px-5">
-                      <div className="flex items-center gap-1.5">
-                        {actions.map((action, ai) => {
-                          const isIconOnly = action.icon && !action.label;
-                          return (
-                            <div key={ai} className="relative group/tip">
-                              <button
-                                type="button"
-                                onClick={() => action.onClick(row)}
-                                className={`
-                                  flex items-center justify-center gap-1.5
-                                  transition duration-150 active:scale-95
-                                  ${isIconOnly
-                                    ? `w-8 h-8 rounded-xl ${actionVariantCls[action.variant ?? "ghost"]}`
-                                    : `px-3 py-1.5 rounded-xl text-xs font-bold ${actionVariantCls[action.variant ?? "ghost"]}`
-                                  }
-                                `}
-                              >
-                                {action.icon && (
-                                  <span className={isIconOnly ? "w-4 h-4" : "w-3.5 h-3.5"}>
-                                    {action.icon}
-                                  </span>
-                                )}
-                                {action.label && (
-                                  <span className="text-xs font-bold">{action.label}</span>
-                                )}
-                              </button>
-
-                              {/* Tooltip — only shown when icon-only */}
-                              {isIconOnly && action.tooltip && (
-                                <div className="
-                                  pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2
-                                  opacity-0 group-hover/tip:opacity-100
-                                  translate-y-1 group-hover/tip:translate-y-0
-                                  transition-all duration-150 ease-out
-                                  z-50 whitespace-nowrap
-                                ">
-                                  <div className="bg-[#1e293b] text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-lg">
-                                    {action.tooltip}
-                                  </div>
-                                  {/* Arrow */}
-                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1e293b]" />
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                      <div className="flex items-center gap-2">
+                        {actions.map((action, ai) => (
+                          <button
+                            key={ai}
+                            type="button"
+                            onClick={() => action.onClick(row)}
+                            className={`
+                              flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
+                              transition duration-150 active:scale-95
+                              ${actionVariantCls[action.variant ?? "ghost"]}
+                            `}
+                          >
+                            {action.icon && (
+                              <span className="w-3.5 h-3.5">{action.icon}</span>
+                            )}
+                            {action.label}
+                          </button>
+                        ))}
                       </div>
                     </td>
                   )}
                 </tr>
-              );
-              })
+              ))
             )}
           </tbody>
         </table>
@@ -1573,7 +1475,7 @@ const T = {
 };
 
 // 8 chart colours cycling
-export const CHART_COLORS = [
+const CHART_COLORS = [
   T.navy,
   T.blue,
   T.teal,
@@ -1830,8 +1732,10 @@ export const DashCard = ({
 
   return (
     <div
-      ref={containerRef}
-      className={`col-span-12 md:col-span-6 lg:col-span-${size} rounded-2xl flex items-center relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group cursor-pointer`}
+      // Mobile: col-span-12 (Full width)
+      // Tablet: col-span-6 (Half width)
+      // Desktop: col-span-{size} (Your custom size)
+      className={`col-span-12 md:col-span-6 lg:col-span-${size} rounded-2xl p-5 flex items-center gap-5 relative overflow-hidden transition-all duration-300 hover:translate-y-[-4px]`}
       style={{
         background: "#ffffff",
         border: "1px solid #e2e8f0",
@@ -1849,8 +1753,7 @@ export const DashCard = ({
       {/* Icon box */}
       {icon && (
         <div
-          ref={iconBoxRef}
-          className="flex-shrink-0 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-105"
+          className="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center"
           style={{
             width: "48px",
             height: "48px",
@@ -1863,19 +1766,15 @@ export const DashCard = ({
         </div>
       )}
 
-      {/* Text */}
-      <div className="flex flex-col justify-center min-w-0 w-full">
+      <div className="flex flex-col justify-center">
         <h3
-          ref={titleRef}
-          className="whitespace-nowrap"
           style={{
             color: "#64748b",
-            fontSize: "12px",
+            fontSize: "11px",
             fontWeight: 700,
             textTransform: "uppercase",
             letterSpacing: "0.05em",
             marginBottom: "2px",
-            overflow: "visible",
           }}
         >
           {title}

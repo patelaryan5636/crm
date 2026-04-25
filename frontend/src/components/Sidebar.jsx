@@ -73,6 +73,7 @@ const MENUS = {
     items: [
       { name: "Dashboard",  path: "/sales-manager",          icon: LayoutDashboard, end: true },
       { name: "My Leads",   path: "/sales-manager/leads",    icon: Target },
+      { name: "team Management",   path: "/sales-manager/team-leader",    icon: Users },
       { name: "Pipeline",   path: "/sales-manager/pipeline", icon: GitBranch },
       { name: "Call Panel", path: "/sales-manager/calls",    icon: PhoneCall },
       { name: "Tickets",    path: "/sales-manager/tickets",  icon: Ticket },

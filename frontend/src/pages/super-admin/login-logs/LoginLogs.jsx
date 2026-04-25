@@ -229,8 +229,7 @@ const LoginLogs = () => {
           <Option value="today" label="Today" />
           {yesterdayDate ? (
             <Option value="yesterday" label="Yesterday" />
-          ) : null}
-        </Select>
+          ) : null}        </Select>
 
         {/* Export CSV button */}
         <Button

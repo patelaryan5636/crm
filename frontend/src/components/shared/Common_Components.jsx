@@ -226,9 +226,9 @@ export const Button = ({
 }) => {
   const variantCls = {
     primary:
-      "bg-[#2a465a] text-white shadow-lg shadow-[#2a465a]/20 hover:bg-gradient-to-r hover:from-[#1e3a52] hover:to-[#2b5a7a] hover:shadow-xl hover:-translate-y-0.5",
+      "bg-[#355872] text-white shadow-lg shadow-[#355872]/20 hover:bg-gradient-to-r hover:from-[#2a465a] hover:to-[#426c8c] hover:shadow-xl hover:-translate-y-0.5",
     secondary:
-      "bg-white text-[#2a465a] border border-slate-200 hover:bg-slate-50 hover:-translate-y-0.5",
+      "bg-white text-[#355872] border border-slate-200 hover:bg-slate-50 hover:-translate-y-0.5",
     danger:
       "bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:bg-rose-600 hover:-translate-y-0.5",
     ghost: "bg-transparent text-[#2a465a] hover:bg-slate-100",
@@ -518,6 +518,8 @@ export const DataTable = ({
   // filterSize — controls the width of the filter modal
   // "sm" | "md" (default) | "lg" | "xl" | "2xl"
   filterSize = "md",
+  hideTopBar = false,
+  hidePagination = false,
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -713,6 +715,7 @@ export const DataTable = ({
       ) : null}
 
       {/* Search + page size + filter button */}
+      {!hideTopBar && (
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {searchable ? (
           <div className="relative flex-1">
@@ -771,6 +774,7 @@ export const DataTable = ({
           <span className="text-xs text-slate-400">rows</span>
         </div>
       </div>
+      )}
 
       {/* ── Filter Modal — rendered via portal into document.body so it is
            always fixed to the true viewport and never moves with page scroll,
@@ -955,7 +959,7 @@ export const DataTable = ({
       )}
 
       {/* Table wrapper */}
-      <div className="data-table-scroll overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-md">
+      <div className="w-full rounded-2xl border border-slate-200 bg-white shadow-md overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gradient-to-r from-[#2a465a] to-[#3a5a7a] border-b border-[#2a465a]/10">
@@ -963,7 +967,7 @@ export const DataTable = ({
                 <th
                   key={col.key}
                   onClick={() => handleSort(col.key)}
-                  className="group py-4 px-5 text-left text-xs font-black text-white uppercase tracking-[0.2em] whitespace-nowrap cursor-pointer hover:bg-white/5 transition-colors select-none"
+                  className="group py-4 px-3 text-left text-xs font-black text-white uppercase tracking-[0.1em] cursor-pointer hover:bg-white/5 transition-colors select-none"
                 >
                   <div className="flex items-center gap-2">
                     {col.label}
@@ -975,7 +979,7 @@ export const DataTable = ({
                 </th>
               ))}
               {actions.length > 0 && (
-                <th className="py-4 px-5 text-left text-xs font-black text-white uppercase tracking-[0.2em]">
+                <th className="py-4 px-5 text-left text-xs font-black text-white uppercase tracking-[0.2em] w-[220px]">
                   Actions
                 </th>
               )}
@@ -1004,40 +1008,44 @@ export const DataTable = ({
                       const val = row[col.key];
                       let statusBg = "bg-slate-100";
                       let statusText = "text-slate-600";
-                      if (val === "Completed") {
+                      if (val === "Completed" || val === "Active" || val === "Present" || val === "Approved") {
                         statusBg = "bg-emerald-100";
                         statusText = "text-emerald-700";
-                      } else if (val === "Pending" || val === "In Progress") {
+                      } else if (val === "Pending" || val === "In Progress" || val === "Late" || val === "On Leave") {
                         statusBg = "bg-amber-100";
                         statusText = "text-amber-700";
-                      } else if (val === "Failed" || val === "Cancelled") {
+                      } else if (val === "Failed" || val === "Cancelled" || val === "Inactive" || val === "Absent" || val === "Rejected") {
                         statusBg = "bg-rose-100";
                         statusText = "text-rose-700";
                       }
                       return (
                         <td
                           key={col.key}
-                          className="py-3.5 px-5 whitespace-nowrap"
+                          className="py-3 px-3 align-middle"
                         >
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${statusBg} ${statusText}`}
-                          >
-                            {val ?? "—"}
-                          </span>
+                          <div className="flex items-center">
+                            <span
+                              className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-[11px] font-bold leading-none ${statusBg} ${statusText}`}
+                            >
+                              {val ?? "—"}
+                            </span>
+                          </div>
                         </td>
                       );
                     }
                     return (
                       <td
                         key={col.key}
-                        className="py-3.5 px-5 text-[#2a465a] font-medium whitespace-nowrap"
+                        className="py-3 px-3 align-middle"
                       >
-                        {row[col.key] ?? "—"}
+                        <div className="text-[#2a465a] font-medium text-[12px] whitespace-nowrap leading-tight">
+                          {row[col.key] ?? "—"}
+                        </div>
                       </td>
                     );
                   })}
                   {actions.length > 0 && (
-                    <td className="py-3 px-5">
+                    <td className="py-3 px-4 align-middle">
                       <div className="flex items-center gap-2">
                         {actions.map((action, ai) => (
                           <button
@@ -1051,7 +1059,7 @@ export const DataTable = ({
                             `}
                           >
                             {action.icon && (
-                              <span className="w-3.5 h-3.5">{action.icon}</span>
+                              <span className="w-3.5 h-3.5 flex items-center justify-center">{action.icon}</span>
                             )}
                             {action.label}
                           </button>
@@ -1067,6 +1075,7 @@ export const DataTable = ({
       </div>
 
       {/* Pagination */}
+      {!hidePagination && (
       <div className="flex items-center justify-between px-1">
         <p className="text-xs text-slate-400 font-medium">
           Showing{" "}
@@ -1128,6 +1137,7 @@ export const DataTable = ({
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 };
@@ -1314,21 +1324,21 @@ export const Grid = ({ children, cols = 12, gap = 4 }) => {
 // THEME TOKENS  (Graphura CRM dark palette)
 // ─────────────────────────────────────────────────────────────────────────────
 const T = {
-  bg: "#e7e7e7b1", // card background
-  bgDeep: "#f8fafc", // deeper background / icon bg
+  bg: "#F7F8F0", // card background
+  bgDeep: "#ffffff", // deeper background / icon bg
   bgInner: "#f1f5f9", // inner elements
-  border: "#aeb0b477", // subtle border
-  navy: "#2a465a", // primary accent (login brand color)
-  blue: "#3b82f6", // chart blue
+  border: "#e2e8f0", // subtle border
+  navy: "#355872", // primary accent (from palette)
+  blue: "#7AAACE", // secondary blue (from palette)
+  sky: "#9CD5FF", // light blue (from palette)
   teal: "#14b8a6", // chart teal
-  green: "#22c55e", // positive trend
+  green: "#10b981", // positive trend
   amber: "#f59e0b", // chart amber
   rose: "#f43f5e", // negative trend / danger
   violet: "#8b5cf6", // chart violet
-  sky: "#38bdf8", // chart sky
-  textPrimary: "#0f172a", // light theme text
-  textSecondary: "#475569", // medium text
-  textMuted: "#64748b", // muted text
+  textPrimary: "#355872", // light theme text
+  textSecondary: "#64748b", // medium text
+  textMuted: "#94a3b8", // muted text
 };
 
 // 8 chart colours cycling
@@ -1516,33 +1526,6 @@ export const DashCard = ({
   size = 4, // This will now act as the "Desktop" size
   accentColor = "#1e293b",
 }) => {
-  const titleRef = useRef(null);
-
-  useEffect(() => {
-    const el = titleRef.current;
-    if (!el) return;
-
-    // Reset to max font size first
-    el.style.fontSize = "12px";
-
-    // Shrink until text fits in one line (no overflow)
-    let fs = 12;
-    while (el.scrollWidth > el.offsetWidth && fs > 7) {
-      fs -= 0.5;
-      el.style.fontSize = `${fs}px`;
-    }
-  });
-
-  const valueStr = String(value);
-  let fontSize = "28px";
-  if (valueStr.length > 12) {
-    fontSize = "18px";
-  } else if (valueStr.length > 8) {
-    fontSize = "22px";
-  } else if (valueStr.length > 6) {
-    fontSize = "24px";
-  }
-
   return (
     <div
       // Mobile: col-span-12 (Full width)
@@ -1575,15 +1558,14 @@ export const DashCard = ({
 
       <div className="flex flex-col justify-center min-w-0 w-full pr-2">
         <h3
-          ref={titleRef}
-          className="w-full whitespace-nowrap overflow-hidden"
+          className="w-full whitespace-nowrap overflow-hidden text-ellipsis"
           style={{
             color: "#64748b",
-            fontSize: "12px",
-            fontWeight: 700,
+            fontSize: "13px",
+            fontWeight: 600,
             textTransform: "uppercase",
             letterSpacing: "0.05em",
-            marginBottom: "2px",
+            marginBottom: "4px",
           }}
         >
           {title}
@@ -1592,11 +1574,10 @@ export const DashCard = ({
           <span
             style={{
               color: "#0f172a",
-              fontSize: fontSize,
-              fontWeight: 800,
+              fontSize: "24px",
+              fontWeight: 700,
               letterSpacing: "-0.01em",
               lineHeight: "1",
-              transition: "font-size 0.3s ease",
             }}
           >
             {value}
@@ -1655,7 +1636,7 @@ export const GLineChart = ({
 }) => (
   // dataKey is derived from the data so ChartCard only animates when data actually changes.
   <ChartCard title={title} subtitle={subtitle} size={size} height={height} filters={filters} dataKey={JSON.stringify(data)}>
-    <LineChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+    <LineChart data={data} margin={{ top: 15, right: 30, left: 0, bottom: 10 }}>
       <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
       <XAxis
         dataKey="name"
@@ -1737,7 +1718,7 @@ export const GBarChart = ({
     <BarChart
       data={data}
       layout="vertical"
-      margin={{ top: 5, right: 10, left: 10, bottom: 0 }}
+      margin={{ top: 15, right: 30, left: 10, bottom: 10 }}
     >
       <CartesianGrid
         strokeDasharray="3 3"
@@ -1812,7 +1793,7 @@ export const GColumnChart = ({
 }) => (
   // dataKey is derived from the data so ChartCard only animates when data actually changes.
   <ChartCard title={title} subtitle={subtitle} size={size} height={height} filters={filters} dataKey={JSON.stringify(data)}>
-    <BarChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+    <BarChart data={data} margin={{ top: 15, right: 30, left: 0, bottom: 10 }}>
       <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
       <XAxis
         dataKey="name"
@@ -1879,7 +1860,7 @@ export const GAreaChart = ({
 }) => (
   // dataKey is derived from the data so ChartCard only animates when data actually changes.
   <ChartCard title={title} subtitle={subtitle} size={size} height={height} filters={filters} dataKey={JSON.stringify(data)}>
-    <AreaChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+    <AreaChart data={data} margin={{ top: 15, right: 30, left: 0, bottom: 10 }}>
       <defs>
         {areas.map((a, i) => {
           const color = a.color ?? CHART_COLORS[i % CHART_COLORS.length];
@@ -2006,7 +1987,7 @@ export const GDoughnutChart = ({
 }) => (
   // dataKey is derived from the data so ChartCard only animates when data actually changes.
   <ChartCard title={title} subtitle={subtitle} size={size} height={height} filters={filters} dataKey={JSON.stringify(data)}>
-    <PieChart>
+    <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
       <Pie
         data={data}
         cx="50%"
@@ -2066,7 +2047,7 @@ export const GPieChart = ({
 }) => (
   // dataKey is derived from the data so ChartCard only animates when data actually changes.
   <ChartCard title={title} subtitle={subtitle} size={size} height={height} filters={filters} dataKey={JSON.stringify(data)}>
-    <PieChart>
+    <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
       <Pie
         data={data}
         cx="50%"

@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import Dashboard from "../pages/admin/Dashboard";
 import FinanceDashboard from "../pages/admin/FinanceDashboard";
-import HRMDashboard from "../pages/admin/HRMDashboard";
+import HRM from "../pages/admin/HRM";
 import Support from "../pages/admin/Support";
 import Report from "../pages/admin/Report";
 
@@ -131,7 +131,7 @@ function AdminRoutes() {
         <Route path="leads" element={<Page name="Leads & Sales" />} />
         <Route path="projects" element={<Page name="Projects" />} />
         <Route path="finance" element={<FinanceDashboard />} />
-        <Route path="hrm" element={<HRMDashboard />} />
+        <Route path="hrm" element={<HRM />} />
         <Route path="support" element={<Support />} />
         <Route path="reports" element={<Report />} />
         <Route path="system" element={<Page name="System" />} />

@@ -71,15 +71,6 @@ const MENUS = {
   "sales-manager": {
     title: "Sales Manager",
     items: [
-<<<<<<< HEAD
-      { name: "Dashboard", path: "/sales", icon: LayoutDashboard, end: true },
-      { name: "My Leads", path: "/sales/leads", icon: Target },
-      { name: "Pipeline", path: "/sales/pipeline", icon: GitBranch },
-      { name: "Call Panel", path: "/sales/calls", icon: PhoneCall },
-      { name: "Tickets", path: "/sales/tickets", icon: Ticket },
-      { name: "Targets", path: "/sales/targets", icon: TrendingUp },
-      { name: "Reports", path: "/sales/reports", icon: BarChart2 },
-=======
       { name: "Dashboard",  path: "/sales-manager",          icon: LayoutDashboard, end: true },
       { name: "My Leads",   path: "/sales-manager/leads",    icon: Target },
       { name: "team Management",   path: "/sales-manager/team-leader",    icon: Users },
@@ -112,7 +103,6 @@ const MENUS = {
       { name: "Tickets",    path: "/sales-executive/tickets",  icon: Ticket },
       { name: "Targets",    path: "/sales-executive/targets",  icon: TrendingUp },
       { name: "Reports",    path: "/sales-executive/reports",  icon: BarChart2 },
->>>>>>> 8f87bd0d6306d28679f1d649b7e35e034d70b527
     ],
   },
   finance: {

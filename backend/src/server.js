@@ -15,6 +15,7 @@ const connectDB = require('./config/db');
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const bulkUserUploadRoutes = require('./routes/bulkUserUpload');
 
 dotenv.config();
 
@@ -49,6 +50,7 @@ app.get('/', (_req, res) => {
 // API ROUTES
 // ────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
+app.use('/api/users/bulk', bulkUserUploadRoutes);
 
 // ────────────────────────────────────────────────────────────
 // 404 HANDLER (Express 5 safe)

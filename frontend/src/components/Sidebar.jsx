@@ -71,13 +71,13 @@ const MENUS = {
   "sales-manager": {
     title: "Sales Manager",
     items: [
-      { name: "Dashboard", path: "/sales-manager", icon: LayoutDashboard, end: true },
-      { name: "My Leads", path: "/sales-manager/leads", icon: Target },
-      { name: "Pipeline", path: "/sales-manager/pipeline", icon: GitBranch },
-      { name: "Call Panel", path: "/sales-manager/calls", icon: PhoneCall },
-      { name: "Tickets", path: "/sales-manager/tickets", icon: Ticket },
-      { name: "Targets", path: "/sales-manager/targets", icon: TrendingUp },
-      { name: "Reports", path: "/sales-manager/reports", icon: BarChart2 },
+      { name: "Dashboard",  path: "/sales-manager",          icon: LayoutDashboard, end: true },
+      { name: "My Leads",   path: "/sales-manager/leads",    icon: Target },
+      { name: "Pipeline",   path: "/sales-manager/pipeline", icon: GitBranch },
+      { name: "Call Panel", path: "/sales-manager/calls",    icon: PhoneCall },
+      { name: "Tickets",    path: "/sales-manager/tickets",  icon: Ticket },
+      { name: "Targets",    path: "/sales-manager/targets",  icon: TrendingUp },
+      { name: "Reports",    path: "/sales-manager/reports",  icon: BarChart2 },
     ],
   },
   "sales-team-leader": {

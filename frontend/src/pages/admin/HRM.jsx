@@ -198,45 +198,45 @@ export default function HRM() {
         <div className="space-y-10">
           <DashGrid cols={12} gap={6}>
             <div className="col-span-12 sm:col-span-6 lg:col-span-3">
-              <div className="rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1" style={{ backgroundColor: "#7AAACE", border: "1px solid #7AAACE33" }}>
+              <div className="rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1 h-full" style={{ backgroundColor: "#355872", border: "1px solid #35587233" }}>
                 <div className="flex-shrink-0 w-[40px] h-[40px] rounded-[14px] flex items-center justify-center bg-white/20 text-white shadow-sm">
                   <Users size={18} />
                 </div>
                 <div className="flex flex-col justify-center min-w-0 flex-1 text-white">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 whitespace-normal break-words opacity-90">Total Employees</h3>
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 truncate opacity-90">Total Employees</h3>
                   <span className="text-[24px] font-extrabold leading-none tracking-tight">135</span>
                 </div>
               </div>
             </div>
             <div className="col-span-12 sm:col-span-6 lg:col-span-3">
-              <div className="rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1" style={{ backgroundColor: "#7AAACE", border: "1px solid #7AAACE33" }}>
+              <div className="rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1 h-full" style={{ backgroundColor: "#355872", border: "1px solid #35587233" }}>
                 <div className="flex-shrink-0 w-[40px] h-[40px] rounded-[14px] flex items-center justify-center bg-white/20 text-white shadow-sm">
                   <UserCheck size={18} />
                 </div>
                 <div className="flex flex-col justify-center min-w-0 flex-1 text-white">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 whitespace-normal break-words opacity-90">Present Today</h3>
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 truncate opacity-90">Present Today</h3>
                   <span className="text-[24px] font-extrabold leading-none tracking-tight">118</span>
                 </div>
               </div>
             </div>
             <div className="col-span-12 sm:col-span-6 lg:col-span-3">
-              <div className="rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1" style={{ backgroundColor: "#7AAACE", border: "1px solid #7AAACE33" }}>
+              <div className="rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1 h-full" style={{ backgroundColor: "#355872", border: "1px solid #35587233" }}>
                 <div className="flex-shrink-0 w-[40px] h-[40px] rounded-[14px] flex items-center justify-center bg-white/20 text-white shadow-sm">
                   <UserX size={18} />
                 </div>
                 <div className="flex flex-col justify-center min-w-0 flex-1 text-white">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 whitespace-normal break-words opacity-90">Absent Today</h3>
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 truncate opacity-90">Absent Today</h3>
                   <span className="text-[24px] font-extrabold leading-none tracking-tight">7</span>
                 </div>
               </div>
             </div>
             <div className="col-span-12 sm:col-span-6 lg:col-span-3">
-              <div className="rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1" style={{ backgroundColor: "#7AAACE", border: "1px solid #7AAACE33" }}>
+              <div className="rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1 h-full" style={{ backgroundColor: "#355872", border: "1px solid #35587233" }}>
                 <div className="flex-shrink-0 w-[40px] h-[40px] rounded-[14px] flex items-center justify-center bg-white/20 text-white shadow-sm">
                   <Calendar size={18} />
                 </div>
                 <div className="flex flex-col justify-center min-w-0 flex-1 text-white">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 whitespace-normal break-words opacity-90">On Leave</h3>
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 truncate opacity-90">On Leave</h3>
                   <span className="text-[24px] font-extrabold leading-none tracking-tight">10</span>
                 </div>
               </div>

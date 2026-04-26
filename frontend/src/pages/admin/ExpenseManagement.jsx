@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, Check, X } from 'lucide-react';
 import { Heading, P, Button, DashGrid, DataTable, openModal, Modal, closeModal, InputField } from '../../components/Shared/Common_Components';
 
 export default function ExpenseManagement({ isEmbedded }) {
@@ -49,11 +49,11 @@ export default function ExpenseManagement({ isEmbedded }) {
   };
 
   const columns = [
-    { key: "title", label: "Expense Title" },
-    { key: "category", label: "Category" },
-    { key: "date", label: "Date" },
-    { key: "amount", label: "Amount" },
-    { key: "status", label: "Status" }
+    { key: "title", label: "Expense Title", width: "20%" },
+    { key: "category", label: "Category", width: "15%" },
+    { key: "date", label: "Date", width: "15%" },
+    { key: "amount", label: "Amount", width: "10%" },
+    { key: "status", label: "Status", width: "15%" }
   ];
 
   const formattedExpenses = expenses.map(exp => ({
@@ -65,7 +65,7 @@ export default function ExpenseManagement({ isEmbedded }) {
 
   return (
     <div className={`w-full ${isEmbedded ? '' : 'min-h-screen bg-[#f8fafc] p-4 md:p-8'}`}>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+      <div className="flex flex-col gap-4 mb-8 w-full">
         <div>
           <Heading primaryText="Expense" secondaryText="Management" size={12} />
           <P text="Track company expenses and manage approvals." size="sm" />

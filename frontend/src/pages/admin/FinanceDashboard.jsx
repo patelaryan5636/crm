@@ -53,7 +53,7 @@ export default function FinanceDashboard() {
     <div className="w-full min-h-screen bg-white p-4 md:p-8">
       
       <div className="flex flex-col mb-8">
-        <div className="flex justify-between items-start mb-6">
+        <div className="flex flex-col gap-4 mb-6 w-full">
           <div>
             <Heading primaryText="Finance" secondaryText="Dashboard" size={12} />
             <P text="Overview of your revenue and transactions." size="sm" />
@@ -89,14 +89,14 @@ export default function FinanceDashboard() {
         <DashGrid cols={12} gap={6}>
 
           <div 
-             className="col-span-12 md:col-span-6 lg:col-span-3 rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1"
-             style={{ backgroundColor: "#7AAACE", border: "1px solid #7AAACE33" }}
+             className="col-span-12 md:col-span-6 lg:col-span-3 rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1 h-full"
+             style={{ backgroundColor: "#355872", border: "1px solid #35587233" }}
           >
             <div className="flex-shrink-0 w-[40px] h-[40px] rounded-[14px] flex items-center justify-center bg-white/20 text-white shadow-sm">
               <DollarSign size={16} />
             </div>
             <div className="flex flex-col justify-center min-w-0 flex-1 text-white">
-              <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 whitespace-normal break-words opacity-90">Total Revenue</h3>
+              <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 truncate opacity-90">Total Revenue</h3>
               <div className="flex items-center gap-2">
                 <span className="text-[24px] font-extrabold leading-none tracking-tight">$124,500</span>
               </div>
@@ -104,14 +104,14 @@ export default function FinanceDashboard() {
           </div>
 
           <div 
-             className="col-span-12 md:col-span-6 lg:col-span-3 rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1"
-             style={{ backgroundColor: "#7AAACE", border: "1px solid #7AAACE33" }}
+             className="col-span-12 md:col-span-6 lg:col-span-3 rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1 h-full"
+             style={{ backgroundColor: "#355872", border: "1px solid #35587233" }}
           >
             <div className="flex-shrink-0 w-[40px] h-[40px] rounded-[14px] flex items-center justify-center bg-white/20 text-white shadow-sm">
               <DollarSign size={16} />
             </div>
             <div className="flex flex-col justify-center min-w-0 flex-1 text-white">
-              <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 whitespace-normal break-words opacity-90">Today's Revenue</h3>
+              <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 truncate opacity-90">Today's Revenue</h3>
               <div className="flex items-center gap-2">
                 <span className="text-[24px] font-extrabold leading-none tracking-tight">$3,450</span>
               </div>
@@ -119,15 +119,15 @@ export default function FinanceDashboard() {
           </div>
           
           <div 
-             className="col-span-12 md:col-span-6 lg:col-span-3 rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer"
-             style={{ backgroundColor: "#7AAACE", border: "1px solid #7AAACE33" }}
+             className="col-span-12 md:col-span-6 lg:col-span-3 rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full"
+             style={{ backgroundColor: "#355872", border: "1px solid #35587233" }}
              onClick={() => openModal('pending-modal')}
           >
             <div className="flex-shrink-0 w-[40px] h-[40px] rounded-[14px] flex items-center justify-center bg-white/20 text-white shadow-sm">
               <Clock size={16} />
             </div>
             <div className="flex flex-col justify-center min-w-0 flex-1 text-white">
-              <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 whitespace-normal break-words opacity-90">Pending Payments</h3>
+              <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 truncate opacity-90">Pending Payments</h3>
               <div className="flex items-center gap-2">
                 <span className="text-[24px] font-extrabold leading-none tracking-tight">${pendingSum.toLocaleString()}</span>
               </div>
@@ -135,15 +135,15 @@ export default function FinanceDashboard() {
           </div>
 
           <div 
-             className="col-span-12 md:col-span-6 lg:col-span-3 rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer"
-             style={{ backgroundColor: "#7AAACE", border: "1px solid #7AAACE33" }}
+             className="col-span-12 md:col-span-6 lg:col-span-3 rounded-2xl p-4 flex items-center gap-3 shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full"
+             style={{ backgroundColor: "#355872", border: "1px solid #35587233" }}
              onClick={() => openModal('failed-modal')}
           >
             <div className="flex-shrink-0 w-[40px] h-[40px] rounded-[14px] flex items-center justify-center bg-white/20 text-white shadow-sm">
               <AlertCircle size={16} />
             </div>
             <div className="flex flex-col justify-center min-w-0 flex-1 text-white">
-              <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 whitespace-normal break-words opacity-90">Failed Payments</h3>
+              <h3 className="text-[11px] font-bold uppercase tracking-wider leading-tight mb-1 truncate opacity-90">Failed Payments</h3>
               <div className="flex items-center gap-2">
                 <span className="text-[24px] font-extrabold leading-none tracking-tight">${failedSum.toLocaleString()}</span>
               </div>

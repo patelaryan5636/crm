@@ -11,11 +11,11 @@ export default function InvoiceManagement({ isEmbedded }) {
   ];
 
   const columns = [
-    { key: "idText", label: "Invoice ID" },
-    { key: "client", label: "Client" },
-    { key: "date", label: "Date" },
-    { key: "amount", label: "Amount" },
-    { key: "status", label: "Status" }
+    { key: "idText", label: "Invoice ID", width: "15%" },
+    { key: "client", label: "Client", width: "20%" },
+    { key: "date", label: "Date", width: "15%" },
+    { key: "amount", label: "Amount", width: "10%" },
+    { key: "status", label: "Status", width: "15%" }
   ];
 
   const invoices = rawInvoices.map(inv => ({
@@ -25,7 +25,7 @@ export default function InvoiceManagement({ isEmbedded }) {
 
   return (
     <div className={`w-full ${isEmbedded ? '' : 'min-h-screen bg-[#f8fafc] p-4 md:p-8'}`}>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+      <div className="flex flex-col gap-4 mb-8 w-full">
         <div>
           <Heading primaryText="Invoice" secondaryText="Management" size={12} />
           <P text="Create, view, and download client invoices." size="sm" />

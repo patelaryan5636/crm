@@ -3694,6 +3694,10 @@ export const EnhancedDataTable = ({
         <div className="absolute -bottom-[80px] left-[35%] w-96 h-96 bg-gradient-to-bl from-[#34d399]/30 to-[#3b82f6]/20 blur-3xl" style={{ clipPath: 'polygon(0% 20%, 100% 0%, 80% 100%, 20% 100%)', animation: 'trapezoidFloat2 25s linear infinite reverse' }} />
       </div>
 
+      {title && (
+        <h3 className="text-lg font-black text-[#2a465a] tracking-tight relative z-10 px-1">{title}</h3>
+      )}
+
       {searchable && (
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
           <div className="flex-1 w-full max-w-xl mx-auto relative group flex items-center gap-3">

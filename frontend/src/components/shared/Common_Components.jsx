@@ -1,4 +1,44 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+/**
+ * LineNumber Line
+---------- ----
+        // Priyanshu's Components
+        93   ── HOW TO USE InputField ──────────────────────────────────────────────────
+       132   ── HOW TO USE Label ────────────────────────────────────────────────────────
+       190   ── HOW TO USE DataField ────────────────────────────────────────────────────
+       267   ── HOW TO USE Button ───────────────────────────────────────────────────────
+       433   ── HOW TO USE SelectField ──────────────────────────────────────────────────
+       461   ── HOW TO USE Select ───────────────────────────────────────────────────────
+       500   ── HOW TO USE Option ───────────────────────────────────────────────────────
+      1416   ── HOW TO USE DataTable ────────────────────────────────────────────────────
+      1568   ── HOW TO USE Heading ──────────────────────────────────────────────────────
+      1618   ── HOW TO USE HeadingForDataTable ──────────────────────────────────────────
+      1668   ── HOW TO USE Grid ─────────────────────────────────────────────────────────
+      2056   ── HOW TO USE DashCard ─────────────────────────────────────────────────────
+      2136   ── HOW TO USE GLineChart ─────────────────────────────────────────────────── 
+      2228   ── HOW TO USE GBarChart ────────────────────────────────────────────────────
+      2306   ── HOW TO USE GColumnChart ─────────────────────────────────────────────────
+      2409   ── HOW TO USE GAreaChart ───────────────────────────────────────────────────
+      2513   ── HOW TO USE GDoughnutChart ───────────────────────────────────────────────
+      2586   ── HOW TO USE GPieChart ────────────────────────────────────────────────────
+      2663   ── HOW TO USE GRadarChart (Spider / Radar) ─────────────────────────────────
+      2723   ── HOW TO USE DashGrid ─────────────────────────────────────────────────────
+      2911   ── HOW TO USE Modal ────────────────────────────────────────────────────────
+      2975   ── HOW TO USE ModalData ────────────────────────────────────────────────────
+      3028   ── HOW TO USE ModalProfile ─────────────────────────────────────────────────
+      3089   ── HOW TO USE ModalGrid ────────────────────────────────────────────────────
+      3134   ── HOW TO USE P ────────────────────────────────────────────────────────────
+      3210   ── HOW TO USE ToggleButton ──────────────────────────────────────────────────
+
+      // Kartik Yadav's Components
+      3347   ── HOW TO USE EnhancedDashCard ─────────────────────────────────────────────
+      3469   ── HOW TO USE EnhancedModal ────────────────────────────────────────────────
+      3680   ── HOW TO USE EnhancedDataTable ────────────────────────────────────────────
+      3774   ── HOW TO USE PanelModal ───────────────────────────────────────────────────
+ */
+
+
+
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   Search,
@@ -226,7 +266,7 @@ export const Button = ({
 }) => {
   const variantCls = {
     primary:
-      "bg-[#355872] text-white shadow-lg shadow-[#355872]/20 hover:bg-gradient-to-r hover:from-[#2a465a] hover:to-[#426c8c] hover:shadow-xl hover:-translate-y-0.5",
+      "bg-[#2a465a] text-white shadow-lg shadow-[#2a465a]/20 hover:bg-gradient-to-r hover:from-[#1e3a52] hover:to-[#2b5a7a] hover:shadow-xl hover:-translate-y-0.5 shiny-sweep",
     secondary:
       "bg-white text-[#355872] border border-slate-200 hover:bg-slate-50 hover:-translate-y-0.5",
     danger:
@@ -303,6 +343,8 @@ export const Button = ({
 // ─────────────────────────────────────────────────────────────────────────────
 // 5. SELECT
 // Props: id, size, value, onChange, children (Option components), disabled, placeholder
+// Note: The dropdown list renders via createPortal into document.body so it is
+//       never clipped by ancestor overflow or CSS transform contexts.
 // ─────────────────────────────────────────────────────────────────────────────
 export const Select = ({
   id,
@@ -428,6 +470,34 @@ export const SelectField = ({
 );
 
 /*
+  ── HOW TO USE SelectField ──────────────────────────────────────────────────
+
+  // SelectField = Label + Select in a single slot (same as DataField but for dropdowns)
+  <SelectField
+    label="Department"
+    id="dept"
+    size={6}
+    placeholder="Choose a department"
+    value={dept}
+    onChange={(e) => setDept(e.target.value)}
+  >
+    <Option value="engineering" label="Engineering" />
+    <Option value="sales"       label="Sales" />
+    <Option value="hr"          label="Human Resources" />
+  </SelectField>
+
+  Props:
+  • label       — label text shown above the select
+  • id          — html id (links label + select)
+  • size        — 1–12 grid columns  (default: 12)
+  • value       — controlled value
+  • onChange    — change handler (e) => void
+  • disabled    — true | false  (default: false)
+  • placeholder — placeholder text when no value selected  (default: "Select an option")
+  • children    — <Option> components
+*/
+
+/*
   ── HOW TO USE Select ───────────────────────────────────────────────────────
 
   <Select
@@ -449,7 +519,10 @@ export const SelectField = ({
   • onChange    — change handler (e) => void
   • children    — <Option> components
   • disabled    — true | false  (default: false)
-  • placeholder — placeholder text shown when no value selected
+  • placeholder — placeholder text shown when no value selected  (default: "Select an option")
+
+  Note: The dropdown list renders via createPortal into document.body so it is
+        never clipped by ancestor overflow or CSS transform contexts.
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -482,26 +555,84 @@ export const Option = ({ value, label, disabled = false }) => (
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 7. DATA TABLE
-// Props: columns, rows, actions, size (1–12), pageSize, searchable,
-//        filters, date
+// Props: columns, rows, actions, title, size (1–12), pageSize, pageSizeOptions,
+//        searchable, filters, date, filterSize, onDateFilter, bulkAction, bulkActions
 //
-// filters — array of custom filter objects:
-//   [{ title: "Status", fn: (row, value) => boolean }]
-//   Each filter gets a text input in the Filter modal; the user types a value
-//   and your fn(row, value) decides whether the row passes.
+// filters — array of filter definition objects shown in the Filter modal:
+//   { title, type?, key?, options?, fn? }
+//   type: "text" (default) | "toggle" | "select"
+//   key:  row field to filter on (used when fn is omitted)
+//   options: required for "toggle" and "select" types — array of string values
+//   fn:  (row, value) => boolean — custom filter function (overrides key+type)
 //
-// date — "on" (default) | "off"
-//   When "on", two date pickers (From / To) appear in the filter modal.
-//   The table expects each row to have a `date` field (ISO string or Date).
-//   Pass date="off" to hide the date range pickers entirely.
+// date — true | false  (default: false)
+//   true  → shows From / To date pickers in the Filter modal
+//           Filters rows where row.date falls within the selected range.
+//   false → hides date range pickers entirely
+//
+// onDateFilter — true | false  (default: false)
+//   true  → shows a single date picker in the toolbar (between search bar and
+//            filter button). Filters rows where row.date matches the selected
+//            date (YYYY-MM-DD comparison, time is ignored).
+//
+// filterSize — controls the max-width of the Filter modal
+//   "sm" | "md" | "lg" | "xl" (default) | "2xl"
+//
+// bulkAction — true | false  (default: false)
+//   true → adds a checkbox column; when rows are selected a bulk action bar
+//           appears below the table.
+//
+// bulkActions — array of { title, icon?, onClick: (selectedRows) => void }
+//   Buttons shown in the bulk action bar when bulkAction={true} and rows are selected.
+//
+// actions — array of { label?, icon?, tooltip?, variant?, onClick: (row) => void }
+//   Per-row action buttons in the Actions column.
+//   If icon is provided and label is omitted → renders as a square icon-only button
+//   with an optional tooltip on hover.
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. DATA TABLE
+// Props: columns, rows, actions, title, size (1–12), pageSize, pageSizeOptions,
+//        searchable, filters, date, filterSize, onDateFilter, bulkAction, bulkActions
+//
+// filters — array of filter definition objects shown in the Filter modal:
+//   { title, type?, key?, options?, fn? }
+//   type: "text" (default) | "toggle" | "select"
+//   key:  row field to filter on (used when fn is omitted)
+//   options: required for "toggle" and "select" types — array of string values
+//   fn:  (row, value) => boolean — custom filter function (overrides key+type)
+//
+// date — true | false  (default: false)
+//   true  → shows From / To date pickers in the Filter modal
+//           Filters rows where row.date falls within the selected range.
+//   false → hides date range pickers entirely
+//
+// onDateFilter — true | false  (default: false)
+//   true  → shows a single date picker in the toolbar (between search bar and
+//            filter button). Filters rows where row.date matches the selected
+//            date (YYYY-MM-DD comparison, time is ignored).
+//
+// filterSize — controls the max-width of the Filter modal
+//   "sm" | "md" | "lg" | "xl" (default) | "2xl"
+//
+// bulkAction — true | false  (default: false)
+//   true → adds a checkbox column; when rows are selected a bulk action bar
+//           appears below the table.
+//
+// bulkActions — array of { title, icon?, onClick: (selectedRows) => void }
+//   Buttons shown in the bulk action bar when bulkAction={true} and rows are selected.
+//
+// actions — array of { label?, icon?, tooltip?, variant?, onClick: (row) => void }
+//   Per-row action buttons in the Actions column.
+//   If icon is provided and label is omitted → renders as a square icon-only button
+//   with an optional tooltip on hover.
 // ─────────────────────────────────────────────────────────────────────────────
 export const DataTable = ({
   columns = [],        // [{ key: "name", label: "Name" }, ...]
   rows = [],           // [{ name: "Alice", email: "..." }, ...]
-  actions = [],        // [{ label: "Edit", icon, onClick: (row) => void, variant? }]
+  actions = [],        // [{ label?, icon?, tooltip?, variant?, onClick: (row) => void }]
   title,
   size = 12,
-  pageSize = 10,
+  pageSize = 5,
   pageSizeOptions = [5, 10, 20, 50],
   searchable = true,
   // filters — pass an array of filter definitions; each filter shows as a
@@ -517,14 +648,24 @@ export const DataTable = ({
   date = false,
   // filterSize — controls the width of the filter modal
   // "sm" | "md" (default) | "lg" | "xl" | "2xl"
-  filterSize = "md",
+  filterSize = "xl",
   hideTopBar = false,
   hidePagination = false,
+  // onDateFilter — true | false (default false)
+  // true → shows a single date picker between the search bar and filter button
+  //        Filters rows where row.date matches the selected date (YYYY-MM-DD)
+  onDateFilter = false,
+  // bulkAction — true | false (default false)
+  // true → adds a checkbox column; when rows are selected a bulk action bar
+  //         appears below the table.
+  // bulkActions — array of { title, icon, onClick: (selectedRows) => void }
+  bulkAction = false,
+  bulkActions = [],
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(
-    () => Number(pageSize) || 10,
+    () => Number(pageSize) || 5,
   );
   const [sortConfig, setSortConfig] = useState({
     key: columns?.[0]?.key || null,
@@ -535,6 +676,7 @@ export const DataTable = ({
   const [filterModalOpen, setFilterModalOpen]   = useState(false);
   const [filterModalShow, setFilterModalShow]   = useState(false);
   const [filterModalRender, setFilterModalRender] = useState(false);
+  const filterCloseTimerRef = useRef(null);
 
   // filterValues holds the current live input value per filter title
   // For "toggle" type: value is an array of selected labels []
@@ -573,6 +715,12 @@ export const DataTable = ({
   const [appliedDateFrom, setAppliedDateFrom] = useState("");
   const [appliedDateTo,   setAppliedDateTo]   = useState("");
 
+  // Single date filter (toolbar date picker — onDateFilter={true})
+  const [singleDate, setSingleDate] = useState("");
+
+  // Bulk selection state — stores indices into `filtered` (not `paginated`)
+  const [selectedRows, setSelectedRows] = useState(new Set());
+
   // Count how many filters are currently active (non-empty)
   const activeFilterCount = useMemo(() => {
     const customActive = Object.values(appliedFilters).filter((v) =>
@@ -585,14 +733,23 @@ export const DataTable = ({
 
   // Open / close filter modal with animation
   const openFilterModal = () => {
+    if (filterCloseTimerRef.current) clearTimeout(filterCloseTimerRef.current);
     setFilterModalRender(true);
     requestAnimationFrame(() => requestAnimationFrame(() => setFilterModalShow(true)));
     setFilterModalOpen(true);
   };
   const closeFilterModal = () => {
     setFilterModalShow(false);
-    setTimeout(() => { setFilterModalRender(false); setFilterModalOpen(false); }, 260);
+    filterCloseTimerRef.current = setTimeout(() => {
+      setFilterModalRender(false);
+      setFilterModalOpen(false);
+    }, 260);
   };
+
+  // Cancel any pending filter-close timer on unmount
+  useEffect(() => () => {
+    if (filterCloseTimerRef.current) clearTimeout(filterCloseTimerRef.current);
+  }, []);
 
   const handleApplyFilters = () => {
     setAppliedFilters({ ...filterValues });
@@ -619,6 +776,11 @@ export const DataTable = ({
     setCurrentPageSize(Number(pageSize) || 10);
     setPage(1);
   }, [pageSize]);
+
+  // Clear bulk selection whenever filters or search change
+  useEffect(() => {
+    setSelectedRows(new Set());
+  }, [search, appliedFilters, appliedDateFrom, appliedDateTo, singleDate]);
 
   const handleSort = (key) => {
     let direction = "asc";
@@ -672,6 +834,15 @@ export const DataTable = ({
       }
     }
 
+    // Single date toolbar filter (onDateFilter={true})
+    if (onDateFilter && singleDate) {
+      result = result.filter((row) => {
+        if (!row.date) return false;
+        // Compare only the date part (YYYY-MM-DD) so time doesn't matter
+        return String(row.date).slice(0, 10) === singleDate;
+      });
+    }
+
     if (sortConfig.key) {
       result = [...result].sort((a, b) => {
         const aVal = a[sortConfig.key] ?? "";
@@ -690,7 +861,7 @@ export const DataTable = ({
     }
 
     return result;
-  }, [rows, search, columns, sortConfig, appliedFilters, appliedDateFrom, appliedDateTo, resolvedFilters, date]);
+  }, [rows, search, columns, sortConfig, appliedFilters, appliedDateFrom, appliedDateTo, resolvedFilters, date, singleDate, onDateFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / currentPageSize));
   const paginated = filtered.slice(
@@ -706,17 +877,45 @@ export const DataTable = ({
 
   const showFilterButton = filters.length > 0 || date === true;
 
+  // ── Bulk selection helpers ────────────────────────────────────────────────
+  // We key rows by their index in `filtered` so selection survives pagination.
+  const paginatedIndices = paginated.map((_, i) => (page - 1) * currentPageSize + i);
+  const allPageSelected  = paginatedIndices.length > 0 && paginatedIndices.every((idx) => selectedRows.has(idx));
+  const someSelected     = selectedRows.size > 0;
+
+  const toggleRow = (idx) => {
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      next.has(idx) ? next.delete(idx) : next.add(idx);
+      return next;
+    });
+  };
+
+  const toggleAllPage = () => {
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        paginatedIndices.forEach((idx) => next.delete(idx));
+      } else {
+        paginatedIndices.forEach((idx) => next.add(idx));
+      }
+      return next;
+    });
+  };
+
+  const selectedRowData = [...selectedRows].map((idx) => filtered[idx]).filter(Boolean);
+
   return (
     <div
       className={`${colSpan(size)} flex bg-[#efefefb1] rounded-xl p-3 flex-col gap-3`}
     >
       {title ? (
-        <Heading primaryText={title} secondaryText="Data table" size={12} />
+        <HeadingForDataTable primaryText={title} secondaryText="Data table" size={12} />
       ) : null}
 
-      {/* Search + page size + filter button */}
+      {/* Search + date picker + page size + filter button */}
       {!hideTopBar && (
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {searchable ? (
           <div className="relative flex-1">
             <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
@@ -734,6 +933,18 @@ export const DataTable = ({
             />
           </div>
         ) : null}
+
+        {/* Single date picker — shown only when onDateFilter={true} */}
+        {onDateFilter && (
+          <div className="relative flex items-center gap-1.5">
+            <input
+              type="date"
+              value={singleDate}
+              onChange={(e) => { setSingleDate(e.target.value); setPage(1); }}
+              className="rounded-2xl border border-slate-200 bg-white py-3 px-4 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 transition cursor-pointer"
+            />
+          </div>
+        )}
 
         <div className="flex items-center gap-2 whitespace-nowrap">
           {/* Filter button — only shown when filters array is provided or date is "on" */}
@@ -960,119 +1171,258 @@ export const DataTable = ({
 
       {/* Table wrapper */}
       <div className="w-full rounded-2xl border border-slate-200 bg-white shadow-md overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed">
           <thead>
             <tr className="bg-gradient-to-r from-[#2a465a] to-[#3a5a7a] border-b border-[#2a465a]/10">
+              {/* Bulk select — header checkbox */}
+              {bulkAction && (
+                <th className="py-4 pl-5 pr-2 w-10">
+                  <button
+                    type="button"
+                    onClick={toggleAllPage}
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all duration-150 ${
+                      allPageSelected
+                        ? "bg-white border-white"
+                        : "bg-transparent border-white/40 hover:border-white/80"
+                    }`}
+                  >
+                    {allPageSelected && (
+                      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6l3 3 5-5" stroke="#2a465a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                    {/* Indeterminate dash — some but not all on this page selected */}
+                    {!allPageSelected && selectedRows.size > 0 && paginatedIndices.some(idx => selectedRows.has(idx)) && (
+                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 6h7" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+                      </svg>
+                    )}
+                  </button>
+                </th>
+              )}
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  onClick={() => handleSort(col.key)}
-                  className="group py-4 px-3 text-left text-xs font-black text-white uppercase tracking-[0.1em] cursor-pointer hover:bg-white/5 transition-colors select-none"
+                  onClick={() => !col.headerNode && handleSort(col.key)}
+                  style={{ width: col.width, minWidth: col.width, maxWidth: col.width }}
+                  className={`group py-4 px-4 text-left text-xs font-black text-white uppercase tracking-[0.1em] transition-colors select-none ${col.headerNode ? "" : "cursor-pointer hover:bg-white/5"}`}
                 >
-                  <div className="flex items-center gap-2">
-                    {col.label}
-                    <ArrowUpDown
-                      size={14}
-                      className={`transition-all duration-200 ${sortConfig.key === col.key ? "opacity-100 text-[#38bdf8]" : "opacity-40 group-hover:opacity-100"}`}
-                    />
-                  </div>
+                  {col.headerNode ? (
+                    col.headerNode
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {col.label}
+                      <ArrowUpDown
+                        size={14}
+                        className={`transition-all duration-200 ${sortConfig.key === col.key ? "opacity-100 text-[#38bdf8]" : "opacity-40 group-hover:opacity-100"}`}
+                      />
+                    </div>
+                  )}
                 </th>
               ))}
               {actions.length > 0 && (
-                <th className="py-4 px-5 text-left text-xs font-black text-white uppercase tracking-[0.2em] w-[220px]">
+                <th style={{ width: "25%", minWidth: "25%", maxWidth: "25%" }} className="py-4 px-4 text-left text-xs font-black text-white uppercase tracking-[0.1em]">
                   Actions
                 </th>
               )}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white">
             {paginated.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length + (actions.length > 0 ? 1 : 0)}
+                  colSpan={columns.length + (actions.length > 0 ? 1 : 0) + (bulkAction ? 1 : 0)}
                   className="py-10 text-center text-slate-400 text-sm"
                 >
                   No records found.
                 </td>
               </tr>
             ) : (
-              paginated.map((row, i) => (
+              paginated.map((row, i) => {
+                const filteredIdx = (page - 1) * currentPageSize + i;
+                const isSelected  = selectedRows.has(filteredIdx);
+                return (
                 <tr
                   key={i}
                   className={`border-b border-slate-100 transition ${
-                    i % 2 === 0 ? "bg-white" : "bg-slate-50/60"
-                  } hover:bg-blue-50/40`}
+                    isSelected ? "bg-blue-50/70" : "bg-white"
+                  } hover:bg-slate-50`}
                 >
+                  {/* Row checkbox */}
+                  {bulkAction && (
+                    <td className="py-3 pl-3 pr-2 w-10">
+                      <button
+                        type="button"
+                        onClick={() => toggleRow(filteredIdx)}
+                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all duration-150 ${
+                          isSelected
+                            ? "bg-[#2a465a] border-[#2a465a]"
+                            : "bg-white border-slate-300 hover:border-[#2a465a]/60"
+                        }`}
+                      >
+                        {isSelected && (
+                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </button>
+                    </td>
+                  )}
                   {columns.map((col) => {
                     if (col.key === "status") {
                       const val = row[col.key];
-                      let statusBg = "bg-slate-100";
-                      let statusText = "text-slate-600";
-                      if (val === "Completed" || val === "Active" || val === "Present" || val === "Approved") {
-                        statusBg = "bg-emerald-100";
-                        statusText = "text-emerald-700";
-                      } else if (val === "Pending" || val === "In Progress" || val === "Late" || val === "On Leave") {
-                        statusBg = "bg-amber-100";
-                        statusText = "text-amber-700";
-                      } else if (val === "Failed" || val === "Cancelled" || val === "Inactive" || val === "Absent" || val === "Rejected") {
-                        statusBg = "bg-rose-100";
-                        statusText = "text-rose-700";
-                      }
+                      // ── Status → colour map ──────────────────────────────
+                      // Green  — positive / done
+                      // Amber  — in-progress / warm / pending
+                      // Blue   — new / cold / info
+                      // Purple — prospect / interested
+                      // Rose   — failed / dump / hot (urgent)
+                      // Slate  — default / unknown
+                      const STATUS_MAP = {
+                        // ── Green ──
+                        Completed:  ["bg-emerald-100", "text-emerald-700"],
+                        Converted:  ["bg-emerald-100", "text-emerald-700"],
+                        Done:       ["bg-emerald-100", "text-emerald-700"],
+                        Active:     ["bg-emerald-100", "text-emerald-700"],
+                        Approved:   ["bg-emerald-100", "text-emerald-700"],
+                        Won:        ["bg-emerald-100", "text-emerald-700"],
+                        Valid:      ["bg-emerald-100", "text-emerald-700"],
+                        Present:    ["bg-emerald-100", "text-emerald-700"],
+                        // ── Amber ──
+                        "In Progress": ["bg-amber-100", "text-amber-700"],
+                        Pending:       ["bg-amber-100", "text-amber-700"],
+                        "Follow-up":   ["bg-amber-100", "text-amber-700"],
+                        Warm:          ["bg-amber-100", "text-amber-700"],
+                        Proposal:      ["bg-amber-100", "text-amber-700"],
+                        Interested:    ["bg-amber-100", "text-amber-700"],
+                        Late:          ["bg-amber-100", "text-amber-700"],
+                        "On Leave":    ["bg-amber-100", "text-amber-700"],
+                        // ── Blue ──
+                        New:  ["bg-blue-100", "text-blue-700"],
+                        Cold: ["bg-blue-100", "text-blue-700"],
+                        // ── Purple ──
+                        Prospect:   ["bg-purple-100", "text-purple-700"],
+                        Qualified:  ["bg-purple-100", "text-purple-700"],
+                        // ── Rose ──
+                        Failed:    ["bg-rose-100", "text-rose-700"],
+                        Cancelled: ["bg-rose-100", "text-rose-700"],
+                        Dump:      ["bg-rose-100", "text-rose-700"],
+                        Hot:       ["bg-rose-100", "text-rose-700"],
+                        Lost:      ["bg-rose-100", "text-rose-700"],
+                        Rejected:  ["bg-rose-100", "text-rose-700"],
+                        Inactive:  ["bg-rose-100", "text-rose-700"],
+                        Invalid:   ["bg-rose-100", "text-rose-700"],
+                        Absent:    ["bg-rose-100", "text-rose-700"],
+                      };
+                      const [statusBg, statusText] = STATUS_MAP[val] ?? ["bg-slate-100", "text-slate-600"];
                       return (
-                        <td
-                          key={col.key}
-                          className="py-3 px-3 align-middle"
-                        >
-                          <div className="flex items-center">
-                            <span
-                              className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-[11px] font-bold leading-none ${statusBg} ${statusText}`}
-                            >
-                              {val ?? "—"}
-                            </span>
-                          </div>
+                        <td key={col.key} style={{ width: col.width, minWidth: col.width, maxWidth: col.width }} className="py-3 px-4 whitespace-nowrap align-middle">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusBg} ${statusText}`}>
+                            {val ?? "—"}
+                          </span>
                         </td>
                       );
                     }
                     return (
-                      <td
+                        <td
                         key={col.key}
-                        className="py-3 px-3 align-middle"
+                        style={{ width: col.width, minWidth: col.width, maxWidth: col.width }}
+                        className="py-3 px-4 align-middle"
                       >
-                        <div className="text-[#2a465a] font-medium text-[12px] whitespace-nowrap leading-tight">
+                        <div className="text-[#2a465a] font-medium text-sm truncate leading-tight">
                           {row[col.key] ?? "—"}
                         </div>
                       </td>
                     );
                   })}
                   {actions.length > 0 && (
-                    <td className="py-3 px-4 align-middle">
-                      <div className="flex items-center gap-2">
-                        {actions.map((action, ai) => (
-                          <button
-                            key={ai}
-                            type="button"
-                            onClick={() => action.onClick(row)}
-                            className={`
-                              flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold
-                              transition duration-150 active:scale-95
-                              ${actionVariantCls[action.variant ?? "ghost"]}
-                            `}
-                          >
-                            {action.icon && (
-                              <span className="w-3.5 h-3.5 flex items-center justify-center">{action.icon}</span>
-                            )}
-                            {action.label}
-                          </button>
-                        ))}
+                    <td style={{ width: "25%", minWidth: "25%", maxWidth: "25%" }} className="py-3 px-4 align-middle">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {actions.map((action, ai) => {
+                          const isIconOnly = action.icon && !action.label;
+                          return (
+                            <div key={ai} className="relative group/tip">
+                              <button
+                                type="button"
+                                onClick={() => action.onClick(row)}
+                                className={`
+                                  flex items-center justify-center gap-1.5
+                                  transition duration-150 active:scale-95
+                                  ${isIconOnly
+                                    ? `w-8 h-8 rounded-xl ${actionVariantCls[action.variant ?? "ghost"]}`
+                                    : `px-3 py-1.5 rounded-xl text-xs font-bold ${actionVariantCls[action.variant ?? "ghost"]}`
+                                  }
+                                `}
+                              >
+                                {action.icon && (
+                                  <span className={isIconOnly ? "w-4 h-4" : "w-3.5 h-3.5"}>
+                                    {action.icon}
+                                  </span>
+                                )}
+                                {action.label && (
+                                  <span className="text-xs font-bold">{action.label}</span>
+                                )}
+                              </button>
+
+                              {/* Tooltip — only shown when icon-only */}
+                              {isIconOnly && action.tooltip && (
+                                <div className="
+                                  pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2
+                                  opacity-0 group-hover/tip:opacity-100
+                                  translate-y-1 group-hover/tip:translate-y-0
+                                  transition-all duration-150 ease-out
+                                  z-50 whitespace-nowrap
+                                ">
+                                  <div className="bg-[#1e293b] text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-lg">
+                                    {action.tooltip}
+                                  </div>
+                                  {/* Arrow */}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1e293b]" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </td>
                   )}
                 </tr>
-              ))
+              );
+              })
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Bulk action bar — slides up when rows are selected */}
+      {bulkAction && someSelected && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#2a465a] text-white shadow-lg">
+          <span className="text-sm font-semibold whitespace-nowrap">
+            {selectedRows.size} row{selectedRows.size > 1 ? "s" : ""} selected
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {bulkActions.map((ba, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => ba.onClick(selectedRowData)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors duration-150 active:scale-95"
+              >
+                {ba.icon && <span className="w-3.5 h-3.5 flex-shrink-0">{ba.icon}</span>}
+                {ba.title}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setSelectedRows(new Set())}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs font-semibold transition-colors duration-150"
+            >
+              <X size={13} />
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Pagination */}
       {!hidePagination && (
@@ -1117,11 +1467,10 @@ export const DataTable = ({
                   key={p}
                   type="button"
                   onClick={() => setPage(p)}
-                  className={`w-8 h-8 rounded-xl text-xs font-bold transition ${
-                    p === page
+                  className={`w-8 h-8 rounded-xl text-xs font-bold transition ${p === page
                       ? "bg-[#2a465a] text-white shadow"
                       : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
-                  }`}
+                    }`}
                 >
                   {p}
                 </button>
@@ -1146,74 +1495,190 @@ export const DataTable = ({
   ── HOW TO USE DataTable ────────────────────────────────────────────────────
 
   const columns = [
-    { key: "name",    label: "Name" },
-    { key: "email",   label: "Email" },
-    { key: "role",    label: "Role" },
-    { key: "status",  label: "Status" }, // 'status' key renders as a colored badge
-    { key: "date",    label: "Date" },   // 'date' field is used by the built-in date range filter
+    { key: "name",   label: "Name" },
+    { key: "email",  label: "Email" },
+    { key: "role",   label: "Role" },
+    { key: "status", label: "Status" }, // 'status' key renders as a colored badge
+    { key: "date",   label: "Date" },   // 'date' field used by date range / toolbar filters
   ];
 
   const rows = [
-    { name: "Alice Johnson", email: "alice@acme.com", role: "Admin",   status: "Completed", date: "2024-03-15" },
+    { name: "Alice Johnson", email: "alice@acme.com", role: "Admin",   status: "Completed",  date: "2024-03-15" },
     { name: "Bob Smith",     email: "bob@acme.com",   role: "Manager", status: "In Progress", date: "2024-04-01" },
-    { name: "Carol White",   email: "carol@acme.com", role: "Staff",   status: "Failed", date: "2024-04-10" },
+    { name: "Carol White",   email: "carol@acme.com", role: "Staff",   status: "Failed",      date: "2024-04-10" },
   ];
 
+  // Icon-only actions with tooltips
   const actions = [
     {
-      label: "Edit",
-      variant: "primary",      // "primary" | "danger" | "ghost"
-      onClick: (row) => console.log("Edit", row),
+      icon: <Pencil size={14} />,
+      tooltip: "Edit",
+      variant: "ghost",                 // "primary" | "danger" | "ghost"
+      onClick: (row) => handleEdit(row),
     },
     {
-      label: "Delete",
+      icon: <Trash2 size={14} />,
+      tooltip: "Delete",
       variant: "danger",
-      onClick: (row) => console.log("Delete", row),
+      onClick: (row) => handleDelete(row),
     },
   ];
 
-  // With filters and date range (date is ON by default)
+  // Label + icon actions (no tooltip needed)
+  const actions = [
+    { label: "Edit",   icon: <Pencil size={14} />, variant: "primary", onClick: (row) => handleEdit(row) },
+    { label: "Delete",                              variant: "danger",  onClick: (row) => handleDelete(row) },
+  ];
+
+  // Full example with all filter types, date range, bulk actions, and toolbar date picker
   <DataTable
     columns={columns}
     rows={rows}
     actions={actions}
+    title="All Users"
     size={12}
     pageSize={10}
+    pageSizeOptions={[5, 10, 20, 50]}
     searchable={true}
+    date={true}
+    onDateFilter={true}
+    filterSize="xl"
     filters={[
-      { title: "Status", fn: (row, value) => row.status === value },
-      { title: "Role",   fn: (row, value) => row.role.toLowerCase().includes(value.toLowerCase()) },
+      // text filter (default) — uses key + substring match
+      { title: "Role",   type: "text",   key: "role" },
+      // toggle filter — renders pill chips; matches rows where row.status is in selected set
+      { title: "Status", type: "toggle", key: "status", options: ["Completed", "In Progress", "Failed", "Cancelled"] },
+      // select filter — renders a dropdown; exact match on row.role
+      { title: "Dept",   type: "select", key: "dept",   options: ["Engineering", "Sales", "HR"] },
+      // custom fn — overrides key+type entirely
+      { title: "Senior", fn: (row, value) => value ? row.yearsExp >= 5 : true },
+    ]}
+    bulkAction={true}
+    bulkActions={[
+      { title: "Export",  icon: <Download size={13} />, onClick: (rows) => exportCSV(rows) },
+      { title: "Archive", icon: <Archive size={13} />,  onClick: (rows) => archiveAll(rows) },
     ]}
   />
 
-  // To hide the date range pickers, pass date="off"
-  <DataTable
-    columns={columns}
-    rows={rows}
-    size={12}
-    date="off"
-  />
-
   Props:
-  • columns    — array of { key, label } defining table headers & data keys (key 'status' renders a colored badge)
-  • rows       — array of data objects (keys must match column keys)
-  • actions    — array of { label, variant, onClick, icon? } action buttons per row
-  • size       — 1–12 grid columns  (default: 12)
-  • pageSize   — rows per page  (default: 10)
-  • searchable — show search bar  (default: true)
-  • filters    — array of { title, fn } filter definitions shown in the Filter modal
-                   title: string label for the filter input
-                   fn: (row, value) => boolean — return true if the row should pass
-  • date       — "on" | "off"  (default: "on")
-                   "on"  → shows From / To date pickers in the filter modal; filters on row.date field
-                   "off" → hides date range pickers entirely
+  • columns          — array of { key, label }; key "status" renders a colored badge
+  • rows             — array of data objects (keys must match column keys)
+  • actions          — array of { label?, icon?, tooltip?, variant?, onClick }
+                         label + icon → labeled button; icon only → square icon button with tooltip
+                         variant: "primary" | "danger" | "ghost"  (default: "ghost")
+  • title            — optional heading shown above the table
+  • size             — 1–12 grid columns  (default: 12)
+  • pageSize         — rows per page  (default: 5)
+  • pageSizeOptions  — array of page-size choices  (default: [5, 10, 20, 50])
+  • searchable       — show search bar  (default: true)
+  • filters          — array of filter definitions shown in the Filter modal:
+                         { title, type?, key?, options?, fn? }
+                         type: "text" (default) | "toggle" | "select"
+                         key:  row field to auto-filter on (used when fn is omitted)
+                         options: required for "toggle" and "select" types
+                         fn: (row, value) => boolean — custom filter (overrides key+type)
+  • date             — true | false  (default: false)
+                         true  → shows From / To date pickers in the Filter modal
+                         false → hides date range pickers
+  • onDateFilter     — true | false  (default: false)
+                         true  → shows a single date picker in the toolbar
+  • filterSize       — max-width of the Filter modal: "sm"|"md"|"lg"|"xl"|"2xl"  (default: "xl")
+  • bulkAction       — true | false  (default: false) — enables row checkboxes + bulk bar
+  • bulkActions      — array of { title, icon?, onClick: (selectedRows) => void }
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 8. HEADING
-// Props: primaryText, secondaryText, size (1–12)
+// Props: primaryText, secondaryText, size (1–12), fontSize, showAnimations
 // ─────────────────────────────────────────────────────────────────────────────
 export const Heading = ({
+  primaryText = "",
+  secondaryText = "",
+  size = 12,
+  fontSize = "2xl", // "sm" | "md" | "lg" | "xl" | "2xl" (default) | "3xl" | "4xl"
+  showAnimations = true, // Added to toggle floating squares and wave drops
+}) => {
+  const fontSizeMap = {
+    sm:  "text-sm",
+    md:  "text-base",
+    lg:  "text-lg",
+    xl:  "text-xl",
+    "2xl": "text-2xl",
+    "3xl": "text-3xl",
+    "4xl": "text-4xl",
+  };
+  const cls = fontSizeMap[fontSize] ?? "text-2xl";
+  return (
+    <div className={`${colSpan(size)} relative overflow-hidden rounded-2xl p-6 ${showAnimations ? 'bg-[#1e3445] shadow-md border border-[#152532]' : 'bg-transparent'}`}>
+      {/* Optional Background 3D Wave Drops & Half Square */}
+      {showAnimations && (
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+          {/* Half Square / Polygon movement */}
+          <div className="absolute top-[20%] left-[20%] w-64 h-64 bg-gradient-to-br from-white to-transparent opacity-10" style={{ clipPath: 'polygon(0 0, 100% 0, 0 100%)', animation: "halfSquareMove 12s ease-in-out infinite" }} />
+          
+          <div className="absolute top-[10%] left-[5%] w-40 h-40 bg-gradient-to-br from-[#3e8ca7] to-transparent blur-[40px] opacity-40" style={{ animation: "dropRipple1 8s ease-in-out infinite" }} />
+          <div className="absolute top-[40%] left-[50%] w-56 h-56 bg-gradient-to-tr from-[#2a455a] to-[#3e8ca7] blur-[50px] opacity-30" style={{ animation: "dropRipple2 10s ease-in-out infinite" }} />
+          <div className="absolute -top-[20%] right-[10%] w-32 h-32 bg-gradient-to-bl from-[#38bdf8] to-transparent blur-[30px] opacity-20" style={{ animation: "dropRipple3 7s ease-in-out infinite" }} />
+        </div>
+      )}
+
+      <h2 className={`${cls} font-black tracking-tight leading-tight relative z-10 flex justify-between items-center`}>
+        <div>
+          <span className={showAnimations ? "text-white drop-shadow-sm" : "text-[#2a465a] drop-shadow-sm"}>{primaryText}</span>
+          {secondaryText && (
+            <span className={showAnimations ? "text-[#38bdf8] font-extrabold ml-2 opacity-90" : "text-slate-400 font-extrabold"}> {secondaryText}</span>
+          )}
+        </div>
+
+        {/* Optional Top-Right Floating Squares */}
+        {showAnimations && (
+          <div className="relative w-10 h-10 mr-2">
+            <div className="absolute inset-0 border-2 border-white/20 rounded-[8px] backdrop-blur-sm" style={{ animation: "squareOrbit1 6s linear infinite" }} />
+            <div className="absolute inset-1 border-2 border-[#38bdf8]/40 rounded-[6px]" style={{ animation: "squareOrbit2 8s linear infinite" }} />
+          </div>
+        )}
+      </h2>
+      {!showAnimations && <hr className="mt-3 border-slate-200/60 relative z-10"/>}
+    </div>
+  );
+};
+
+/*
+  ── HOW TO USE Heading ──────────────────────────────────────────────────────
+
+  // Animated dark banner (default — showAnimations=true)
+  <Heading
+    primaryText="Manage Customers."
+    secondaryText="Empower Teams."
+    size={12}
+  />
+
+  // Plain heading without animations (transparent background, navy text)
+  <Heading
+    primaryText="Dashboard Overview"
+    size={8}
+    showAnimations={false}
+  />
+
+  // Smaller font size
+  <Heading
+    primaryText="Section Title"
+    secondaryText="Details"
+    size={12}
+    fontSize="lg"
+  />
+
+  Props:
+  • primaryText     — main text; white when showAnimations=true, navy (#2a465a) when false
+  • secondaryText   — accent text; sky-blue (#38bdf8) when animated, slate-400 when not
+  • size            — 1–12 grid columns  (default: 12)
+  • fontSize        — "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl"  (default: "2xl")
+  • showAnimations  — true | false  (default: true)
+                        true  → dark navy card with floating squares and wave-drop background
+                        false → transparent background with a bottom border rule
+*/
+
+export const HeadingForDataTable = ({
   primaryText = "",
   secondaryText = "",
   size = 12,
@@ -1229,19 +1694,16 @@ export const Heading = ({
 );
 
 /*
-  ── HOW TO USE Heading ──────────────────────────────────────────────────────
+  ── HOW TO USE HeadingForDataTable ──────────────────────────────────────────
 
-  // Two-color heading (primary word + secondary/muted word)
-  <Heading
-    primaryText="Manage Customers."
-    secondaryText="Empower Teams."
+  // Used internally by DataTable when a title prop is provided.
+  // You can also use it standalone as a plain two-color heading without the
+  // animated background that Heading uses.
+
+  <HeadingForDataTable
+    primaryText="All Users"
+    secondaryText="Data table"
     size={12}
-  />
-
-  // Single-color heading (leave secondaryText empty)
-  <Heading
-    primaryText="Dashboard Overview"
-    size={8}
   />
 
   Props:
@@ -1518,35 +1980,112 @@ const ChartCard = ({
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. DASH CARD
 // Props: title, value, icon, size, accentColor
+// Uses a ResizeObserver to auto-scale text and icon to fit the card width.
+// Internal refs: titleRef, valueRef, containerRef, iconBoxRef, isRunningRef
 // ─────────────────────────────────────────────────────────────────────────────
 export const DashCard = ({
   title = "Total Employees",
   value = "0",
   icon,
-  size = 4, // This will now act as the "Desktop" size
+  size = 4,
   accentColor = "#1e293b",
 }) => {
+  const titleRef     = useRef(null);
+  const valueRef     = useRef(null);
+  const containerRef = useRef(null);
+  const iconBoxRef   = useRef(null);
+  // Guard against ResizeObserver re-entrancy: our own DOM writes (padding, gap,
+  // icon size) change the observed element's layout, which would re-fire the
+  // observer and create an infinite loop. The flag breaks the cycle.
+  const isRunningRef = useRef(false);
+
+  const fitText = useCallback((el, maxPx, minPx) => {
+    if (!el) return;
+    el.style.fontSize = `${maxPx}px`;
+    let fs = maxPx;
+    while (el.scrollWidth > el.offsetWidth + 1 && fs > minPx) {
+      fs -= 0.5;
+      el.style.fontSize = `${fs}px`;
+    }
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const run = () => {
+      // Skip if we triggered this observation ourselves
+      if (isRunningRef.current) return;
+      isRunningRef.current = true;
+
+      const w = container.offsetWidth;
+
+      // ── Responsive padding: 8px at 80px wide → 20px at 240px+ ──
+      const pad = Math.round(Math.min(20, Math.max(8, (w / 240) * 20)));
+      container.style.padding = `${pad}px`;
+
+      // ── Responsive gap between icon and text ──
+      const gap = Math.round(Math.min(16, Math.max(6, (w / 240) * 16)));
+      container.style.gap = `${gap}px`;
+
+      // ── Responsive icon box: 32px at 80px → 48px at 240px+ ──
+      if (iconBoxRef.current) {
+        const iconSz = Math.round(Math.min(48, Math.max(28, (w / 240) * 48)));
+        iconBoxRef.current.style.width  = `${iconSz}px`;
+        iconBoxRef.current.style.height = `${iconSz}px`;
+        const svgSz = Math.round(Math.min(20, Math.max(12, (w / 240) * 20)));
+        iconBoxRef.current.style.fontSize = `${svgSz}px`;
+        const svgEl = iconBoxRef.current.querySelector("svg");
+        if (svgEl) {
+          svgEl.setAttribute("width",  svgSz);
+          svgEl.setAttribute("height", svgSz);
+        }
+      }
+
+      // ── Fit title text ──
+      fitText(titleRef.current, 12, 7);
+
+      // ── Fit value text ──
+      const vStr = String(value);
+      const maxV = vStr.length > 12 ? 18 : vStr.length > 8 ? 22 : vStr.length > 6 ? 24 : 28;
+      fitText(valueRef.current, maxV, 10);
+
+      // Release the guard after the current microtask queue drains so any
+      // layout recalculation triggered by our writes is already settled.
+      Promise.resolve().then(() => { isRunningRef.current = false; });
+    };
+
+    run();
+    const ro = new ResizeObserver(run);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [value, fitText]);
   return (
     <div
-      // Mobile: col-span-12 (Full width)
-      // Tablet: col-span-6 (Half width)
-      // Desktop: col-span-{size} (Your custom size)
-      className={`col-span-12 md:col-span-6 lg:col-span-${size} rounded-2xl p-5 flex items-center gap-5 relative overflow-hidden transition-all duration-300 hover:translate-y-[-4px]`}
+      ref={containerRef}
+      className={`col-span-12 md:col-span-6 lg:col-span-${size} rounded-2xl flex items-center relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group cursor-pointer`}
       style={{
         background: "#ffffff",
         border: "1px solid #e2e8f0",
-        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.04)",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+        padding: "20px",
+        gap: "16px",
       }}
     >
+      {/* Accent glow */}
       <div
-        className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full blur-3xl opacity-10 pointer-events-none"
+        className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full blur-2xl opacity-10 pointer-events-none transition-opacity duration-300 group-hover:opacity-20"
         style={{ background: accentColor }}
       />
 
+      {/* Icon box */}
       {icon && (
         <div
-          className="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center"
+          ref={iconBoxRef}
+          className="flex-shrink-0 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-105"
           style={{
+            width: "48px",
+            height: "48px",
             background: "#f8fafc",
             border: "1px solid #f1f5f9",
             color: accentColor,
@@ -1556,45 +2095,45 @@ export const DashCard = ({
         </div>
       )}
 
-      <div className="flex flex-col justify-center min-w-0 w-full pr-2">
+      {/* Text */}
+      <div className="flex flex-col justify-center min-w-0 w-full">
         <h3
-          className="w-full whitespace-nowrap overflow-hidden text-ellipsis"
+          ref={titleRef}
+          className="whitespace-nowrap"
           style={{
             color: "#64748b",
             fontSize: "13px",
             fontWeight: 600,
             textTransform: "uppercase",
             letterSpacing: "0.05em",
-            marginBottom: "4px",
+            marginBottom: "2px",
+            overflow: "visible",
           }}
         >
           {title}
         </h3>
-        <div className="flex items-center gap-2">
-          <span
-            style={{
-              color: "#0f172a",
-              fontSize: "24px",
-              fontWeight: 700,
-              letterSpacing: "-0.01em",
-              lineHeight: "1",
-            }}
-          >
-            {value}
-          </span>
-          <div
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ background: accentColor, opacity: 0.2 }}
-          />
-        </div>
+        <span
+          ref={valueRef}
+          className="whitespace-nowrap"
+          style={{
+            color: "#0f172a",
+            fontSize: "28px",
+            fontWeight: 800,
+            letterSpacing: "-0.01em",
+            lineHeight: "1",
+            overflow: "visible",
+          }}
+        >
+          {value}
+        </span>
       </div>
     </div>
   );
-};
+};;
 /*
   ── HOW TO USE DashCard ─────────────────────────────────────────────────────
 
-  import { Users } from "lucide-react";
+  import { Users, TrendingDown } from "lucide-react";
 
   <DashCard
     title="Total Employees"
@@ -1604,7 +2143,6 @@ export const DashCard = ({
     size={3}
   />
 
-  // Negative trend example
   <DashCard
     title="Churn Rate"
     value="4.2%"
@@ -1614,11 +2152,12 @@ export const DashCard = ({
   />
 
   Props:
-  • title        — card label text
-  • value        — big number/text displayed
-  • icon         — any React node (Lucide icon recommended)
-  • accentColor  — hex color for icon + glow  (default: "#3b82f6")
-  • size         — 1–12 grid columns  (default: 3)
+  • title       — card label text (auto-shrinks to fit via ResizeObserver)
+  • value       — big number/text displayed (auto-shrinks to fit)
+  • icon        — any React node (Lucide icon recommended)
+  • accentColor — hex color for icon tint + background glow  (default: "#1e293b")
+  • size        — 1–12 grid columns  (default: 4)
+                    Responsive: always full-width on mobile, half-width on md, size cols on lg+
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1690,15 +2229,23 @@ export const GLineChart = ({
     ]}
     size={6}
     height={260}
+    filters={[
+      { label: "This Week",  onClick: (label) => loadWeekData() },
+      { label: "This Month", onClick: (label) => loadMonthData() },
+      { label: "This Year",  onClick: (label) => loadYearData() },
+    ]}
   />
 
   Props:
-  • title     — card title
-  • subtitle  — small muted text below title
-  • data      — array of objects; "name" key used for X axis
-  • lines     — array of { key, label?, color? } — one per line
-  • size      — 1–12 grid columns  (default: 6)
-  • height    — chart height in px  (default: 260)
+  • title    — card title
+  • subtitle — small muted text below title
+  • data     — array of objects; "name" key used for X axis
+  • lines    — array of { key, label?, color? } — one per line series
+  • size     — 1–12 grid columns  (default: 6)
+  • height   — chart height in px  (default: 260)
+  • filters  — array of { label, onClick } filter toggle buttons shown above the chart
+                 The first item is active by default. onClick receives the label string.
+                 Omit or pass [] to hide the filter bar.
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1774,9 +2321,20 @@ export const GBarChart = ({
     ]}
     size={6}
     height={260}
+    filters={[
+      { label: "This Month", onClick: (label) => loadMonth() },
+      { label: "This Year",  onClick: (label) => loadYear() },
+    ]}
   />
 
-  Props: same structure as GLineChart; bars replaces lines
+  Props:
+  • title    — card title
+  • subtitle — small muted text below title
+  • data     — array of objects; "name" key used for Y axis (category)
+  • bars     — array of { key, label?, color? } — one per bar series
+  • size     — 1–12 grid columns  (default: 6)
+  • height   — chart height in px  (default: 260)
+  • filters  — array of { label, onClick } filter toggle buttons  (omit to hide)
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1842,7 +2400,20 @@ export const GColumnChart = ({
     ]}
     size={6}
     height={260}
+    filters={[
+      { label: "This Quarter", onClick: (label) => loadQuarter() },
+      { label: "This Year",    onClick: (label) => loadYear() },
+    ]}
   />
+
+  Props:
+  • title    — card title
+  • subtitle — small muted text below title
+  • data     — array of objects; "name" key used for X axis
+  • bars     — array of { key, label?, color? } — one per bar series
+  • size     — 1–12 grid columns  (default: 6)
+  • height   — chart height in px  (default: 260)
+  • filters  — array of { label, onClick } filter toggle buttons  (omit to hide)
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1932,6 +2503,10 @@ export const GAreaChart = ({
     stacked={false}
     size={6}
     height={260}
+    filters={[
+      { label: "This Week",  onClick: (label) => loadWeek() },
+      { label: "This Month", onClick: (label) => loadMonth() },
+    ]}
   />
 
   Props:
@@ -1942,7 +2517,7 @@ export const GAreaChart = ({
   • stacked  — true | false  (default: false) — stack areas on top of each other
   • size     — 1–12 grid columns  (default: 6)
   • height   — chart height in px  (default: 260)
-  • filters  — array of { label, onClick } filter buttons shown above the chart
+  • filters  — array of { label, onClick } filter toggle buttons  (omit to hide)
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2030,7 +2605,21 @@ export const GDoughnutChart = ({
     innerRadius={60}
     size={4}
     height={280}
+    filters={[
+      { label: "This Month", onClick: (label) => loadMonth() },
+      { label: "This Year",  onClick: (label) => loadYear() },
+    ]}
   />
+
+  Props:
+  • title       — card title
+  • subtitle    — small muted text below title
+  • data        — array of { name, value }
+  • colors      — array of hex color strings  (default: CHART_COLORS)
+  • innerRadius — inner hole radius in px  (default: 60)
+  • size        — 1–12 grid columns  (default: 4)
+  • height      — chart height in px  (default: 260)
+  • filters     — array of { label, onClick } filter toggle buttons  (omit to hide)
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2075,10 +2664,10 @@ export const GPieChart = ({
   ── HOW TO USE GPieChart ────────────────────────────────────────────────────
 
   const data = [
-    { name: "Direct",  value: 540 },
-    { name: "Organic", value: 320 },
-    { name: "Paid",    value: 210 },
-    { name: "Referral",value: 130 },
+    { name: "Direct",   value: 540 },
+    { name: "Organic",  value: 320 },
+    { name: "Paid",     value: 210 },
+    { name: "Referral", value: 130 },
   ];
 
   <GPieChart
@@ -2087,7 +2676,20 @@ export const GPieChart = ({
     colors={["#3b82f6", "#14b8a6", "#f59e0b", "#8b5cf6"]}
     size={4}
     height={260}
+    filters={[
+      { label: "This Month", onClick: (label) => loadMonth() },
+      { label: "This Year",  onClick: (label) => loadYear() },
+    ]}
   />
+
+  Props:
+  • title    — card title
+  • subtitle — small muted text below title
+  • data     — array of { name, value }
+  • colors   — array of hex color strings  (default: CHART_COLORS)
+  • size     — 1–12 grid columns  (default: 4)
+  • height   — chart height in px  (default: 260)
+  • filters  — array of { label, onClick } filter toggle buttons  (omit to hide)
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2139,12 +2741,12 @@ export const GRadarChart = ({
   ── HOW TO USE GRadarChart (Spider / Radar) ─────────────────────────────────
 
   const data = [
-    { subject: "Sales",    teamA: 80, teamB: 65 },
-    { subject: "Support",  teamA: 90, teamB: 72 },
-    { subject: "Dev",      teamA: 70, teamB: 85 },
-    { subject: "Design",   teamA: 60, teamB: 78 },
-    { subject: "Marketing",teamA: 85, teamB: 55 },
-    { subject: "Finance",  teamA: 75, teamB: 90 },
+    { subject: "Sales",     teamA: 80, teamB: 65 },
+    { subject: "Support",   teamA: 90, teamB: 72 },
+    { subject: "Dev",       teamA: 70, teamB: 85 },
+    { subject: "Design",    teamA: 60, teamB: 78 },
+    { subject: "Marketing", teamA: 85, teamB: 55 },
+    { subject: "Finance",   teamA: 75, teamB: 90 },
   ];
 
   <GRadarChart
@@ -2157,7 +2759,20 @@ export const GRadarChart = ({
     ]}
     size={4}
     height={280}
+    filters={[
+      { label: "This Quarter", onClick: (label) => loadQuarter() },
+      { label: "This Year",    onClick: (label) => loadYear() },
+    ]}
   />
+
+  Props:
+  • title    — card title
+  • subtitle — small muted text below title
+  • data     — array of objects; "subject" key used for axis labels
+  • radars   — array of { key, label?, color? } — one per radar series
+  • size     — 1–12 grid columns  (default: 4)
+  • height   — chart height in px  (default: 280)
+  • filters  — array of { label, onClick } filter toggle buttons  (omit to hide)
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2181,6 +2796,26 @@ export const DashGrid = ({ children, cols = 12, gap = 4 }) => {
     </div>
   );
 };
+
+/*
+  ── HOW TO USE DashGrid ─────────────────────────────────────────────────────
+
+  // Always wrap DashCard and chart components inside a <DashGrid>.
+  // Unlike <Grid>, DashGrid does NOT add sm: breakpoint prefixes — it uses
+  // plain grid-cols-N so the layout is always active (not mobile-first).
+
+  <DashGrid cols={12} gap={4}>
+    <DashCard title="Total Employees" value="313" icon={<Users size={22}/>} size={3} />
+    <DashCard title="Open Deals"      value="87"  icon={<Briefcase size={22}/>} size={3} />
+    <GLineChart title="Revenue" data={data} lines={[{key:"revenue",color:"#3b82f6"}]} size={6} />
+    <GDoughnutChart title="Segments" data={segData} size={6} />
+  </DashGrid>
+
+  Props:
+  • children — DashCard, GLineChart, GBarChart, etc.
+  • cols     — total grid columns: 1 | 2 | 3 | 4 | 6 | 12  (default: 12)
+  • gap      — gap between cells: 2 | 3 | 4 | 5 | 6  (default: 4)
+*/
 
 /*
   ── FULL DASHBOARD EXAMPLE ──────────────────────────────────────────────────
@@ -2290,9 +2925,16 @@ export const Modal = ({ id, title, children, size = "xl" }) => {
   useEffect(() => {
     if (isOpen) {
       setRender(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setShow(true));
+      // Double-rAF to ensure the element is painted before we trigger the
+      // enter transition. We track the IDs so we can cancel on cleanup.
+      let raf1, raf2;
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setShow(true));
       });
+      return () => {
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
+      };
     } else {
       setShow(false);
       const timer = setTimeout(() => setRender(false), 300);
@@ -2313,9 +2955,8 @@ export const Modal = ({ id, title, children, size = "xl" }) => {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       {/* Backdrop — covers the entire screen regardless of scroll position */}
       <div
-        className={`fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${
-          show ? "opacity-100" : "opacity-0"
-        }`}
+        className={`fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${show ? "opacity-100" : "opacity-0"
+          }`}
         onClick={handleCloseClick}
       />
 
@@ -2325,7 +2966,7 @@ export const Modal = ({ id, title, children, size = "xl" }) => {
           show
             ? "opacity-100 translate-y-0 scale-100"
             : "opacity-0 translate-y-4 scale-95"
-        }`}
+          }`}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <h3 className="text-lg font-bold text-[#2a465a]">{title}</h3>
@@ -2381,16 +3022,16 @@ export const Modal = ({ id, title, children, size = "xl" }) => {
   • id       — unique string used to open/close this specific modal
   • title    — string shown in the modal header
   • children — any React content rendered in the scrollable modal body
-  • size     — controls the max-width of the dialog  (default: "md")
+  • size     — controls the max-width of the dialog  (default: "xl")
                  "sm"  → max-w-sm  (~384px)   — compact confirmations
-                 "md"  → max-w-lg  (~512px)   — default forms & info
+                 "md"  → max-w-lg  (~512px)   — forms & info panels
                  "lg"  → max-w-2xl (~672px)   — wider forms
-                 "xl"  → max-w-4xl (~896px)   — dashboards / rich content
+                 "xl"  → max-w-4xl (~896px)   — dashboards / rich content  (default)
                  "2xl" → max-w-5xl (~1152px)  — maximum width
 
   Functions:
-  • openModal(id)  — call anywhere to open the modal with the given id
-  • closeModal(id) — call anywhere to close the modal with the given id
+  • openModal(id)  — dispatch a custom event to open the modal with the given id
+  • closeModal(id) — dispatch a custom event to close the modal with the given id
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2415,6 +3056,138 @@ export const ModalData = ({ label, value }) => (
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
+// MODAL PROFILE
+// Renders a styled profile card inside a modal.
+// Initials are auto-generated from the first two words of name.
+//
+// Props:
+//   name        — full name (required) — initials are auto-generated from first two words
+//   subtitle    — e.g. "Senior Executive · Mumbai"
+//   meta        — e.g. "Joined 2023-03-15"
+//   avatarColor — background color of the initials circle  (default: "#2a465a")
+// ─────────────────────────────────────────────────────────────────────────────
+export const ModalProfile = ({
+  name = "",
+  subtitle = "",
+  meta = "",
+  avatarColor = "#2a465a",
+}) => {
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0].toUpperCase())
+    .slice(0, 2)
+    .join("");
+
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+      {/* Avatar */}
+      <div
+        className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-black flex-shrink-0 select-none"
+        style={{ background: avatarColor }}
+      >
+        {initials}
+      </div>
+      {/* Info */}
+      <div className="min-w-0">
+        <p className="text-lg font-bold text-[#2a465a] leading-tight truncate">{name}</p>
+        {subtitle && (
+          <p className="text-sm text-slate-500 mt-0.5 truncate">{subtitle}</p>
+        )}
+        {meta && (
+          <p className="text-xs text-slate-400 mt-0.5 truncate">{meta}</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/*
+  ── HOW TO USE ModalProfile ─────────────────────────────────────────────────
+
+  <ModalProfile
+    name="Riya Sharma"
+    subtitle="Senior Executive · Mumbai"
+    meta="Joined 2023-03-15"
+    avatarColor="#3b82f6"
+  />
+
+  Props:
+  • name        — full name; initials are auto-generated from the first two words
+  • subtitle    — secondary line (role, location, etc.)  (optional)
+  • meta        — tertiary line (join date, ID, etc.)  (optional)
+  • avatarColor — background color of the initials circle  (default: "#2a465a")
+*/
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODAL GRID
+// Groups a set of ModalData fields under a labelled section inside a modal.
+// Visually separates sections with a title bar and a subtle card background.
+// On mobile the grid always collapses to 1 column regardless of the cols prop.
+//
+// Props:
+//   title    — section heading (e.g. "Contact", "Lead Stats")
+//   cols     — number of columns in the inner grid: 1 | 2 | 3 (default: 2)
+//              Mobile always uses 1 column; sm+ uses the requested cols value.
+//   children — <ModalData> items
+// ─────────────────────────────────────────────────────────────────────────────
+export const ModalGrid = ({ title = "", cols = 2, children }) => {
+  // Mobile always 1 col; sm+ uses the requested cols value
+  const colsMap = {
+    1: "grid-cols-1",
+    2: "grid-cols-1 sm:grid-cols-2",
+    3: "grid-cols-1 sm:grid-cols-3",
+  };
+  const gridCls = colsMap[cols] ?? "grid-cols-1 sm:grid-cols-2";
+
+  return (
+    <div className="rounded-2xl border border-slate-100 overflow-hidden">
+      {/* Section title bar */}
+      {title && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-[#2a465a]/5 border-b border-slate-100">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#3e8ca7] flex-shrink-0" />
+          <p className="text-xs font-black text-[#2a465a] uppercase tracking-[0.18em]">
+            {title}
+          </p>
+        </div>
+      )}
+      {/* Fields grid */}
+      <div className={`grid ${gridCls} gap-px bg-slate-100`}>
+        {React.Children.map(children, (child) =>
+          child ? (
+            <div className="bg-white p-3">{child}</div>
+          ) : null
+        )}
+      </div>
+    </div>
+  );
+};
+
+/*
+  ── HOW TO USE ModalGrid ────────────────────────────────────────────────────
+
+  <ModalGrid title="Contact" cols={2}>
+    <ModalData label="Phone" value="+91 98101 11001" />
+    <ModalData label="Email" value="riya@crm.in" />
+  </ModalGrid>
+
+  <ModalGrid title="Lead Stats" cols={3}>
+    <ModalData label="Total Leads"       value="148" />
+    <ModalData label="Conversions"       value="42" />
+    <ModalData label="Conv. Rate"        value="28.4%" />
+    <ModalData label="Open Leads"        value="12" />
+    <ModalData label="Follow-ups Done"   value="61" />
+    <ModalData label="Follow-ups Missed" value="4" />
+  </ModalGrid>
+
+  Props:
+  • title    — section label shown in the header bar (omit to hide the header)
+  • cols     — 1 | 2 | 3  (default: 2)
+                 Mobile always collapses to 1 column; sm+ uses the requested value.
+  • children — <ModalData> components
+*/
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 21. PARAGRAPH
 // Props: text, size
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2434,6 +3207,18 @@ export const P = ({ text, size = "sm" }) => {
     </p>
   );
 };
+
+/*
+  ── HOW TO USE P ────────────────────────────────────────────────────────────
+
+  <P text="This is a muted paragraph used for descriptions or helper text." />
+
+  <P text="Smaller helper text." size="xs" />
+
+  Props:
+  • text — the paragraph text to display
+  • size — "xs" | "sm" | "base" | "lg" | "xl"  (default: "sm")
+*/
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 22. TOGGLE BUTTON  (ON / OFF switch)
@@ -2545,4 +3330,547 @@ export const ToggleButton = ({
   • labelOff  — text shown beside the toggle when OFF (optional; falls back to label)
   • size      — "sm" | "md" | "lg"  (default: "md")
   • disabled  — true | false  (default: false) — greys out and blocks interaction
+*/
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENHANCED COMPONENTS (V2)
+// EnhancedDashCard — dark animated stat card with wave layers and mouse parallax
+// EnhancedModal    — full-width (max-w-7xl) portal modal; event + prop control
+// EnhancedDataTable — styled table with compact view + "Show More" expanded modal
+// PanelModal       — compact (max-w-lg) portal modal with spring animation
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const EnhancedDashCard = ({
+  title = "Total Employees",
+  value = "0",
+  icon,
+  size = 4,
+  accentColor = "#ffffff",
+}) => {
+  const valueStr = String(value);
+  let fontSize = "28px";
+  if (valueStr.length > 12) fontSize = "18px";
+  else if (valueStr.length > 8) fontSize = "22px";
+  else if (valueStr.length > 6) fontSize = "24px";
+
+  const map = { 1: "col-span-12 md:col-span-6 lg:col-span-1", 2: "col-span-12 md:col-span-6 lg:col-span-2", 3: "col-span-12 md:col-span-6 lg:col-span-3", 4: "col-span-12 md:col-span-6 lg:col-span-4", 5: "col-span-12 md:col-span-6 lg:col-span-5", 6: "col-span-12 md:col-span-6 lg:col-span-6", 12: "col-span-12" };
+  const dashSpan = map[size] || "col-span-12 md:col-span-6 lg:col-span-4";
+
+  const cardRef = useRef(null);
+
+  const handleMouseMove = (e) => {
+    const el = cardRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width - 0.5) * 30;
+    const my = ((e.clientY - rect.top) / rect.height - 0.5) * 30;
+    el.style.setProperty("--wx1", `calc(-30% + ${mx * 0.3}%)`);
+    el.style.setProperty("--wy1", `calc(-40% + ${my * 0.3}%)`);
+    el.style.setProperty("--wx2", `calc(-20% + ${mx * 0.5}%)`);
+    el.style.setProperty("--wy2", `calc(-30% + ${my * 0.5}%)`);
+    el.style.setProperty("--wx3", `calc(-40% + ${mx * 0.7}%)`);
+    el.style.setProperty("--wy3", `calc(-25% + ${my * 0.7}%)`);
+  };
+
+  const handleMouseLeave = () => {
+    const el = cardRef.current;
+    if (!el) return;
+    el.style.removeProperty("--wx1");
+    el.style.removeProperty("--wy1");
+    el.style.removeProperty("--wx2");
+    el.style.removeProperty("--wy2");
+    el.style.removeProperty("--wx3");
+    el.style.removeProperty("--wy3");
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className={`${dashSpan} wave-card silver-shiny-border rounded-3xl p-5 flex items-center gap-4 transition-all duration-300 hover:scale-[1.02] shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(56,189,248,0.25)] group cursor-pointer bg-gradient-to-br from-[#243f55] to-[#32526b] text-white overflow-hidden relative`}
+    >
+      {/* 3 visible wave layers */}
+      <div className="wave-layer wave-l1" />
+      <div className="wave-layer wave-l2" />
+      <div className="wave-layer wave-l3" />
+
+      {icon && (
+        <div
+          className="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow-lg bg-white/10 border border-white/10 backdrop-blur-md z-10"
+          style={{ color: accentColor }}
+        >
+          {icon}
+        </div>
+      )}
+
+      <div className="flex flex-col justify-center overflow-hidden w-full z-10 relative">
+        <h3 className="truncate text-xs font-bold uppercase tracking-widest text-slate-300/80 mb-1" title={title}>
+          {title}
+        </h3>
+        <div className="flex items-center gap-2">
+          <span
+            className="truncate drop-shadow-md font-black tracking-tighter transition-all duration-300 group-hover:text-white"
+            style={{ fontSize, lineHeight: "1" }}
+          >
+            {value}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/*
+  ── HOW TO USE EnhancedDashCard ─────────────────────────────────────────────
+
+  // Dark-themed animated card with wave layers and mouse-parallax effect.
+  // Use inside a <DashGrid> for dashboard stat rows.
+
+  import { Users } from "lucide-react";
+
+  <EnhancedDashCard
+    title="Total Employees"
+    value="313"
+    icon={<Users size={22} />}
+    accentColor="#38bdf8"
+    size={3}
+  />
+
+  Props:
+  • title       — card label text
+  • value       — big number/text displayed
+  • icon        — any React node (Lucide icon recommended)
+  • accentColor — hex color for icon tint  (default: "#ffffff")
+  • size        — 1–12 grid columns  (default: 4)
+                    Responsive: full-width on mobile, half-width on md, size cols on lg+
+*/
+
+export const EnhancedModal = ({ id, title, children, isVisible, onClose }) => {
+  const [show, setShow] = useState(false);
+  const [render, setRender] = useState(false);
+
+  const closeTimerRef = useRef(null);
+
+  useEffect(() => {
+    const handleOpen  = (e) => { if (e.detail.id === id) { setRender(true); } };
+    const handleClose = (e) => {
+      if (!e.detail.id || e.detail.id === id) {
+        setShow(false);
+        // Track timer so it can be cancelled on unmount
+        closeTimerRef.current = setTimeout(() => setRender(false), 300);
+      }
+    };
+
+    window.addEventListener("open-modal", handleOpen);
+    window.addEventListener("close-modal", handleClose);
+
+    if (isVisible !== undefined) {
+      if (isVisible) {
+        setRender(true);
+      } else {
+        setShow(false);
+        closeTimerRef.current = setTimeout(() => setRender(false), 300);
+      }
+    }
+
+    return () => {
+      window.removeEventListener("open-modal", handleOpen);
+      window.removeEventListener("close-modal", handleClose);
+      // Cancel any pending close animation on cleanup
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, [id, isVisible]);
+
+  useEffect(() => {
+    if (render) {
+      document.body.style.overflow = "hidden";
+      let raf1, raf2;
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setShow(true));
+      });
+      return () => {
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
+      };
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [render]);
+
+  const handleCloseClick = () => {
+    setShow(false);
+    // Track so it can be cancelled if component unmounts before it fires
+    closeTimerRef.current = setTimeout(() => {
+      setRender(false);
+      if (onClose) onClose();
+      else closeModal(id);
+    }, 300);
+  };
+
+  if (!render) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6">
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${show ? "opacity-100" : "opacity-0"}`}
+        onClick={handleCloseClick}
+      />
+
+      {/* Modal Content — centered, capped at 85vh so it never overflows */}
+      <div
+        className={`relative w-full max-w-7xl bg-white border border-slate-200/50 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ease-out transform ${show ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-8 scale-95"}`}
+        style={{ maxHeight: "90vh" }}
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl flex-shrink-0">
+          <h3 className="text-lg font-bold text-[#2a465a]">{title}</h3>
+          <button
+            onClick={handleCloseClick}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-rose-500 transition-all duration-200"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto overflow-x-hidden flex-1 custom-scrollbar">
+          {children}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+/*
+  ── HOW TO USE EnhancedModal ────────────────────────────────────────────────
+
+  // Full-width (max-w-7xl) modal with portal rendering and smooth animation.
+  // Supports both event-based control (openModal/closeModal) and prop-based
+  // control (isVisible + onClose).
+
+  // Event-based (same as Modal):
+  <Button text="Open" onClick={() => openModal("my-modal")} />
+  <EnhancedModal id="my-modal" title="Details">
+    <p>Content here</p>
+  </EnhancedModal>
+
+  // Prop-based (controlled):
+  const [open, setOpen] = useState(false);
+  <EnhancedModal isVisible={open} onClose={() => setOpen(false)} title="Details">
+    <p>Content here</p>
+  </EnhancedModal>
+
+  Props:
+  • id         — unique string for event-based open/close via openModal(id) / closeModal(id)
+  • title      — string shown in the modal header
+  • children   — any React content rendered in the scrollable modal body
+  • isVisible  — boolean for prop-based control (optional; overrides event system)
+  • onClose    — callback fired when the modal closes (optional)
+*/
+
+export const EnhancedDataTable = ({
+  columns = [],
+  rows = [],
+  actions = [],
+  title,
+  size = 12,
+  pageSize = 5,
+  pageSizeOptions = [5, 10, 20, 50],
+  searchable = true,
+  importantColumnsCount = 4,
+}) => {
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(() => Number(pageSize) || 5);
+  const [sortConfig, setSortConfig] = useState({ key: columns?.[0]?.key || null, direction: "asc" });
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => { setCurrentPageSize(Number(pageSize) || 10); setPage(1); }, [pageSize]);
+
+  const handleSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
+    setSortConfig({ key, direction });
+  };
+
+  const filtered = useMemo(() => {
+    let result = rows;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(row => columns.some(col => String(row[col.key] ?? "").toLowerCase().includes(q)));
+    }
+    if (sortConfig.key) {
+      result = [...result].sort((a, b) => {
+        const aVal = a[sortConfig.key] ?? "";
+        const bVal = b[sortConfig.key] ?? "";
+        if (typeof aVal === "string" && typeof bVal === "string") return sortConfig.direction === "asc" ? aVal.localeCompare(bVal, undefined, { numeric: true }) : bVal.localeCompare(aVal, undefined, { numeric: true });
+        if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+    return result;
+  }, [rows, search, columns, sortConfig]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / currentPageSize));
+  const paginated = filtered.slice((page - 1) * currentPageSize, page * currentPageSize);
+  const colSpanClass = (s) => (s === 12 ? "col-span-12" : `col-span-12 sm:col-span-${s}`);
+
+  const actionVariantCls = {
+    primary: "bg-[#2a465a] text-white hover:bg-[#1e3a52] shiny-sweep",
+    danger: "bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100",
+    ghost: "bg-slate-100 text-slate-600 hover:bg-slate-200",
+  };
+
+  const renderTableContent = (displayColumns) => (
+    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm w-full table-trapezoid-corners relative z-10">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-gradient-to-r from-[#2a465a] to-[#3a5a7a] border-b border-[#2a465a]/10">
+            {displayColumns.map((col) => (
+              <th key={col.key} onClick={() => handleSort(col.key)} className="group py-4 px-5 text-left text-xs font-black text-white uppercase tracking-[0.2em] whitespace-nowrap cursor-pointer hover:bg-white/5 transition-colors select-none">
+                <div className="flex items-center gap-2">
+                  {col.label}
+                  <ArrowUpDown size={14} className={`transition-all duration-200 ${sortConfig.key === col.key ? "opacity-100 text-[#38bdf8]" : "opacity-40 group-hover:opacity-100"}`} />
+                </div>
+              </th>
+            ))}
+            {actions.length > 0 && <th className="py-4 px-5 text-left text-xs font-black text-white uppercase tracking-[0.2em]">Actions</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {paginated.length === 0 ? (
+            <tr><td colSpan={displayColumns.length + (actions.length > 0 ? 1 : 0)} className="py-10 text-center text-slate-400 text-sm">No records found.</td></tr>
+          ) : (
+            paginated.map((row, i) => (
+              <tr key={i} className={`border-b border-slate-100 transition duration-300 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/60"} hover:bg-[#38bdf8]/10`}>
+                {displayColumns.map((col) => {
+                  if (col.key === "status") {
+                    const val = row[col.key];
+                    let statusBg = "bg-slate-100 text-slate-600";
+                    if (val === "Completed" || val === "Approved" || val === "Active" || val === "Won") statusBg = "bg-emerald-100 text-emerald-800";
+                    else if (val === "Pending" || val === "In Progress" || val === "Interested" || val === "Proposal") statusBg = "bg-amber-100 text-amber-800";
+                    else if (val === "Failed" || val === "Cancelled" || val === "Inactive" || val === "Lost" || val === "Rejected") statusBg = "bg-rose-100 text-rose-800";
+                    return <td key={col.key} className="py-3.5 px-5 whitespace-nowrap"><span className={`px-3 py-1 rounded-full text-xs font-bold ${statusBg}`}>{val ?? "—"}</span></td>;
+                  }
+                  return <td key={col.key} className={`py-3.5 px-5 text-[#1e3445] font-semibold ${isExpanded ? "whitespace-normal text-xs min-w-[120px]" : "whitespace-nowrap"}`}>{row[col.key] ?? "—"}</td>;
+                })}
+                {actions.length > 0 && (
+                  <td className="py-3 px-5">
+                    <div className="flex items-center gap-2">
+                      {actions.map((action, ai) => (
+                        <button key={ai} type="button" onClick={() => action.onClick(row)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition duration-150 active:scale-95 ${actionVariantCls[action.variant ?? "ghost"]}`}>
+                          {action.icon && <span className="w-3.5 h-3.5">{action.icon}</span>}
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  return (
+    <div className={`${colSpanClass(size)} flex bg-[#efefefb1] rounded-2xl p-4 flex-col gap-4 shadow-sm border border-slate-200/50 relative overflow-hidden`}>
+      
+      {/* Blue/Green Rotating Polygons Background */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-60">
+        {/* Top Right (near Show More) */}
+        <div className="absolute -top-[50px] right-[5%] w-80 h-80 bg-gradient-to-br from-[#0ea5e9]/40 to-[#10b981]/20 blur-2xl" style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)', animation: 'trapezoidFloat1 20s linear infinite' }} />
+        
+        {/* Bottom Middle */}
+        <div className="absolute -bottom-[80px] left-[35%] w-96 h-96 bg-gradient-to-bl from-[#34d399]/30 to-[#3b82f6]/20 blur-3xl" style={{ clipPath: 'polygon(0% 20%, 100% 0%, 80% 100%, 20% 100%)', animation: 'trapezoidFloat2 25s linear infinite reverse' }} />
+      </div>
+
+      {searchable && (
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
+          <div className="flex-1 w-full max-w-xl mx-auto relative group flex items-center gap-3">
+            <div className="relative flex-1">
+              <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400 group-focus-within:text-[#2a465a] transition-colors">
+                <Search size={16} />
+              </div>
+              <input
+                type="text"
+                placeholder="Search records..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="w-full rounded-full border border-slate-200 bg-white shadow-sm py-3 pl-10 pr-4 text-sm text-[#2a465a] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2a465a]/30 focus:border-[#2a465a] transition duration-300"
+              />
+            </div>
+            <button
+              onClick={() => { setIsExpanded(true); window.dispatchEvent(new CustomEvent("expand-table")); }}
+              className="flex-shrink-0 whitespace-nowrap flex items-center gap-2 px-5 py-3 rounded-full text-white font-bold text-sm shadow-lg overflow-hidden relative group active:scale-95 transition-transform duration-200 bg-[#2a465a]"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[#1e3a52] to-[#2a465a]" />
+              <div className="absolute w-[200%] h-[200%] top-[-50%] left-[-50%] rounded-[40%] bg-white/10 group-hover:rotate-[180deg] transition-all duration-[3000ms] pointer-events-none ease-linear" />
+              <span className="relative z-10">Show More</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {renderTableContent(columns.slice(0, importantColumnsCount > 0 ? importantColumnsCount : columns.length))}
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 mt-1">
+        <p className="text-xs text-slate-500 font-medium bg-white px-3 py-1.5 rounded-full border border-slate-200/60 shadow-sm">
+          Showing <span className="text-[#2a465a] font-bold">{filtered.length === 0 ? 0 : (page - 1) * currentPageSize + 1}–{Math.min(page * currentPageSize, filtered.length)}</span> of <span className="text-[#2a465a] font-bold">{filtered.length}</span>
+        </p>
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-[#2a465a] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-xs font-bold text-slate-500 px-2">Page {page} of {totalPages}</span>
+          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-[#2a465a] shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      <EnhancedModal isVisible={isExpanded} onClose={() => { setIsExpanded(false); window.dispatchEvent(new CustomEvent("collapse-table")); }} id={`expanded-table-${title}`} title={title ? `${title} (Full Dataset)` : "Full Dataset"}>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full bg-slate-50 p-3 rounded-2xl border border-slate-200/50">
+            <div className="relative flex-1 w-full max-w-sm">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input type="text" placeholder="Search across all fields..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20" />
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm">Total: {filtered.length}</span>
+              <select value={currentPageSize} onChange={(e) => { setCurrentPageSize(Number(e.target.value)); setPage(1); }} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 cursor-pointer shadow-sm">
+                {pageSizeOptions.map(opt => <option key={opt} value={opt}>Show {opt}</option>)}
+              </select>
+            </div>
+          </div>
+          {renderTableContent(columns)}
+        </div>
+      </EnhancedModal>
+    </div>
+  );
+};
+
+/*
+  ── HOW TO USE EnhancedDataTable ────────────────────────────────────────────
+
+  // A styled data table with a "Show More" button that opens an EnhancedModal
+  // with the full dataset. By default only the first importantColumnsCount
+  // columns are shown in the compact view; the modal shows all columns.
+
+  const columns = [
+    { key: "name",   label: "Name" },
+    { key: "email",  label: "Email" },
+    { key: "role",   label: "Role" },
+    { key: "status", label: "Status" },
+  ];
+
+  const rows = [
+    { name: "Alice", email: "alice@acme.com", role: "Admin",   status: "Active" },
+    { name: "Bob",   email: "bob@acme.com",   role: "Manager", status: "Inactive" },
+  ];
+
+  <EnhancedDataTable
+    title="Team Members"
+    columns={columns}
+    rows={rows}
+    actions={[
+      { label: "Edit",   variant: "primary", onClick: (row) => handleEdit(row) },
+      { label: "Delete", variant: "danger",  onClick: (row) => handleDelete(row) },
+    ]}
+    size={12}
+    pageSize={5}
+    pageSizeOptions={[5, 10, 20, 50]}
+    searchable={true}
+    importantColumnsCount={4}
+  />
+
+  Props:
+  • columns               — array of { key, label }; key "status" renders a colored badge
+  • rows                  — array of data objects
+  • actions               — array of { label?, icon?, variant?, onClick } per-row buttons
+  • title                 — optional heading; also used as the expanded modal title
+  • size                  — 1–12 grid columns  (default: 12)
+  • pageSize              — rows per page  (default: 5)
+  • pageSizeOptions       — page-size choices  (default: [5, 10, 20, 50])
+  • searchable            — show search bar + "Show More" button  (default: true)
+  • importantColumnsCount — number of columns shown in compact view  (default: 4)
+                             0 or negative → show all columns in compact view
+*/
+
+export const PanelModal = ({ id, title, children, isVisible, onClose }) => {
+  const [show, setShow] = useState(false);
+  const [render, setRender] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = (e) => { if (e.detail.id === id) { setShow(true); setRender(true); } };
+    const handleClose = (e) => { if (e.detail.id === id) { setShow(false); } };
+    window.addEventListener("open-modal", handleOpen);
+    window.addEventListener("close-modal", handleClose);
+    return () => {
+      window.removeEventListener("open-modal", handleOpen);
+      window.removeEventListener("close-modal", handleClose);
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (isVisible) { setShow(true); setRender(true); }
+    else { setShow(false); }
+  }, [isVisible]);
+
+  const handleAnimEnd = () => { if (!show) setRender(false); };
+  const close = () => { setShow(false); if (onClose) onClose(); };
+
+  if (!render) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center pointer-events-auto px-4 py-6 sm:px-6">
+      <div className={`absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity duration-300 ${show ? "opacity-100" : "opacity-0"}`} onClick={close} />
+      <div 
+        onTransitionEnd={handleAnimEnd} 
+        className={`relative w-full max-w-lg bg-white rounded-[24px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-white/50 flex flex-col max-h-[85vh] overflow-hidden transform transition-all duration-400 cubic-bezier(0.34, 1.56, 0.64, 1) ${show ? "scale-100 opacity-100 translate-y-0" : "scale-95 opacity-0 translate-y-4"}`}
+      >
+        <div className="flex-shrink-0 flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+          <h3 className="text-lg font-black text-[#2a465a] tracking-tight">{title}</h3>
+          <button onClick={close} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors border border-transparent hover:border-rose-100">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-white">
+          {children}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+/*
+  ── HOW TO USE PanelModal ───────────────────────────────────────────────────
+
+  // Compact centered panel modal (max-w-lg) with a spring-style open animation.
+  // Supports both event-based control (openModal/closeModal) and prop-based
+  // control (isVisible + onClose).
+
+  // Event-based:
+  <Button text="Open Panel" onClick={() => openModal("detail-panel")} />
+  <PanelModal id="detail-panel" title="Quick Details">
+    <p>Content here</p>
+  </PanelModal>
+
+  // Prop-based (controlled):
+  const [open, setOpen] = useState(false);
+  <PanelModal isVisible={open} onClose={() => setOpen(false)} title="Quick Details">
+    <p>Content here</p>
+  </PanelModal>
+
+  Props:
+  • id        — unique string for event-based open/close via openModal(id) / closeModal(id)
+  • title     — string shown in the modal header
+  • children  — any React content rendered in the scrollable modal body
+  • isVisible — boolean for prop-based control (optional; overrides event system)
+  • onClose   — callback fired when the modal closes (optional)
 */

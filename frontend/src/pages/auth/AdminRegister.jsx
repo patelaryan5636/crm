@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   User,
   Layers3,
@@ -17,6 +17,11 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
+import {
+  sendOTP,
+  verifyOTP,
+  registerAdmin,
+} from "../../services/authService";
 // import GraphuraLogo from "../assets/Graphura_Logo.webp";
 
 // ─── Floating Background (identical to Login) ────────────────────────────────
@@ -60,10 +65,6 @@ const FloatingBackground = () => (
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function generateCaptcha() {
   return Math.floor(1000 + Math.random() * 9000).toString();
-}
-
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
@@ -139,6 +140,7 @@ const InputWrap = ({ icon: Icon, children, className = "" }) => (
 
 // ─── Register Component ───────────────────────────────────────────────────────
 const AdminRegister = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
 
   // Step 0 – Company info
@@ -147,7 +149,6 @@ const AdminRegister = () => {
   const [companyAddress, setCompanyAddress] = useState("");
 
   // OTP
-  const [generatedOTP, setGeneratedOTP] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpInput, setOtpInput] = useState("");
@@ -167,6 +168,7 @@ const AdminRegister = () => {
   // Errors
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState({ type: "", message: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ── OTP countdown ──
   useEffect(() => {
@@ -186,7 +188,7 @@ const AdminRegister = () => {
   const validateEmail = (v) => /^\S+@\S+\.\S+$/.test(v);
 
   // ── Send OTP ──
-  const handleSendOTP = () => {
+  const handleSendOTP = async () => {
     if (!companyEmail.trim()) {
       setErrors((e) => ({ ...e, companyEmail: "Email is required." }));
       return;
@@ -198,38 +200,51 @@ const AdminRegister = () => {
       }));
       return;
     }
-    const otp = generateOTP();
-    setGeneratedOTP(otp);
-    setOtpSent(true);
-    setOtpVerified(false);
-    setOtpInput("");
-    setOtpCooldown(60);
-    setErrors((e) => ({ ...e, companyEmail: "", otpInput: "" }));
-    // In production: send OTP via API. Here we surface it via status for demo.
-    setStatus({
-      type: "info",
-      message: `OTP sent to ${companyEmail}. (Demo OTP: ${otp})`,
-    });
-    console.log(`Demo OTP for ${companyEmail}: ${otp}`);
+
+    try {
+      setIsSubmitting(true);
+      await sendOTP(companyEmail, ownerName || companyName || "Admin");
+      setOtpSent(true);
+      setOtpVerified(false);
+      setOtpInput("");
+      setOtpCooldown(120);
+      setErrors((e) => ({ ...e, companyEmail: "", otpInput: "" }));
+      setStatus({
+        type: "info",
+        message: `OTP sent to ${companyEmail}. Please check your inbox.`,
+      });
+    } catch (err) {
+      setStatus({
+        type: "error",
+        message: err?.message || "Failed to send OTP. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // ── Verify OTP ──
-  const handleVerifyOTP = () => {
+  const handleVerifyOTP = async () => {
     if (!otpInput.trim()) {
       setErrors((e) => ({ ...e, otpInput: "Please enter the OTP." }));
       return;
     }
-    if (otpInput !== generatedOTP) {
+
+    try {
+      setIsSubmitting(true);
+      await verifyOTP(companyEmail, otpInput);
+      setOtpVerified(true);
+      setErrors((e) => ({ ...e, otpInput: "" }));
+      setStatus({ type: "success", message: "Email verified successfully!" });
+    } catch (err) {
       setErrors((e) => ({
         ...e,
-        otpInput: "Incorrect OTP. Please try again.",
+        otpInput: err?.message || "Incorrect OTP. Please try again.",
       }));
       setOtpInput("");
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-    setOtpVerified(true);
-    setErrors((e) => ({ ...e, otpInput: "" }));
-    setStatus({ type: "success", message: "Email verified successfully!" });
   };
 
   // ── Step navigation ──
@@ -266,8 +281,16 @@ const AdminRegister = () => {
   };
 
   // ── Final submit ──
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Guard against accidental form submits (e.g. Enter key)
+    // before reaching the final security step.
+    if (step < 2) {
+      nextStep();
+      return;
+    }
+
     const errs = {};
     if (!password.trim()) errs.password = "Password is required.";
     else if (password.length < 8)
@@ -291,10 +314,37 @@ const AdminRegister = () => {
       });
       return;
     }
-    setStatus({
-      type: "success",
-      message: "🎉 Account created! Redirecting to your dashboard…",
-    });
+
+    try {
+      setIsSubmitting(true);
+      await registerAdmin({
+        companyName,
+        companyEmail,
+        companyAddress,
+        adminName: ownerName,
+        ownerName,
+        adminEmail: companyEmail,
+        password,
+        confirmPassword,
+        securityCode: captchaInput,
+      });
+
+      setStatus({
+        type: "success",
+        message: "🎉 Account created! Redirecting to your dashboard…",
+      });
+
+      setTimeout(() => {
+        navigate("/admin");
+      }, 1200);
+    } catch (err) {
+      setStatus({
+        type: "error",
+        message: err?.message || "Registration failed. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const refreshCaptcha = () => {
@@ -427,7 +477,7 @@ const AdminRegister = () => {
                       <button
                         type="button"
                         onClick={handleSendOTP}
-                        disabled={otpCooldown > 0 || otpVerified}
+                        disabled={isSubmitting || otpCooldown > 0 || otpVerified}
                         className={`whitespace-nowrap px-4 rounded-2xl text-xs font-bold transition ${
                           otpVerified
                             ? "bg-emerald-100 text-emerald-700 border border-emerald-300 cursor-default"
@@ -468,7 +518,8 @@ const AdminRegister = () => {
                         <button
                           type="button"
                           onClick={handleVerifyOTP}
-                          className="px-4 rounded-2xl text-xs font-bold bg-[#2a465a] text-white hover:bg-[#1e3a52] transition"
+                          disabled={isSubmitting}
+                          className="px-4 rounded-2xl text-xs font-bold bg-[#2a465a] text-white hover:bg-[#1e3a52] transition disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           Verify
                         </button>
@@ -714,6 +765,7 @@ const AdminRegister = () => {
                   <button
                     type="button"
                     onClick={nextStep}
+                    disabled={isSubmitting}
                     className="flex-1 py-4 bg-[#2a465a] text-white font-bold rounded-2xl shadow-xl shadow-[#2a465a]/20 transition duration-300 ease-out hover:bg-gradient-to-r hover:from-[#1e3a52] hover:to-[#2b5a7a] hover:shadow-2xl hover:-translate-y-0.5 active:scale-95"
                   >
                     Continue →
@@ -721,9 +773,10 @@ const AdminRegister = () => {
                 ) : (
                   <button
                     type="submit"
+                    disabled={isSubmitting}
                     className="flex-1 py-4 bg-[#2a465a] text-white font-bold rounded-2xl shadow-xl shadow-[#2a465a]/20 transition duration-300 ease-out hover:bg-gradient-to-r hover:from-[#1e3a52] hover:to-[#2b5a7a] hover:shadow-2xl hover:-translate-y-0.5 active:scale-95"
                   >
-                    Create Account →
+                    {isSubmitting ? "Creating..." : "Create Account →"}
                   </button>
                 )}
               </div>

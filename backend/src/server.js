@@ -1,33 +1,122 @@
+/**
+ * GRAPHURA CRM — PRODUCTION SERVER
+ * Multi-tenant SaaS CRM built with Express, MongoDB, Mongoose
+ * Comprehensive registration, authentication, and tenant management
+ */
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
+const AppError = require('./utils/appError');
+const logger = require('./utils/logger');
 
 const connectDB = require('./config/db');
+
+// Import routes
+const authRoutes = require('./routes/auth');
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
-app.use(morgan('dev'));
+// ────────────────────────────────────────────────────────────
+// GLOBAL MIDDLEWARE
+// ────────────────────────────────────────────────────────────
+app.use(helmet()); // Security headers
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+}));
+app.use(express.json({ limit: '16kb' })); // Parse JSON payloads
+app.use(express.urlencoded({ limit: '16kb', extended: true })); // Parse URL-encoded
+app.use(morgan('dev')); // HTTP request logging
 
+// ────────────────────────────────────────────────────────────
+// HEALTH CHECK ENDPOINT
+// ────────────────────────────────────────────────────────────
 app.get('/', (_req, res) => {
-	res.status(200).json({ message: 'Hello from server' });
+	res.status(200).json({
+		message: 'Graphura CRM API',
+		version: '1.0.0',
+		status: 'Server is running',
+	});
 });
 
+// ────────────────────────────────────────────────────────────
+// API ROUTES
+// ────────────────────────────────────────────────────────────
+app.use('/api/auth', authRoutes);
+
+// ────────────────────────────────────────────────────────────
+// 404 HANDLER (Express 5 safe)
+// ────────────────────────────────────────────────────────────
+app.use((req, _res, next) => {
+	next(new AppError(`Can't find ${req.originalUrl} on this server`, 404));
+});
+
+// ────────────────────────────────────────────────────────────
+// GLOBAL ERROR HANDLER MIDDLEWARE
+// ────────────────────────────────────────────────────────────
+app.use((err, _req, res, _next) => {
+	err.statusCode = err.statusCode || 500;
+	err.message = err.message || 'Internal Server Error';
+
+	// Wrong MongoDB ID error
+	if (err.name === 'CastError') {
+		const message = `Resource not found: ${err.path}`;
+		return res.status(400).json({
+			success: false,
+			message,
+		});
+	}
+
+	// Mongoose duplicate key error
+	if (err.code === 11000) {
+		const field = Object.keys(err.keyPattern)[0];
+		const message = `${field} must be unique`;
+		return res.status(409).json({
+			success: false,
+			message,
+		});
+	}
+
+	// JWT errors
+	if (err.name === 'JsonWebTokenError') {
+		return res.status(401).json({
+			success: false,
+			message: 'Invalid token',
+		});
+	}
+
+	if (err.name === 'TokenExpiredError') {
+		return res.status(401).json({
+			success: false,
+			message: 'Token expired',
+		});
+	}
+
+	// Default error response
+	res.status(err.statusCode).json({
+		success: false,
+		message: err.message,
+		...(NODE_ENV === 'development' && { stack: err.stack }),
+	});
+});
+
+// ────────────────────────────────────────────────────────────
+// START SERVER
+// ────────────────────────────────────────────────────────────
 const startServer = async () => {
 	try {
 		await connectDB();
 		app.listen(PORT, () => {
-			console.log(`Server running on port ${PORT}`);
+			logger.info(`✅ Server running on port ${PORT} (${NODE_ENV} mode)`);
 		});
 	} catch (error) {
-		console.error('Failed to start server:', error.message);
+		logger.error('Failed to start server', error.message);
 		process.exit(1);
 	}
 };

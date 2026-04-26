@@ -9,7 +9,16 @@ import {
   GBarChart,
   GDoughnutChart,
   GPieChart,
+  GRadarChart,
   DataTable,
+  Modal,
+  ModalData,
+  Button,
+  DataField,
+  SelectField,
+  Option,
+  openModal,
+  closeModal,
 } from "../../../components/shared/Common_Components";
 import {
   Building2,
@@ -20,26 +29,53 @@ import {
   DollarSign,
   Wallet,
   HeadphonesIcon,
+  Eye,
+  Pencil,
+  MessageSquareReply,
+  FileText,
+  RefreshCw,
+  Bell,
 } from "lucide-react";
 
 export default function Dashboard() {
-  // ── Period filter states (one per chart that supports filtering) ────────────
-  const [growthPeriod,        setGrowthPeriod]        = useState("This Year");
-  const [revenuePeriod,       setRevenuePeriod]       = useState("This Year");
-  const [mrrPeriod,           setMrrPeriod]           = useState("This Year");
-  const [churnPeriod,         setChurnPeriod]         = useState("This Year");
-  const [planStatusPeriod,    setPlanStatusPeriod]    = useState("This Year");
-  const [companyStatusPeriod, setCompanyStatusPeriod] = useState("This Year");
-  const [storagePeriod,       setStoragePeriod]       = useState("This Year");
-  const [ticketsPeriod,       setTicketsPeriod]       = useState("This Year");
-  const [apiHealthPeriod,     setApiHealthPeriod]     = useState("This Year");
+  // ── Period filter states (only for charts that show the filter bar) ──────────
+  const [growthPeriod,  setGrowthPeriod]  = useState("This Year");
+  const [revenuePeriod, setRevenuePeriod] = useState("This Year");
 
-  // Shared period labels reused across all chart filter bars
+  // Shared period labels
   const PERIODS = ["This Week", "This Month", "This Quarter", "This Year", "Overall"];
 
   // Helper — builds a filters array for a given setter function
   const makePeriodFilters = (setter) =>
     PERIODS.map((label) => ({ label, onClick: () => setter(label) }));
+
+  // ── Selected row state for each table's modals ───────────────────────────────
+  const [selectedCompany,  setSelectedCompany]  = useState(null);
+  const [selectedTicket,   setSelectedTicket]   = useState(null);
+  const [selectedRenewal,  setSelectedRenewal]  = useState(null);
+  const [selectedActivity, setSelectedActivity] = useState(null);
+
+  // ── Edit form state (mirrors selectedCompany fields) ─────────────────────────
+  const [editForm, setEditForm] = useState({
+    company: "", admin: "", plan: "", users: "", revenue: "", renewal: "", status: "",
+  });
+
+  const openEditModal = (row) => {
+    setSelectedCompany(row);
+    setEditForm({
+      company: row.company,
+      admin:   row.admin,
+      plan:    row.plan,
+      users:   row.users,
+      revenue: row.revenue,
+      renewal: row.renewal,
+      status:  row.status,
+    });
+    openModal("company-edit");
+  };
+
+  const handleEditField = (field) => (e) =>
+    setEditForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   // ── Company Growth ───────────────────────────────────────────────────────────
   const companyGrowthAll = {
@@ -290,13 +326,24 @@ export default function Dashboard() {
   // ── Derived (period-selected) data ───────────────────────────────────────────
   const companyGrowthData = companyGrowthAll[growthPeriod];
   const revenueData        = revenueAll[revenuePeriod];
-  const mrrData            = mrrAll[mrrPeriod];
-  const churnData          = churnAll[churnPeriod];
-  const planStatusData     = planStatusAll[planStatusPeriod];
-  const companyStatusData  = companyStatusAll[companyStatusPeriod];
-  const storageData        = storageAll[storagePeriod];
-  const ticketsData        = ticketsAll[ticketsPeriod];
-  const apiHealthData      = apiHealthAll[apiHealthPeriod];
+  // Static data for charts without period filters
+  const mrrData           = mrrAll["This Year"];
+  const churnData         = churnAll["This Year"];
+  const planStatusData    = planStatusAll["This Year"];
+  const companyStatusData = companyStatusAll["This Year"];
+  const storageData       = storageAll["This Year"];
+  const ticketsData       = ticketsAll["This Year"];
+  const apiHealthData     = apiHealthAll["This Year"];
+
+  // ── Ticket Resolution Status (radar chart in the ticket/API row) ─────────────
+  const ticketResolutionData = [
+    { subject: "Critical", resolved: 72, pending: 28 },
+    { subject: "High",     resolved: 81, pending: 19 },
+    { subject: "Medium",   resolved: 91, pending: 9  },
+    { subject: "Low",      resolved: 96, pending: 4  },
+    { subject: "Billing",  resolved: 85, pending: 15 },
+    { subject: "Tech",     resolved: 78, pending: 22 },
+  ];
 
   // ── Top Companies Table ──────────────────────────────────────────────────────
   const companyCols = [
@@ -385,9 +432,11 @@ export default function Dashboard() {
       {/* ── 1. Page Header ── */}
       <Grid cols={12} gap={4}>
         <Heading
-          primaryText="Super Admin Dashboard"
-          secondaryText="Multi-company CRM platform overview"
+          primaryText="Super Admin"
+          secondaryText="Dashboard"
           size={12}
+          fontSize="3xl"
+          showAnimations={true}
         />
 
         {/* ── 2. Top KPI Cards ── */}
@@ -408,7 +457,7 @@ export default function Dashboard() {
           subtitle="New companies onboarded per period"
           data={companyGrowthData}
           lines={[{ key: "companies", label: "New Companies", color: "#3b82f6" }]}
-          size={4}
+          size={5}
           height={300}
           filters={makePeriodFilters(setGrowthPeriod)}
         />
@@ -421,7 +470,7 @@ export default function Dashboard() {
             { key: "expense", label: "Expense", color: "#f43f5e" },
             { key: "profit",  label: "Profit",  color: "#38bdf8" },
           ]}
-          size={8}
+          size={7}
           height={300}
           filters={makePeriodFilters(setRevenuePeriod)}
         />
@@ -439,7 +488,6 @@ export default function Dashboard() {
           ]}
           size={8}
           height={300}
-          filters={makePeriodFilters(setMrrPeriod)}
         />
         <GColumnChart
           title="Churn vs Retention"
@@ -451,7 +499,6 @@ export default function Dashboard() {
           ]}
           size={4}
           height={300}
-          filters={makePeriodFilters(setChurnPeriod)}
         />
       </Grid>
 
@@ -464,7 +511,6 @@ export default function Dashboard() {
           colors={["#22c55e", "#38bdf8", "#f59e0b", "#f43f5e"]}
           size={4}
           height={300}
-          filters={makePeriodFilters(setPlanStatusPeriod)}
         />
         <GDoughnutChart
           title="Company Status"
@@ -473,7 +519,6 @@ export default function Dashboard() {
           colors={["#3b82f6", "#8b5cf6", "#64748b", "#f43f5e"]}
           size={4}
           height={300}
-          filters={makePeriodFilters(setCompanyStatusPeriod)}
         />
         <GDoughnutChart
           title="Storage Usage"
@@ -482,20 +527,25 @@ export default function Dashboard() {
           colors={["#f43f5e", "#22c55e"]}
           size={4}
           height={300}
-          filters={makePeriodFilters(setStoragePeriod)}
         />
-      </Grid>
-
-      {/* ── Ticket Priority + API Health ── */}
-      <Grid cols={12} gap={4}>
         <GPieChart
           title="Tickets by Priority"
           subtitle="Open support tickets breakdown"
           data={ticketsData}
           colors={["#f43f5e", "#f59e0b", "#38bdf8", "#22c55e"]}
-          size={4}
+          size={3}
           height={300}
-          filters={makePeriodFilters(setTicketsPeriod)}
+        />
+        <GRadarChart
+          title="Ticket Resolution Rate"
+          subtitle="Resolved vs pending % by category"
+          data={ticketResolutionData}
+          radars={[
+            { key: "resolved", label: "Resolved (%)", color: "#22c55e" },
+            { key: "pending",  label: "Pending (%)",  color: "#f43f5e" },
+          ]}
+          size={3}
+          height={300}
         />
         <GBarChart
           title="API & Integration Health"
@@ -505,9 +555,8 @@ export default function Dashboard() {
             { key: "uptime",  label: "Uptime (%)",   color: "#22c55e" },
             { key: "latency", label: "Latency (ms)", color: "#f59e0b" },
           ]}
-          size={8}
+          size={6}
           height={300}
-          filters={makePeriodFilters(setApiHealthPeriod)}
         />
       </Grid>
 
@@ -518,12 +567,14 @@ export default function Dashboard() {
           columns={companyCols}
           rows={companyRows}
           actions={[
-            { label: "View", variant: "ghost",   onClick: (row) => console.log("View", row) },
-            { label: "Edit", variant: "primary", onClick: (row) => console.log("Edit", row) },
+            { icon: <Eye size={15} />,    tooltip: "View",  variant: "ghost",   onClick: (row) => { setSelectedCompany(row);  openModal("company-view"); } },
+            { icon: <Pencil size={15} />, tooltip: "Edit",  variant: "primary", onClick: (row) => openEditModal(row) },
           ]}
           size={12}
           pageSize={5}
           date={true}
+          filterSize="xl"
+          // onDateFilter={true}
           filters={[
             {
               title: "Plan",
@@ -548,8 +599,8 @@ export default function Dashboard() {
           columns={ticketCols}
           rows={ticketRows}
           actions={[
-            { label: "View",  variant: "ghost",   onClick: (row) => console.log("View", row) },
-            { label: "Reply", variant: "primary", onClick: (row) => console.log("Reply", row) },
+            { icon: <Eye size={15} />,                tooltip: "View",  variant: "ghost",   onClick: (row) => { setSelectedTicket(row); openModal("ticket-view");  } },
+            { icon: <MessageSquareReply size={15} />, tooltip: "Reply", variant: "primary", onClick: (row) => { setSelectedTicket(row); openModal("ticket-reply"); } },
           ]}
           size={12}
           pageSize={5}
@@ -578,9 +629,9 @@ export default function Dashboard() {
           columns={renewalCols}
           rows={renewalRows}
           actions={[
-            { label: "Invoice", variant: "ghost",   onClick: (row) => console.log("Invoice", row) },
-            { label: "Renew",   variant: "primary", onClick: (row) => console.log("Renew", row) },
-            { label: "Remind",  variant: "ghost",   onClick: (row) => console.log("Remind", row) },
+            { icon: <FileText size={15} />,  tooltip: "Invoice", variant: "ghost",   onClick: (row) => { setSelectedRenewal(row); openModal("renewal-invoice"); } },
+            { icon: <RefreshCw size={15} />, tooltip: "Renew",   variant: "primary", onClick: (row) => { setSelectedRenewal(row); openModal("renewal-renew");   } },
+            { icon: <Bell size={15} />,      tooltip: "Remind",  variant: "ghost",   onClick: (row) => { setSelectedRenewal(row); openModal("renewal-remind");  } },
           ]}
           size={12}
           pageSize={5}
@@ -609,7 +660,7 @@ export default function Dashboard() {
           columns={activityCols}
           rows={activityRows}
           actions={[
-            { label: "View", variant: "primary", onClick: (row) => console.log("View", row) },
+            { icon: <Eye size={15} />, tooltip: "View", variant: "primary", onClick: (row) => { setSelectedActivity(row); openModal("activity-view"); } },
           ]}
           size={12}
           pageSize={5}
@@ -630,6 +681,237 @@ export default function Dashboard() {
           ]}
         />
       </Grid>
+
+      {/* ══ MODALS ══════════════════════════════════════════════════════════ */}
+
+      {/* Company: View */}
+      <Modal id="company-view" title="Company Details" size="md">
+        {selectedCompany && (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <ModalData label="Company"      value={selectedCompany.company} />
+              <ModalData label="Admin"        value={selectedCompany.admin} />
+              <ModalData label="Plan"         value={selectedCompany.plan} />
+              <ModalData label="Total Users"  value={selectedCompany.users} />
+              <ModalData label="Revenue"      value={selectedCompany.revenue} />
+              <ModalData label="Renewal Date" value={selectedCompany.renewal} />
+              <ModalData label="Status"       value={selectedCompany.status} />
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("company-view")} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Company: Edit */}
+      <Modal id="company-edit" title="Edit Company" size="lg">
+        {selectedCompany && (
+          <div className="flex flex-col gap-5">
+            <Grid cols={12} gap={3}>
+              {/* Company Name */}
+              <DataField
+                label="Company Name"
+                id="edit-company"
+                size={6}
+                value={editForm.company}
+                onChange={handleEditField("company")}
+                placeholder="e.g. Nexus Corp"
+              />
+              {/* Admin Name */}
+              <DataField
+                label="Admin Name"
+                id="edit-admin"
+                size={6}
+                value={editForm.admin}
+                onChange={handleEditField("admin")}
+                placeholder="e.g. Arjun Mehta"
+              />
+              {/* Plan */}
+              <SelectField
+                label="Plan"
+                id="edit-plan"
+                size={4}
+                value={editForm.plan}
+                onChange={handleEditField("plan")}
+              >
+                <Option value="Starter"    label="Starter" />
+                <Option value="Pro"        label="Pro" />
+                <Option value="Enterprise" label="Enterprise" />
+              </SelectField>
+              {/* Total Users */}
+              <DataField
+                label="Total Users"
+                id="edit-users"
+                type="number"
+                size={4}
+                value={editForm.users}
+                onChange={handleEditField("users")}
+                placeholder="e.g. 142"
+              />
+              {/* Revenue */}
+              <DataField
+                label="Revenue"
+                id="edit-revenue"
+                size={4}
+                value={editForm.revenue}
+                onChange={handleEditField("revenue")}
+                placeholder="e.g. ₹1,28,000"
+              />
+              {/* Renewal Date */}
+              <DataField
+                label="Renewal Date"
+                id="edit-renewal"
+                type="date"
+                size={6}
+                value={editForm.renewal}
+                onChange={handleEditField("renewal")}
+              />
+              {/* Status */}
+              <SelectField
+                label="Status"
+                id="edit-status"
+                size={6}
+                value={editForm.status}
+                onChange={handleEditField("status")}
+              >
+                <Option value="Completed"   label="Completed" />
+                <Option value="In Progress" label="In Progress" />
+                <Option value="Failed"      label="Failed" />
+              </SelectField>
+            </Grid>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button text="Cancel" variant="ghost"   size={2} onClick={() => closeModal("company-edit")} />
+              <Button text="Save Changes" variant="primary" size={3} onClick={() => {
+                // In a real app: dispatch update action / API call with editForm
+                console.log("Saving:", editForm);
+                closeModal("company-edit");
+              }} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Ticket: View */}
+      <Modal id="ticket-view" title="Ticket Details" size="md">
+        {selectedTicket && (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <ModalData label="Ticket ID" value={selectedTicket.ticketId} />
+              <ModalData label="Company"   value={selectedTicket.company} />
+              <ModalData label="Subject"   value={selectedTicket.subject} />
+              <ModalData label="Priority"  value={selectedTicket.priority} />
+              <ModalData label="Status"    value={selectedTicket.status} />
+              <ModalData label="Date"      value={selectedTicket.date} />
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("ticket-view")} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Ticket: Reply */}
+      <Modal id="ticket-reply" title="Reply to Ticket" size="md">
+        {selectedTicket && (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <ModalData label="Ticket ID" value={selectedTicket.ticketId} />
+              <ModalData label="Company"   value={selectedTicket.company} />
+              <ModalData label="Subject"   value={selectedTicket.subject} />
+              <ModalData label="Priority"  value={selectedTicket.priority} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Your Reply</label>
+              <textarea
+                rows={4}
+                placeholder="Type your reply here…"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-[#2a465a] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 resize-none transition"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button text="Cancel"     variant="ghost"   size={3} onClick={() => closeModal("ticket-reply")} />
+              <Button text="Send Reply" variant="primary" size={4} onClick={() => closeModal("ticket-reply")} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Renewal: Invoice */}
+      <Modal id="renewal-invoice" title="Invoice Preview" size="md">
+        {selectedRenewal && (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <ModalData label="Company"     value={selectedRenewal.company} />
+              <ModalData label="Plan"        value={selectedRenewal.plan} />
+              <ModalData label="Expiry Date" value={selectedRenewal.expiry} />
+              <ModalData label="Amount"      value={selectedRenewal.amount} />
+              <ModalData label="Status"      value={selectedRenewal.status} />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button text="Close"    variant="ghost"   size={3} onClick={() => closeModal("renewal-invoice")} />
+              <Button text="Download" variant="primary" size={4} onClick={() => closeModal("renewal-invoice")} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Renewal: Confirm Renew */}
+      <Modal id="renewal-renew" title="Confirm Renewal" size="sm">
+        {selectedRenewal && (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-slate-600">
+              Renew subscription for <span className="font-bold text-[#2a465a]">{selectedRenewal.company}</span>?
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <ModalData label="Plan"   value={selectedRenewal.plan} />
+              <ModalData label="Amount" value={selectedRenewal.amount} />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button text="Cancel"        variant="ghost"   size={4} onClick={() => closeModal("renewal-renew")} />
+              <Button text="Confirm Renew" variant="primary" size={4} onClick={() => closeModal("renewal-renew")} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Renewal: Send Reminder */}
+      <Modal id="renewal-remind" title="Send Reminder" size="sm">
+        {selectedRenewal && (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-slate-600">
+              Send renewal reminder to admin of <span className="font-bold text-[#2a465a]">{selectedRenewal.company}</span>?
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <ModalData label="Plan"        value={selectedRenewal.plan} />
+              <ModalData label="Expiry Date" value={selectedRenewal.expiry} />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button text="Cancel"        variant="ghost"   size={4} onClick={() => closeModal("renewal-remind")} />
+              <Button text="Send Reminder" variant="primary" size={4} onClick={() => closeModal("renewal-remind")} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Activity: View */}
+      <Modal id="activity-view" title="Activity Details" size="md">
+        {selectedActivity && (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <ModalData label="Activity"     value={selectedActivity.activity} />
+              <ModalData label="Module"       value={selectedActivity.module} />
+              <ModalData label="Performed By" value={selectedActivity.performedBy} />
+              <ModalData label="Date"         value={selectedActivity.date} />
+              <ModalData label="Status"       value={selectedActivity.status} />
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("activity-view")} />
+            </div>
+          </div>
+        )}
+      </Modal>
 
     </div>
   );

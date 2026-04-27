@@ -222,25 +222,47 @@ export default function Communication() {
 
       </Grid>
 
-      <Modal id="view-message-modal" title="Message Details" size="md">
-        {selectedMsg && (
-          <Grid cols={12} gap={4}>
-            <ModalGrid title="Message Info" cols={2}>
-              <ModalData label="Title"   value={selectedMsg.title}   />
-              <ModalData label="Type"    value={selectedMsg.type}    />
-              <ModalData label="Sent To" value={selectedMsg.sentTo}  />
-              <ModalData label="Sent By" value={selectedMsg.sentBy}  />
-              <ModalData label="Date"    value={selectedMsg.date}    />
-            </ModalGrid>
-            <ModalGrid title="Message Content" cols={1}>
-              <ModalData label="Message" value={selectedMsg.message} />
-            </ModalGrid>
-            <div className="col-span-12" style={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button text="Close" size={3} variant="secondary" onClick={() => closeModal("view-message-modal")} />
-            </div>
-          </Grid>
-        )}
-      </Modal>
+          <Modal id="view-message-modal" title="Message Details" size="md">
+          {selectedMsg && (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+      {/* Type Badge */}
+      <div>
+        <span style={{
+          background: selectedMsg.type === "Warning" ? "#FAECE7" : selectedMsg.type === "Appreciation" ? "#EAF3DE" : "#E6F1FB",
+          color: selectedMsg.type === "Warning" ? "#993C1D" : selectedMsg.type === "Appreciation" ? "#3B6D11" : "#0C447C",
+          padding: "4px 12px", borderRadius: "12px", fontSize: "13px", fontWeight: 700,
+        }}>
+          {selectedMsg.type}
+        </span>
+      </div>
+
+      {/* Fields */}
+      {[
+        { label: "Title",   value: selectedMsg.title   },
+        { label: "Sent To", value: selectedMsg.sentTo  },
+        { label: "Sent By", value: selectedMsg.sentBy  },
+        { label: "Date",    value: selectedMsg.date    },
+        { label: "Message", value: selectedMsg.message },
+      ].map((item) => (
+        <div key={item.label}>
+          <p style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.3em", marginBottom: "4px" }}>
+            {item.label}
+          </p>
+          <p style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "10px 14px", fontSize: "14px", color: "#2a465a", fontWeight: 500 }}>
+            {item.value}
+          </p>
+        </div>
+      ))}
+
+      {/* Close Button */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <Button text="Close" size={3} variant="secondary" onClick={() => closeModal("view-message-modal")} />
+      </div>
+
+    </div>
+  )}
+</Modal>
     </div>
   );
 }

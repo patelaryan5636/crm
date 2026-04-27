@@ -73,7 +73,7 @@ const MENUS = {
       {
         label: "Overview",
         items: [
-          { name: "Dashboard", path: "/admin", icon: LayoutDashboard, end: true },
+          { name: "Dashboard", path: "/admin/", icon: LayoutDashboard, end: true },
         ],
       },
       {

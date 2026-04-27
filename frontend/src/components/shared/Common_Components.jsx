@@ -1078,6 +1078,7 @@ export const DataTable = ({
               </span>
               <Select
                 value={currentPageSize}
+                searchable={false}
                 onChange={(e) => {
                   setCurrentPageSize(Number(e.target.value));
                   setPage(1);

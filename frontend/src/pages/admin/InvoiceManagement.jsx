@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heading, P, Button, DashGrid, DataTable } from '../../components/Shared/Common_Components';
+import { Heading, P, Button, DashGrid, DataTable } from '../../components/shared/Common_Components';
 
 export default function InvoiceManagement({ isEmbedded }) {
   const rawInvoices = [

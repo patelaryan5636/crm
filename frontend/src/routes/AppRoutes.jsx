@@ -4,16 +4,18 @@ import SuperAdminRoutes from "./superAdminRoutes";
 import AdminLogin from "../pages/auth/AdminLogin";
 import AdminRegister from "../pages/auth/AdminRegister";
 import SalesManagerRoutes from "./Sales/salesManagerRoutes";
-
-
+import DepartmentLogin from "../pages/auth/DepartmentLogin";
+import SuperAdminLogin from "../pages/auth/SuperAdminLogin";
 function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         {/* Authentication Pages */}
-        <Route path="/login" element={<AdminLogin />} />
-        <Route path="/register" element={<AdminRegister />} />
+        <Route path="/super-admin-login" element={<SuperAdminLogin />} />
+        <Route path="/Admin-login" element={<AdminLogin />} />
+        <Route path="/Admin-register" element={<AdminRegister />} />
+        <Route path="/login" element={<DepartmentLogin />} />
         {/* Admin Routes */}
         <Route path="/admin/*" element={<AdminRoutes />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />

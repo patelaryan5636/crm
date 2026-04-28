@@ -1,58 +1,57 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
-  User,
-  Layers3,
-  Activity,
-  BriefcaseBusiness,
+  Shield,
+  Globe,
+  Server,
+  Database,
+  Lock,
+  BarChart3,
+  Users,
   Mail,
-  ShieldCheck,
-  Zap,
-  CalendarDays,
   Eye,
   EyeOff,
 } from "lucide-react";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
-import { loginAdmin } from "../../services/authService";
 
 const FloatingBackground = () => (
   <div className="absolute inset-0 z-0 overflow-hidden opacity-5 pointer-events-none">
-    <Layers3
+    <Shield
       className="w-20 h-20 text-slate-900 absolute top-10 left-10 animate-[spin_25s_linear_infinite]"
       strokeWidth={1}
     />
-    <Activity
+    <Globe
       className="w-24 h-24 text-slate-900 absolute top-20 right-20 animate-[pulse_4s_ease-in-out_infinite]"
       strokeWidth={1}
     />
-    <User
+    <Server
       className="w-16 h-16 text-slate-900 absolute bottom-32 left-40 animate-[spin_22s_linear_infinite]"
       strokeWidth={1}
     />
-    <BriefcaseBusiness
+    <Database
       className="w-20 h-20 text-slate-900 absolute -bottom-10 right-40 animate-[pulse_5s_ease-in-out_infinite]"
       strokeWidth={1}
     />
-    <Mail
+    <Lock
       className="w-28 h-28 text-slate-900 absolute top-[40%] left-[20%] animate-[spin_18s_linear_infinite]"
       strokeWidth={1}
     />
-    <ShieldCheck
+    <BarChart3
       className="w-18 h-18 text-slate-900 absolute top-28 left-[45%] animate-[spin_30s_linear_infinite]"
       strokeWidth={1}
     />
-    <Zap
+    <Users
       className="w-16 h-16 text-slate-900 absolute bottom-20 right-28 animate-[pulse_3s_ease-in-out_infinite]"
-      strokeWidth={1}
-    />
-    <CalendarDays
-      className="w-24 h-24 text-slate-900 absolute top-[55%] right-10 animate-[spin_28s_linear_infinite]"
       strokeWidth={1}
     />
   </div>
 );
 
-const AdminLogin = () => {
+function generateCaptcha() {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+const SuperAdminLogin = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -64,12 +63,7 @@ const AdminLogin = () => {
   const [captchaCode, setCaptchaCode] = useState(generateCaptcha());
   const [captchaInput, setCaptchaInput] = useState("");
   const [captchaError, setCaptchaError] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  function generateCaptcha() {
-    return Math.floor(1000 + Math.random() * 9000).toString();
-  }
 
   const refreshCaptcha = () => {
     setCaptchaCode(generateCaptcha());
@@ -77,19 +71,14 @@ const AdminLogin = () => {
     setCaptchaError("");
   };
 
-  const validateEmail = (value) => {
-    const emailRegex = /^\S+@\S+\.\S+$/;
-    return emailRegex.test(value);
-  };
+  const validateEmail = (value) => /^\S+@\S+\.\S+$/.test(value);
 
   useEffect(() => {
     if (!statusType) return;
-
     const timeout = setTimeout(() => {
       setStatusType("");
       setStatusMessage("");
     }, 4000);
-
     return () => clearTimeout(timeout);
   }, [statusType]);
 
@@ -103,16 +92,12 @@ const AdminLogin = () => {
     } else if (!validateEmail(email)) {
       setEmailError("Enter a valid email address.");
       valid = false;
-    } else {
-      setEmailError("");
-    }
+    } else setEmailError("");
 
     if (!password.trim()) {
       setPasswordError("Password is required.");
       valid = false;
-    } else {
-      setPasswordError("");
-    }
+    } else setPasswordError("");
 
     if (!captchaInput.trim()) {
       setCaptchaError("Please enter the CAPTCHA code.");
@@ -122,9 +107,7 @@ const AdminLogin = () => {
       setCaptchaCode(generateCaptcha());
       setCaptchaInput("");
       valid = false;
-    } else {
-      setCaptchaError("");
-    }
+    } else setCaptchaError("");
 
     if (!valid) {
       setStatusType(
@@ -144,66 +127,16 @@ const AdminLogin = () => {
       return;
     }
 
-    const getCurrentLocation = () => new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error("Geolocation is not supported by this browser."));
-        return;
-      }
-
-      let isSettled = false;
-      const finish = (fn, payload) => {
-        if (isSettled) return;
-        isSettled = true;
-        clearTimeout(fallbackTimer);
-        fn(payload);
-      };
-
-      const fallbackTimer = setTimeout(() => {
-        finish(reject, new Error("Location request timed out. Please try again."));
-      }, 12000);
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          finish(resolve, {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-        },
-        () => {
-          finish(reject, new Error("Location access is required to sign in."));
-        },
-        {
-          enableHighAccuracy: false,
-          timeout: 8000,
-          maximumAge: 60000,
-        },
-      );
-    });
-
     try {
       setIsSubmitting(true);
       setStatusType("info");
-      setStatusMessage("Checking location permission...");
-
-      const location = await getCurrentLocation();
-
-      setStatusType("info");
       setStatusMessage("Signing you in securely...");
 
-      await loginAdmin({
-        email,
-        password,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        rememberMe,
-      });
+      await loginSuperAdmin({ email, password });
 
       setStatusType("success");
       setStatusMessage("Sign in successful. Redirecting...");
-
-      setTimeout(() => {
-        navigate("/admin");
-      }, 900);
+      setTimeout(() => navigate("/super-admin"), 900);
     } catch (error) {
       setStatusType("error");
       setStatusMessage(
@@ -218,7 +151,6 @@ const AdminLogin = () => {
     <div className="min-h-screen bg-crm-off-white flex items-center justify-center p-4 relative overflow-hidden">
       <FloatingBackground />
 
-      {/* Main Login Card */}
       <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl flex overflow-hidden z-10 min-h-[600px]">
         {/* Left Panel */}
         <div className="hidden lg:flex w-5/12 bg-slate-50 p-12 flex-col justify-between border-r border-slate-100">
@@ -226,12 +158,16 @@ const AdminLogin = () => {
             <div className="mb-10">
               <img src={GraphuraLogo} alt="Graphura Logo" className="h-20" />
             </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-500 text-[11px] font-bold tracking-widest mb-6">
+              <Shield size={11} />
+              SUPER ADMIN PORTAL
+            </div>
             <h2 className="text-3xl font-extrabold text-crm-navy leading-tight mb-4" style={{ fontFamily: "'Gugi', cursive" }}>
-              Manage Customers. <br />Empower Teams. <br />Grow Faster.
+              Platform Control. <br /> Global Oversight. <br />Full Authority.
             </h2>
             <p className="text-slate-500 text-sm leading-relaxed">
-              Empower your business with one smart platform to manage leads,
-              teams, tasks, and customer relationships effortlessly.
+              Manage all companies, admins, and platform-wide settings from one
+              centralized control panel. Access is restricted and fully audited.
             </p>
           </div>
           <div className="flex gap-2">
@@ -255,10 +191,9 @@ const AdminLogin = () => {
               />
             </div>
             <h1 className="text-3xl font-black text-crm-navy mb-8 text-center tracking-tight" style={{ fontFamily: "'Courgette', cursive" }}>
-              Admin Control Center 🏢
+              Super Admin Access 🛡️
             </h1>
 
-            {/* Input Form */}
             <form className="space-y-5" onSubmit={handleSubmit}>
               {statusType ? (
                 <div
@@ -267,19 +202,22 @@ const AdminLogin = () => {
                       ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
                       : statusType === "alert"
                         ? "border border-yellow-200 bg-yellow-50 text-yellow-800"
-                        : "border border-red-200 bg-red-50 text-red-800"
+                        : statusType === "info"
+                          ? "border border-blue-200 bg-blue-50 text-blue-800"
+                          : "border border-red-200 bg-red-50 text-red-800"
                   }`}
                 >
                   {statusMessage}
                 </div>
               ) : null}
 
+              {/* Email */}
               <div className="space-y-2">
                 <label
-                  htmlFor="email_login"
+                  htmlFor="sa_email"
                   className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]"
                 >
-                  Work Email
+                  Super Admin Email
                 </label>
                 <div className="relative rounded-2xl border border-slate-200 bg-slate-50/90 focus-within:ring-2 focus-within:ring-crm-blue/20 mt-1 transition">
                   <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
@@ -287,8 +225,8 @@ const AdminLogin = () => {
                   </div>
                   <input
                     type="email"
-                    id="email_login"
-                    placeholder="you@company.com"
+                    id="sa_email"
+                    placeholder="superadmin@graphura.com"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -302,21 +240,22 @@ const AdminLogin = () => {
                 ) : null}
               </div>
 
+              {/* Password */}
               <div className="space-y-2">
                 <label
-                  htmlFor="password_login"
+                  htmlFor="sa_password"
                   className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]"
                 >
-                  Password
+                  Master Password
                 </label>
                 <div className="relative mt-1 rounded-2xl border border-slate-200 bg-slate-50/90 focus-within:ring-2 focus-within:ring-crm-blue/20 transition">
                   <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
-                    <ShieldCheck size={18} />
+                    <Lock size={18} />
                   </div>
                   <input
                     type={showPassword ? "text" : "password"}
-                    id="password_login"
-                    placeholder="Enter your password"
+                    id="sa_password"
+                    placeholder="Enter master password"
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
@@ -337,9 +276,10 @@ const AdminLogin = () => {
                 ) : null}
               </div>
 
+              {/* CAPTCHA */}
               <div className="space-y-3">
                 <label
-                  htmlFor="captcha_login"
+                  htmlFor="sa_captcha"
                   className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]"
                 >
                   Security Verification
@@ -376,7 +316,7 @@ const AdminLogin = () => {
                 <div className="relative rounded-2xl border border-slate-200 bg-slate-50/90 focus-within:ring-2 focus-within:ring-crm-blue/20 transition">
                   <input
                     type="text"
-                    id="captcha_login"
+                    id="sa_captcha"
                     placeholder="Enter the 4-digit number above"
                     value={captchaInput}
                     onChange={(e) => {
@@ -390,27 +330,16 @@ const AdminLogin = () => {
                 {captchaError ? (
                   <p className="text-xs text-rose-600">{captchaError}</p>
                 ) : null}
-                <p className="text-xs text-slate-400">
-                  Enter the 4-digit number shown above
-                </p>
               </div>
 
-              <div className="flex items-center justify-between text-xs font-bold pt-2">
-                <label className="flex items-center gap-2 text-slate-500 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 accent-crm-navy"
-                  />
-                  Remember me
-                </label>
+              {/* Forgot */}
+              <div className="flex justify-end text-xs font-bold pt-2">
                 <a href="#" className="text-crm-navy hover:underline">
                   Forgot password?
                 </a>
               </div>
 
-              {/* Visible Sign In Button */}
+              {/* Submit */}
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -419,16 +348,6 @@ const AdminLogin = () => {
                 {isSubmitting ? "Signing in..." : "Sign in →"}
               </button>
             </form>
-
-            <p className="mt-8 text-center text-slate-500 text-sm">
-              Don't have an account?{" "}
-              <Link
-                to="/register"
-                className="text-crm-navy font-bold hover:underline"
-              >
-                Register your company
-              </Link>
-            </p>
           </div>
         </div>
       </div>
@@ -436,4 +355,4 @@ const AdminLogin = () => {
   );
 };
 
-export default AdminLogin;
+export default SuperAdminLogin;

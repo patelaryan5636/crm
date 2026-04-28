@@ -32,6 +32,9 @@ import {
   List,
   TrendingUp,
   Database,
+  Shuffle,
+  Save,
+  X,
 } from "lucide-react";
 
 // ─── Dummy Data ───────────────────────────────────────────────────────────────
@@ -145,6 +148,9 @@ export default function SalesManagerLeads() {
   // ── Delete confirmation state ─────────────────────────────────────────────
   const [deleteTarget, setDeleteTarget] = useState(null); // dump row to delete
 
+  // ── Auto-distribute result state ──────────────────────────────────────────
+  const [autoDistResult, setAutoDistResult] = useState([]); // [{ tlName, count }]
+
   const fileRef = useRef();
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -194,6 +200,70 @@ export default function SalesManagerLeads() {
     setCsvFileName("");
     setActiveTab("All Leads");
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  // ── Auto Distribute Leads (Round-Robin) ───────────────────────────────────
+  // Distributes selected valid CSV rows evenly across all TLs that still have
+  // capacity, using round-robin scheduling. TLs at max capacity are skipped.
+  const autoDistributeLeads = () => {
+    const toDistribute = csvRows.filter((r) => r.selected && r.validationStatus === "Valid");
+    if (toDistribute.length === 0) return;
+
+    // Build eligible TL list sorted by available capacity descending
+    const eligible = TEAM_LEADERS
+      .filter((tl) => (MAX_LEADS - tl.currentLeads) > 0)
+      .map((tl) => ({ ...tl, capacity: MAX_LEADS - tl.currentLeads, assigned: 0 }));
+
+    if (eligible.length === 0) {
+      alert("No team leaders have available capacity.");
+      return;
+    }
+
+    // Round-robin: cycle through eligible TLs, skip when a TL hits its capacity
+    const assignments = {};
+    let pointer = 0;
+
+    for (const row of toDistribute) {
+      let placed = false;
+      for (let attempt = 0; attempt < eligible.length; attempt++) {
+        const tl = eligible[pointer % eligible.length];
+        pointer++;
+        if (tl.assigned < tl.capacity) {
+          assignments[row._idx] = tl.name;
+          tl.assigned++;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) assignments[row._idx] = "Unassigned";
+    }
+
+    // Build new lead objects
+    const today = new Date().toISOString().split("T")[0];
+    const newLeads = toDistribute.map((r, i) => ({
+      id:          `L${String(leads.length + i + 1).padStart(3, "0")}`,
+      name:        r.name,
+      mobile:      r.mobile,
+      email:       r.email,
+      status:      "New",
+      assignedTo:  assignments[r._idx] ?? "Unassigned",
+      createdDate: today,
+    }));
+
+    setLeads((prev) => [...prev, ...newLeads]);
+
+    // Build per-TL summary for the result modal
+    const summary = {};
+    for (const lead of newLeads) {
+      summary[lead.assignedTo] = (summary[lead.assignedTo] ?? 0) + 1;
+    }
+    setAutoDistResult(Object.entries(summary).map(([tlName, count]) => ({ tlName, count })));
+
+    // Clear upload state and show result
+    setCsvRows([]);
+    setCsvFileName("");
+    if (fileRef.current) fileRef.current.value = "";
+    openModal("auto-dist-result-modal");
   };
 
   const downloadCSVFormat = () => {
@@ -457,16 +527,23 @@ export default function SalesManagerLeads() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => { setCsvRows([]); setCsvFileName(""); if (fileRef.current) fileRef.current.value = ""; }}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 transition"
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 transition"
               >
-                Cancel
+                <X size={14} /> Cancel
+              </button>
+              <button
+                onClick={autoDistributeLeads}
+                disabled={selectedCount === 0}
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-[#2a465a]/30 bg-[#2a465a]/8 text-sm font-bold text-[#2a465a] hover:bg-[#2a465a]/15 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Shuffle size={14} /> Auto Distribute Leads
               </button>
               <button
                 onClick={saveValidLeads}
                 disabled={selectedCount === 0}
-                className="px-5 py-2.5 rounded-xl bg-[#2a465a] text-white text-sm font-bold hover:bg-[#1e3a52] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#2a465a] text-white text-sm font-bold hover:bg-[#1e3a52] transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Save {selectedCount > 0 ? `${selectedCount} ` : ""}Selected Leads
+                <Save size={14} /> Save Leads {selectedCount > 0 ? `(${selectedCount})` : ""}
               </button>
             </div>
           </div>
@@ -809,6 +886,71 @@ export default function SalesManagerLeads() {
           {activeTab === "Follow-ups"         && renderFollowUps()}
           {activeTab === "Dump Data"          && renderDumpData()}        </div>
       </Grid>
+
+      {/* Auto-Distribute Result Modal */}
+      <Modal id="auto-dist-result-modal" title="Leads Distributed Successfully" size="md">
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl">
+            <CheckCircle size={18} className="flex-shrink-0" />
+            <p className="text-sm font-semibold">
+              {autoDistResult.reduce((s, r) => s + r.count, 0)} leads have been distributed across{" "}
+              {autoDistResult.filter((r) => r.tlName !== "Unassigned").length} team leader(s) using round-robin scheduling.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gradient-to-r from-[#2a465a] to-[#3a5a7a]">
+                  <th className="py-3 px-4 text-left text-xs font-black text-white uppercase tracking-[0.2em]">Team Leader</th>
+                  <th className="py-3 px-4 text-left text-xs font-black text-white uppercase tracking-[0.2em]">Leads Assigned</th>
+                </tr>
+              </thead>
+              <tbody>
+                {autoDistResult.map((row, i) => (
+                  <tr key={row.tlName} className={`border-b border-slate-100 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`}>
+                    <td className="py-3 px-4 font-semibold text-[#2a465a]">
+                      {row.tlName === "Unassigned" ? (
+                        <span className="flex items-center gap-1.5 text-slate-400">
+                          <AlertTriangle size={13} /> Unassigned (capacity full)
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5">
+                          <UserCheck size={13} className="text-emerald-600" /> {row.tlName}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
+                        row.tlName === "Unassigned"
+                          ? "bg-slate-100 text-slate-500"
+                          : "bg-emerald-100 text-emerald-700"
+                      }`}>
+                        {row.count} lead{row.count !== 1 ? "s" : ""}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              text="View All Leads"
+              variant="primary"
+              size={4}
+              onClick={() => { closeModal("auto-dist-result-modal"); setActiveTab("All Leads"); }}
+            />
+            <Button
+              text="Close"
+              variant="ghost"
+              size={3}
+              onClick={() => closeModal("auto-dist-result-modal")}
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal id="delete-confirm-modal" title="Delete Lead" size="sm">

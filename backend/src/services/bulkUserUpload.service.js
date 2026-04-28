@@ -25,6 +25,11 @@ const {
 // FILE PARSERS
 // ─────────────────────────────────────────────────────────────
 
+const buildDefaultUserPassword = (email, phone) => {
+  const lastFiveDigits = String(phone || "").trim().slice(-5);
+  return `${String(email || "").toLowerCase().trim()}@${lastFiveDigits}`;
+};
+
 const parseCsv = (filePath) =>
   new Promise((resolve, reject) => {
     const results = [];
@@ -429,6 +434,8 @@ exports.commitUpload = async (uploadId, importMode) => {
       // Default password: Test@<last5 digits of phone>  (per BULK_USER_UPLOAD_PLAN.md §3)
       const rawPassword    = `Test@${last5}`;
       const hashedPassword = await hashPassword(rawPassword);
+      const defaultPassword = buildDefaultUserPassword(email, row.phone);
+      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
       usersToInsert.push({
         admin:             upload.admin,

@@ -191,7 +191,21 @@ export const Label = ({ text, htmlFor, size = 12 }) => (
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. DATA FIELD  (Label + Input wrapped in a single slot)
-// Props: label, id, type, placeholder, autoFocus, size, value, onChange, disabled
+// Combines a label and input into one grid slot. Optionally displays a left icon.
+//
+// Props:
+//   label       — label text shown above the input
+//   id          — html id (links label + input)
+//   type        — input type  (default: "text")
+//   placeholder — placeholder string
+//   autoFocus   — true | false  (default: false)
+//   size        — 1–12 grid columns  (default: 12)
+//   value       — controlled value
+//   onChange    — change handler (e) => void
+//   disabled    — true | false  (default: false)
+//   readOnly    — true | false  (default: false)
+//   className   — additional CSS classes for the input
+//   icon        — optional Lucide icon component (e.g., Mail, Lock) to show on the left
 // ─────────────────────────────────────────────────────────────────────────────
 export const DataField = ({
   label,
@@ -205,6 +219,7 @@ export const DataField = ({
   disabled = false,
   readOnly = false,
   className = "",
+  icon: Icon,
 }) => (
   <div className={`${colSpan(size)} flex flex-col gap-1.5`}>
     {label && (
@@ -215,30 +230,39 @@ export const DataField = ({
         {label}
       </label>
     )}
-    <input
-      id={id}
-      type={type}
-      placeholder={placeholder}
-      autoFocus={autoFocus}
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      readOnly={readOnly}
-      className={`
-        w-full rounded-2xl border border-slate-200 bg-slate-50/90
-        py-3.5 px-4 text-[#2a465a] placeholder:text-slate-400 text-sm font-medium
-        focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40
-        disabled:opacity-50 disabled:cursor-not-allowed
-        transition duration-200
-        ${className}
-      `}
-    />
+    <div className="relative">
+      {Icon && (
+        <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
+          <Icon size={18} />
+        </div>
+      )}
+      <input
+        id={id}
+        type={type}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        readOnly={readOnly}
+        className={`
+          w-full rounded-2xl border border-slate-200 bg-slate-50/90
+          ${Icon ? "pl-12 pr-4" : "px-4"} py-3.5
+          text-[#2a465a] placeholder:text-slate-400 text-sm font-medium
+          focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40
+          disabled:opacity-50 disabled:cursor-not-allowed
+          transition duration-200
+          ${className}
+        `}
+      />
+    </div>
   </div>
 );
 
 /*
   ── HOW TO USE DataField ────────────────────────────────────────────────────
 
+  Basic usage:
   <DataField
     label="Company Name"
     id="company_name"
@@ -247,6 +271,20 @@ export const DataField = ({
     size={6}
     value={companyName}
     onChange={(e) => setCompanyName(e.target.value)}
+  />
+
+  With icon:
+  import { Mail } from "lucide-react";
+  
+  <DataField
+    label="Work Email"
+    id="email"
+    type="email"
+    placeholder="you@company.com"
+    icon={Mail}
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    size={12}
   />
 
   Props:
@@ -259,6 +297,9 @@ export const DataField = ({
   • value       — controlled value
   • onChange    — change handler (e) => void
   • disabled    — true | false  (default: false)
+  • readOnly    — true | false  (default: false)
+  • className   — additional CSS classes for the input
+  • icon        — optional Lucide icon component (e.g., Mail, Lock, User)
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1019,9 +1060,11 @@ export const DataTable = ({
       ) : null}
 
       {/* Search + date picker + page size + filter button */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Search + date picker + page size + filter button */}
+      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-between sm:gap-3">
+        {/* Search — full width on mobile, flex-1 on desktop */}
         {searchable ? (
-          <div className="relative flex-1">
+          <div className="relative w-full sm:flex-1">
             <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
               <Search size={16} />
             </div>
@@ -1040,17 +1083,18 @@ export const DataTable = ({
 
         {/* Single date picker — shown only when onDateFilter={true} */}
         {onDateFilter && (
-          <div className="relative flex items-center gap-1.5">
+          <div className="flex-1 min-w-0 sm:flex-none">
             <input
               type="date"
               value={singleDate}
               onChange={(e) => { setSingleDate(e.target.value); setPage(1); }}
-              className="rounded-2xl border border-slate-200 bg-white py-3 px-4 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 transition cursor-pointer"
+              className="w-full rounded-2xl border border-slate-200 bg-white py-3 px-4 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 transition cursor-pointer"
             />
           </div>
         )}
 
-        <div className="flex items-center gap-2 whitespace-nowrap">
+        {/* Filter button + page size — flex-1 on mobile so it fills remaining space */}
+        <div className="flex flex-1 items-center gap-2 whitespace-nowrap sm:flex-none">
           {/* Filter button — only shown when filters array is provided or date is "on" */}
           {showFilterButton && (
             <button

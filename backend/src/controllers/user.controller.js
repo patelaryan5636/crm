@@ -1,13 +1,55 @@
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const ApiResponse = require('../utils/apiResponse');
-const { User, Department, AuditLog, Team, Admin } = require('../models/index');
-const { hashPassword } = require('../services/auth.service');
+const {
+  User,
+  Department,
+  AuditLog,
+  Team,
+  Admin,
+  UserLoginLog,
+  LoginAttempt,
+  RefreshToken,
+} = require('../models/index');
+const {
+  hashPassword,
+  comparePassword,
+  generateAccessToken,
+  generateRefreshToken,
+} = require('../services/auth.service');
+
+const getClientIp = (req) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.length > 0) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.ip || req.socket?.remoteAddress || 'unknown';
+};
+
+const getDepartmentNextRoute = (role, user) => {
+  if (user.mustChangePassword || !user.isProfileComplete) {
+    return '/department';
+  }
+
+  if (role === 'SALES_MANAGER') return '/sales-manager';
+  if (role === 'SALES_TL' || role === 'SALES_EXECUTIVE') return '/department';
+  if (role === 'FINANCE_MANAGER') return '/department';
+  if (role === 'MANAGEMENT_MANAGER' || role === 'MANAGEMENT_TL' || role === 'MANAGEMENT_EMPLOYEE') {
+    return '/department';
+  }
+
+  return '/department';
+};
 
 const ROLE_DEPARTMENT_MAP = {
   SALES: ['SALES_MANAGER', 'SALES_TL', 'SALES_EXECUTIVE'],
   FINANCE: ['FINANCE_MANAGER', 'FINANCE_EXECUTIVE'],
   MANAGEMENT: ['MANAGEMENT_MANAGER', 'MANAGEMENT_TL', 'MANAGEMENT_EMPLOYEE']
+};
+
+const buildDefaultUserPassword = (email, phone) => {
+  const lastFiveDigits = String(phone || '').trim().slice(-5);
+  return `${String(email || '').toLowerCase().trim()}@${lastFiveDigits}`;
 };
 
 exports.getRoleDepartmentMap = catchAsync(async (req, res, next) => {
@@ -55,8 +97,7 @@ exports.createUser = catchAsync(async (req, res, next) => {
   }
 
   // 6. Generate default password
-  const last5 = phone.slice(-5);
-  const defaultPasswordStr = `${email.toLowerCase()}@${last5}`;
+  const defaultPasswordStr = buildDefaultUserPassword(email, phone);
   const hashedPassword = await hashPassword(defaultPasswordStr);
 
   // 7. Create User
@@ -68,10 +109,12 @@ exports.createUser = catchAsync(async (req, res, next) => {
     phone,
     role,
     password: hashedPassword,
+    tempPassword: defaultPasswordStr,
     team: teamId || null,
     leadDataLimit: leadDataLimit || null,
     mustChangePassword: true,
-    isProfileComplete: false
+    isProfileComplete: false,
+    approvalStatus: 'APPROVED',
   });
 
   // 8. Write AuditLog entry
@@ -129,5 +172,175 @@ exports.getDepartments = catchAsync(async (req, res, next) => {
 
   res.status(200).json(
     new ApiResponse(200, { departments }, 'Departments retrieved successfully')
+  );
+});
+
+exports.loginUser = catchAsync(async (req, res, next) => {
+  const { email, password, latitude, longitude, rememberMe = false } = req.body;
+  const normalizedEmail = email.toLowerCase().trim();
+  const ipAddress = getClientIp(req);
+  const userAgent = req.get('user-agent') || 'unknown';
+
+  const blockedAttempt = await LoginAttempt.findOne({
+    identifier: normalizedEmail,
+    identifierType: 'EMAIL',
+  });
+
+  if (blockedAttempt?.isBlocked && blockedAttempt.blockedUntil && blockedAttempt.blockedUntil > new Date()) {
+    return next(new AppError('Too many failed attempts. Please try again later.', 429));
+  }
+
+  const user = await User.findOne({ email: normalizedEmail, isDeleted: false }).populate('admin', 'isActive company name');
+
+  if (!user) {
+    await LoginAttempt.findOneAndUpdate(
+      { identifier: normalizedEmail, identifierType: 'EMAIL' },
+      {
+        $set: {
+          identifier: normalizedEmail,
+          identifierType: 'EMAIL',
+          ipAddress,
+          userAgent,
+          lastAttemptAt: new Date(),
+        },
+        $inc: { attempts: 1 },
+      },
+      { upsert: true, new: true }
+    );
+    return next(new AppError('Invalid email or password.', 401));
+  }
+
+  const approvalStatus = user.approvalStatus || 'APPROVED';
+
+  if (!user.admin?.isActive || !user.isActive || approvalStatus !== 'APPROVED') {
+    await UserLoginLog.create({
+      admin: user.admin?._id,
+      user: user._id,
+      email: normalizedEmail,
+      role: user.role,
+      ipAddress,
+      latitude,
+      longitude,
+      userAgent,
+      device: userAgent,
+      isSuccess: false,
+      failReason: !user.admin?.isActive ? 'ADMIN_INACTIVE' : 'USER_INACTIVE',
+      loginAt: new Date(),
+    });
+    return next(new AppError('Your account is not active. Contact your admin.', 403));
+  }
+
+  const isValid = await comparePassword(password, user.password);
+  if (!isValid) {
+    const updatedAttempt = await LoginAttempt.findOneAndUpdate(
+      { identifier: normalizedEmail, identifierType: 'EMAIL' },
+      {
+        $set: {
+          identifier: normalizedEmail,
+          identifierType: 'EMAIL',
+          ipAddress,
+          userAgent,
+          lastAttemptAt: new Date(),
+        },
+        $inc: { attempts: 1 },
+      },
+      { new: true, upsert: true }
+    );
+
+    if (updatedAttempt.attempts >= 5) {
+      updatedAttempt.isBlocked = true;
+      updatedAttempt.blockReason = 'TOO_MANY_ATTEMPTS';
+      updatedAttempt.blockedAt = new Date();
+      updatedAttempt.blockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+      await updatedAttempt.save();
+    }
+
+    await UserLoginLog.create({
+      admin: user.admin?._id,
+      user: user._id,
+      email: normalizedEmail,
+      role: user.role,
+      ipAddress,
+      latitude,
+      longitude,
+      userAgent,
+      device: userAgent,
+      isSuccess: false,
+      failReason: 'INVALID_CREDENTIALS',
+      loginAt: new Date(),
+    });
+
+    return next(new AppError('Invalid email or password.', 401));
+  }
+
+  await LoginAttempt.deleteOne({ identifier: normalizedEmail, identifierType: 'EMAIL' });
+
+  const accessToken = generateAccessToken({
+    id: user._id,
+    email: user.email,
+    role: user.role,
+    type: 'USER',
+    adminId: user.admin?._id,
+  });
+
+  const refreshToken = generateRefreshToken({
+    id: user._id,
+    email: user.email,
+    role: user.role,
+    type: 'USER',
+    adminId: user.admin?._id,
+  });
+
+  const refreshTokenExpiry = new Date();
+  refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + (rememberMe ? 30 : 7));
+
+  await RefreshToken.create({
+    token: refreshToken,
+    holderType: 'USER',
+    holderId: user._id,
+    admin: user.admin?._id,
+    expiresAt: refreshTokenExpiry,
+    ipAddress,
+    userAgent,
+  });
+
+  user.lastLoginAt = new Date();
+  user.lastActiveAt = new Date();
+  user.isFirstLogin = false;
+  await user.save();
+
+  await UserLoginLog.create({
+    admin: user.admin?._id,
+    user: user._id,
+    email: normalizedEmail,
+    role: user.role,
+    ipAddress,
+    latitude,
+    longitude,
+    userAgent,
+    device: userAgent,
+    isSuccess: true,
+    loginAt: new Date(),
+  });
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          department: user.department,
+          mustChangePassword: user.mustChangePassword,
+          isProfileComplete: user.isProfileComplete,
+        },
+        accessToken,
+        refreshToken,
+        nextRoute: getDepartmentNextRoute(user.role, user),
+      },
+      'Login successful'
+    )
   );
 });

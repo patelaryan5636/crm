@@ -1,6 +1,6 @@
 const Joi = require('joi');
 
-exports.createUserSchema = Joi.object({
+const createUserSchema = Joi.object({
   name: Joi.string().trim().required().messages({
     'string.empty': 'Name is required'
   }),
@@ -26,3 +26,28 @@ exports.createUserSchema = Joi.object({
   teamId: Joi.string().optional().allow(null, ''),
   leadDataLimit: Joi.number().optional().allow(null),
 });
+
+const departmentLoginSchema = Joi.object({
+  email: Joi.string().email().lowercase().trim().required().messages({
+    'string.email': 'Please provide a valid email address',
+    'string.empty': 'Email is required',
+  }),
+  password: Joi.string().min(8).required().messages({
+    'string.empty': 'Password is required',
+    'string.min': 'Password must be at least 8 characters',
+  }),
+  latitude: Joi.number().required().min(-90).max(90).messages({
+    'any.required': 'Location permission is required to sign in',
+    'number.base': 'Latitude must be a valid number',
+  }),
+  longitude: Joi.number().required().min(-180).max(180).messages({
+    'any.required': 'Location permission is required to sign in',
+    'number.base': 'Longitude must be a valid number',
+  }),
+  rememberMe: Joi.boolean().optional(),
+});
+
+module.exports = {
+  createUserSchema,
+  departmentLoginSchema,
+};

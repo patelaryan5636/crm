@@ -19,6 +19,7 @@ import {
   DataField,
   Button,
 } from "../../components/shared/Common_Components";
+import { loginDepartment } from "../../services/authService";
 
 // ── Floating background icons ─────────────────────────────────────────────────
 const FloatingBackground = () => (
@@ -51,6 +52,7 @@ const DepartmentLogin = () => {
   const [captchaInput,  setCaptchaInput]  = useState("");
   const [captchaError,  setCaptchaError]  = useState("");
   const [isSubmitting,  setIsSubmitting]  = useState(false);
+  const [rememberMe,    setRememberMe]    = useState(false);
 
   const refreshCaptcha = () => {
     setCaptchaCode(generateCaptcha());
@@ -60,6 +62,41 @@ const DepartmentLogin = () => {
 
   const validateEmail = (v) => /^\S+@\S+\.\S+$/.test(v);
 
+  const getCurrentLocation = () => new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation is not supported by this browser."));
+      return;
+    }
+
+    let settled = false;
+    const finish = (fn, payload) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn(payload);
+    };
+
+    const timer = setTimeout(() => {
+      finish(reject, new Error("Location request timed out. Please try again."));
+    }, 12000);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        finish(resolve, {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      () => {
+        finish(reject, new Error("Location access is required to sign in."));
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 8000,
+        maximumAge: 60000,
+      }
+    );
+  });
   // Auto-clear status banner after 4 s
   useEffect(() => {
     if (!statusType) return;
@@ -99,14 +136,24 @@ const DepartmentLogin = () => {
     try {
       setIsSubmitting(true);
       setStatusType("info");
+      setStatusMessage("Checking your location permission...");
+
+      const location = await getCurrentLocation();
+
+      setStatusType("info");
       setStatusMessage("Verifying your credentials...");
 
-      // TODO: replace with real auth call
-      // await loginDepartment({ email, password });
+      const response = await loginDepartment({
+        email,
+        password,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        rememberMe,
+      });
 
       setStatusType("success");
       setStatusMessage("Sign in successful. Loading your workspace...");
-      setTimeout(() => navigate("/department"), 900);
+      setTimeout(() => navigate(response?.nextRoute || "/department"), 900);
     } catch (error) {
       setStatusType("error");
       setStatusMessage(error?.message || "Unable to sign in. Please try again.");
@@ -258,6 +305,19 @@ const DepartmentLogin = () => {
                   />
                   {captchaError && <p className="text-xs text-rose-600 px-1">{captchaError}</p>}
                   <p className="text-xs text-slate-400 px-1">Enter the 4-digit number shown above</p>
+                </div>
+
+                <div className="flex items-center justify-between text-xs font-bold pt-2">
+                  <label className="flex items-center gap-2 text-slate-500 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 accent-crm-navy"
+                    />
+                    Remember me
+                  </label>
+                  <span className="text-slate-400">Location is required for sign in</span>
                 </div>
               </div>
 

@@ -5,6 +5,7 @@ import AdminLogin from "../pages/auth/AdminLogin";
 import AdminRegister from "../pages/auth/AdminRegister";
 import SalesManagerRoutes from "./Sales/salesManagerRoutes";
 import DepartmentLogin from "../pages/auth/DepartmentLogin";
+import DepartmentWorkspace from "../pages/department/DepartmentWorkspace";
 import SuperAdminLogin from "../pages/auth/SuperAdminLogin";
 function AppRoutes() {
   return (
@@ -16,6 +17,7 @@ function AppRoutes() {
         <Route path="/Admin-login" element={<AdminLogin />} />
         <Route path="/Admin-register" element={<AdminRegister />} />
         <Route path="/login" element={<DepartmentLogin />} />
+        <Route path="/department" element={<DepartmentWorkspace />} />
         {/* Admin Routes */}
         <Route path="/admin/*" element={<AdminRoutes />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />

@@ -21,6 +21,11 @@ const ROLE_DEPARTMENT_MAP = {
 
 const RESTRICTED_ROLES = new Set(["SUPER_ADMIN", "ADMIN"]);
 
+const buildDefaultUserPassword = (email, phone) => {
+  const lastFiveDigits = String(phone || "").trim().slice(-5);
+  return `${String(email || "").toLowerCase().trim()}@${lastFiveDigits}`;
+};
+
 const parseCsv = (filePath) =>
   new Promise((resolve, reject) => {
     const results = [];
@@ -359,7 +364,7 @@ exports.commitUpload = async (uploadId, confirm, importMode) => {
         teamId = teamMap[row.team.toUpperCase()];
       }
 
-      const defaultPassword = `${email}@${row.phone.slice(-5)}`;
+      const defaultPassword = buildDefaultUserPassword(email, row.phone);
       const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
       usersToInsert.push({
@@ -374,6 +379,8 @@ exports.commitUpload = async (uploadId, confirm, importMode) => {
         mustChangePassword: true,
         isActive: true,
         isProfileComplete: false,
+        approvalStatus: "APPROVED",
+        tempPassword: defaultPassword,
       });
 
       imported++;

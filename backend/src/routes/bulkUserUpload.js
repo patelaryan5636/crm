@@ -1,42 +1,40 @@
-const express = require("express");
-const router = express.Router();
-const bulkUserUploadController = require("../controllers/bulkUserUpload.controller");
-const upload = require("../middleware/upload");
+const express = require('express');
+const router  = express.Router();
+const bulkUserUploadController = require('../controllers/bulkUserUpload.controller');
+const upload = require('../middleware/upload');
+const { requireAdmin } = require('../middleware/auth');
 
-// Depending on the current auth middleware implementation, we'll assume it's exposed as authAdmin or similar.
-// Since we don't have the exact auth middleware contents, we'll use a generic placeholder that the existing codebase likely uses.
-const { requireAuth } = require("../middleware/auth"); // Placeholder
+// GET template — public, no auth needed to download the template
+router.get('/template', bulkUserUploadController.downloadTemplate);
 
-// GET template
-router.get("/template", bulkUserUploadController.downloadTemplate);
-
-// POST upload file and get preview
+// POST /api/users/bulk/upload — parse file and return preview
 router.post(
-  "/upload",
-  requireAuth,
-  upload.single("file"),
+  '/upload',
+  requireAdmin,
+  upload.single('file'),
   bulkUserUploadController.uploadPreview,
 );
 
-// POST commit a processed upload
+// POST /api/users/bulk/:uploadId/commit — insert valid rows
 router.post(
-  "/:uploadId/commit",
-  requireAuth,
+  '/:uploadId/commit',
+  requireAdmin,
   bulkUserUploadController.commitUpload,
 );
 
-// GET status of upload
+// GET /api/users/bulk/:uploadId/status — job lifecycle status
 router.get(
-  "/:uploadId/status",
-  requireAuth,
+  '/:uploadId/status',
+  requireAdmin,
   bulkUserUploadController.getStatus,
 );
 
-// GET download errors CSV
+// GET /api/users/bulk/:uploadId/errors — downloadable error CSV
 router.get(
-  "/:uploadId/errors",
-  requireAuth,
+  '/:uploadId/errors',
+  requireAdmin,
   bulkUserUploadController.downloadErrors,
 );
 
 module.exports = router;
+

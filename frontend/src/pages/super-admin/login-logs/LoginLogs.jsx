@@ -193,10 +193,13 @@ const LoginLogs = () => {
   return (
     <div className="space-y-6">
       {/* PAGE HEADING */}
-      <Grid cols={12} gap={2}>
+      <Grid cols={12} gap={5}>
         <Heading
-          primaryText="Admin Login Logs"
+          primaryText="Admin"
+          secondaryText="Login Logs"
           size={12}
+          fontSize="3xl"
+          showAnimation={true}
         />
       </Grid>
 

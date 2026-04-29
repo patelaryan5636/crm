@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { PenSquare, Send, Inbox, ChevronDown } from "lucide-react";
 import {
   Grid,
   Heading,
@@ -28,7 +29,7 @@ const initialSent = [
     type: "Appreciation",
     title: "Great Onboarding This Month!",
     message: "Admin team has done an excellent job onboarding new companies this month.",
-    sentTo: "Admin - Graphura Delhi",
+    sentTo: "Admin - TechNova Solutions",
     sentBy: "Super Admin",
     date: "2026-04-25",
   },
@@ -36,8 +37,8 @@ const initialSent = [
     id: 3,
     type: "Warning",
     title: "Data Limit Almost Reached",
-    message: "Admin account for Graphura Mumbai is approaching the 6000 lead limit. Please review.",
-    sentTo: "Admin - Graphura Mumbai",
+    message: "Admin account for Globex Inc is approaching the 6000 lead limit. Please review.",
+    sentTo: "Admin - Globex Inc",
     sentBy: "Super Admin",
     date: "2026-04-24",
   },
@@ -47,7 +48,7 @@ const initialSent = [
 const initialReceived = [
   {
     id: 101,
-    from: "Admin - Graphura Delhi",
+    from: "Admin - TechNova Solutions",
     title: "Storage Issue",
     message: "We are facing storage issues. Our lead limit is almost full. Please increase the limit.",
     date: "2026-04-26",
@@ -56,7 +57,7 @@ const initialReceived = [
   },
   {
     id: 102,
-    from: "Admin - Graphura Mumbai",
+    from: "Admin - Globex Inc",
     title: "Billing Query",
     message: "We have a query regarding our billing cycle for this month. Kindly assist.",
     date: "2026-04-25",
@@ -70,50 +71,98 @@ const initialReceived = [
   },
 ];
 
-// ─── Tab Button ───────────────────────────────────────────────────────────────
-const TabBtn = ({ label, active, onClick, count }) => (
-  <button
-    onClick={onClick}
-    style={{
-      padding: "10px 20px",
-      borderRadius: "12px",
-      border: "none",
-      cursor: "pointer",
-      fontWeight: 700,
-      fontSize: "14px",
-      background: active ? "#355872" : "#f1f5f9",
-      color: active ? "#ffffff" : "#64748b",
-      transition: "all 0.2s",
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-    }}
-  >
-    {label}
-    {count !== undefined && (
-      <span
-        style={{
-          background: active ? "#ffffff30" : "#e2e8f0",
-          color: active ? "#ffffff" : "#355872",
-          borderRadius: "20px",
-          padding: "1px 8px",
-          fontSize: "12px",
-          fontWeight: 800,
-        }}
-      >
-        {count}
-      </span>
-    )}
-  </button>
-);
+const MultiSelectDropdown = ({ options, selected, onChange, label }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleOption = (opt) => {
+    if (opt === "All Admins") {
+      if (selected.includes("All Admins")) {
+        onChange([]);
+      } else {
+        onChange([...options]);
+      }
+      return;
+    }
+
+    if (selected.includes(opt)) {
+      onChange(selected.filter((item) => item !== opt && item !== "All Admins"));
+    } else {
+      const newSelected = [...selected, opt];
+      const allOthersSelected = options.filter(o => o !== "All Admins").every(o => newSelected.includes(o));
+      if (allOthersSelected) {
+        onChange([...options]);
+      } else {
+        onChange(newSelected);
+      }
+    }
+  };
+
+  return (
+    <div className="col-span-12" style={{ display: "flex", flexDirection: "column", gap: "6px" }} ref={dropdownRef}>
+      <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.3em" }}>
+        {label}
+      </label>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border bg-slate-50/90 text-[#2a465a] text-sm font-medium transition duration-200 focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40 ${
+            isOpen ? "border-[#2a465a]/40 ring-2 ring-[#2a465a]/20" : "border-slate-200 hover:border-[#2a465a]/40"
+          }`}
+        >
+          <span className="truncate">
+            {selected.length === 0 ? "Select company admin..." : selected.join(", ")}
+          </span>
+          <ChevronDown size={16} className={`transition-transform ${isOpen ? "rotate-180 text-[#2a465a]" : "text-slate-400"}`} />
+        </button>
+
+        {isOpen && (
+          <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+            {options.map((opt) => {
+              const isSelected = selected.includes(opt);
+              return (
+                <label 
+                  key={opt} 
+                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-slate-100 last:border-0 transition-colors ${
+                    isSelected ? "bg-[#2a465a]" : "hover:bg-slate-50"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleOption(opt)}
+                    className={`w-4 h-4 rounded cursor-pointer ${
+                      isSelected ? "bg-white border-transparent text-[#2a465a] focus:ring-white" : "text-[#2a465a] border-slate-300 focus:ring-[#2a465a]"
+                    }`}
+                  />
+                  <span className={`text-sm font-medium ${isSelected ? "text-white" : "text-slate-700"}`}>{opt}</span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Communication() {
   const [activeTab, setActiveTab] = useState("compose");
 
   // Compose form state
-  const [msgType, setMsgType] = useState("Announcement");
-  const [sentTo, setSentTo]   = useState("All Admins");
+  const [sentTo, setSentTo]   = useState(["All Admins"]);
   const [title, setTitle]     = useState("");
   const [message, setMessage] = useState("");
 
@@ -132,18 +181,20 @@ export default function Communication() {
       alert("Please fill in both Title and Message.");
       return;
     }
+    if (sentTo.length === 0) {
+      alert("Please select at least one recipient.");
+      return;
+    }
     const newMsg = {
       id: Date.now(),
-      type: msgType,
       title: title.trim(),
       message: message.trim(),
-      sentTo,
+      sentTo: sentTo.join(", "),
       sentBy: "Super Admin",
       date: new Date().toISOString().slice(0, 10),
     };
     setSentMessages((prev) => [newMsg, ...prev]);
-    setMsgType("Announcement");
-    setSentTo("All Admins");
+    setSentTo(["All Admins"]);
     setTitle("");
     setMessage("");
     alert("Message sent successfully!");
@@ -189,7 +240,6 @@ export default function Communication() {
 
   // ── Sent Table columns ───────────────────────────────────────────────────────
   const sentColumns = [
-    { key: "type",   label: "Type"    },
     { key: "title",  label: "Title"   },
     { key: "sentTo", label: "Sent To" },
     { key: "date",   label: "Date"    },
@@ -212,24 +262,62 @@ export default function Communication() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: "24px", background: "#F7F8F0", minHeight: "100vh" }}>
+    <div className="w-full max-w-[1600px] mx-auto space-y-6">
       <Grid cols={12} gap={4}>
 
         {/* Heading */}
         <Heading
           primaryText="Communication"
-          secondaryText="Admin Announcements"
+          secondaryText="Super-Admin Announcements"
           size={12}
+          fontSize="3xl"
+          showAnimation={true}
         />
 
         {/* Tabs */}
-        <div
-          className="col-span-12"
-          style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}
-        >
-          <TabBtn label="Compose"          active={activeTab === "compose"}  onClick={() => setActiveTab("compose")}  />
-          <TabBtn label="Sent Messages"    active={activeTab === "sent"}     onClick={() => setActiveTab("sent")}     count={sentMessages.length} />
-          <TabBtn label="Received Messages" active={activeTab === "received"} onClick={() => setActiveTab("received")} count={unreadCount > 0 ? unreadCount : undefined} />
+        <div className="col-span-12">
+          <div className="flex flex-wrap gap-1.5 bg-white border border-slate-200 rounded-2xl p-2 shadow-sm">
+            <button
+              onClick={() => setActiveTab("compose")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "compose"
+                  ? "bg-[#2a465a] text-white shadow"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-[#2a465a]"
+              }`}
+            >
+              <PenSquare size={16} />
+              Compose
+            </button>
+            <button
+              onClick={() => setActiveTab("sent")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "sent"
+                  ? "bg-[#2a465a] text-white shadow"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-[#2a465a]"
+              }`}
+            >
+              <Send size={16} />
+              Sent Messages
+            </button>
+            <button
+              onClick={() => setActiveTab("received")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "received"
+                  ? "bg-[#2a465a] text-white shadow"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-[#2a465a]"
+              }`}
+            >
+              <Inbox size={16} />
+              Received Messages
+              {unreadCount > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  activeTab === "received" ? "bg-white/20 text-white" : "bg-rose-100 text-rose-600"
+                }`}>
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* ══════════ COMPOSE TAB ══════════ */}
@@ -249,20 +337,19 @@ export default function Communication() {
 
             <Grid cols={12} gap={4}>
 
-              <SelectField label="Message Type" id="msgType" size={4} value={msgType} onChange={(e) => setMsgType(e.target.value)} placeholder="Select type">
-                <Option value="Announcement"  label="Announcement" />
-                <Option value="Warning"       label="Warning" />
-                <Option value="Appreciation"  label="Appreciation" />
-              </SelectField>
+              <MultiSelectDropdown
+                label="Send To (Company Wise)"
+                options={[
+                  "All Admins",
+                  "Admin - TechNova Solutions",
+                  "Admin - Globex Inc",
+                  "Admin - Zenith Retail"
+                ]}
+                selected={sentTo}
+                onChange={setSentTo}
+              />
 
-              <SelectField label="Send To (Admin)" id="sentTo" size={4} value={sentTo} onChange={(e) => setSentTo(e.target.value)} placeholder="Select admin">
-                <Option value="All Admins"              label="All Admins" />
-                <Option value="Admin - Graphura Delhi"  label="Admin - Graphura Delhi" />
-                <Option value="Admin - Graphura Mumbai" label="Admin - Graphura Mumbai" />
-                <Option value="Admin - Graphura Pune"   label="Admin - Graphura Pune" />
-              </SelectField>
-
-              <DataField label="Title" id="title" placeholder="e.g. Platform Maintenance Tonight" size={4} value={title} onChange={(e) => setTitle(e.target.value)} />
+              <DataField label="Title" id="title" placeholder="e.g. Platform Maintenance Tonight" size={12} value={title} onChange={(e) => setTitle(e.target.value)} />
 
               {/* Message Textarea */}
               <div className="col-span-12" style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -276,22 +363,13 @@ export default function Communication() {
                   placeholder="Write your message here..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  style={{ width: "100%", borderRadius: "16px", border: "1px solid #e2e8f0", background: "#f8fafc", padding: "14px 16px", fontSize: "14px", color: "#2a465a", resize: "vertical", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-3.5 text-[#2a465a] placeholder:text-slate-400 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40 transition duration-200 resize-none"
                 />
                 <p style={{ fontSize: "12px", color: "#94a3b8", textAlign: "right" }}>{message.length} / 500</p>
               </div>
 
               <Button text="Send Message →" size={3} variant="primary" onClick={handleSend} />
 
-              {/* Preview */}
-              <div className="col-span-9">
-                <p style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.3em", marginBottom: "6px" }}>Preview</p>
-                <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "12px 16px", fontSize: "13px", color: title || message ? "#2a465a" : "#94a3b8", fontStyle: title || message ? "normal" : "italic", minHeight: "48px" }}>
-                  {title || message ? (
-                    <>{title && <strong style={{ display: "block", marginBottom: "4px" }}>{title}</strong>}{message}</>
-                  ) : "Your message preview will appear here..."}
-                </div>
-              </div>
 
             </Grid>
           </div>
@@ -420,7 +498,7 @@ export default function Communication() {
                 placeholder="Write your reply here..."
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
-                style={{ width: "100%", borderRadius: "12px", border: "1px solid #e2e8f0", background: "#f8fafc", padding: "12px 14px", fontSize: "14px", color: "#2a465a", resize: "vertical", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-3.5 text-[#2a465a] placeholder:text-slate-400 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40 transition duration-200 resize-none"
               />
             </div>
 

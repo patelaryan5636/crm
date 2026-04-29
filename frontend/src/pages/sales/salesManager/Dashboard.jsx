@@ -324,6 +324,9 @@ export default function SalesManagerDashboard() {
                     title="Top Performers"
                     columns={performerCols}
                     rows={performerRows}
+                    exportable
+                    exportFileName="Top_Performers"
+                    pageSizeOptions={[5,10,30,50,500]}
                     pageSize={5}
                     bulkAction={true}
                     bulkActions={[

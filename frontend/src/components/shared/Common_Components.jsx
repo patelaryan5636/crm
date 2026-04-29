@@ -860,6 +860,13 @@ export const DataTable = ({
   // bulkActions — array of { title, icon, onClick: (selectedRows) => void }
   bulkAction = false,
   bulkActions = [],
+  // exportable — true | false (default false)
+  // true → shows an Export CSV button in the toolbar.
+  //        Exports ALL fields from every row in the `rows` prop (not just
+  //        the columns shown in the table), so hidden fields are included.
+  // exportFileName — custom filename for the downloaded CSV (default: "export")
+  exportable = false,
+  exportFileName = "export",
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -1099,9 +1106,9 @@ export const DataTable = ({
     ];
 
     const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
     a.download = `${exportFileName}.csv`;
     a.click();
     URL.revokeObjectURL(url);
@@ -1191,7 +1198,7 @@ export const DataTable = ({
               title="Export all data as CSV"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
               Export
             </button>
@@ -1500,7 +1507,7 @@ export const DataTable = ({
                 </th>
               ))}
               {actions.length > 0 && (
-                <th style={{ width: "1%", whiteSpace: "nowrap" }} className="py-4 px-4 text-left text-xs font-black text-white uppercase tracking-[0.1em]">
+                <th style={{ width: "1%", whiteSpace: "nowrap" }} className="py-4 px-4 text-center text-xs font-black text-white uppercase tracking-[0.1em]">
                   Actions
                 </th>
               )}
@@ -1609,7 +1616,7 @@ export const DataTable = ({
                     })}
                     {actions.length > 0 && (
                       <td style={{ width: "1%", whiteSpace: "nowrap" }} className="py-3 px-4 align-middle">
-                        <div className="flex flex-nowrap items-center gap-2">
+                        <div className="flex flex-nowrap items-center justify-center gap-2">
                           {actions.map((action, ai) => {
                             const isIconOnly = action.icon && !action.label;
                             return (
@@ -1786,6 +1793,12 @@ export const DataTable = ({
   • filterSize       — max-width of the Filter modal: "sm"|"md"|"lg"|"xl"|"2xl"  (default: "xl")
   • bulkAction       — true | false  (default: false) — enables row checkboxes + bulk bar
   • bulkActions      — array of { title, icon?, onClick: (selectedRows) => void }
+  • exportable       — true | false  (default: false)
+                         true → shows an "Export" button in the toolbar.
+                         Exports ALL fields from every row in the `rows` prop as a CSV,
+                         including fields not shown as table columns (hidden data is included).
+  • exportFileName   — filename for the downloaded CSV without extension  (default: "export")
+                         Example: exportFileName="leads-report" → downloads "leads-report.csv"
 */
 
 // ─────────────────────────────────────────────────────────────────────────────

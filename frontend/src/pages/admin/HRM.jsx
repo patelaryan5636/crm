@@ -40,11 +40,11 @@ const leaveStatusData = [
 // Employees
 const employeesColumns = [
   { key: "name", label: "EMPLOYEE NAME", width: "20%" },
-  { key: "department", label: "DEPARTMENT", width: "15%" },
-  { key: "attendance", label: "ATTENDANCE %", width: "15%" },
-  { key: "totalLeaves", label: "TOTAL LEAVES", width: "15%" },
-  { key: "workingDays", label: "WORKING DAYS", width: "15%" },
-  { key: "status", label: "CURRENT STATUS", width: "15%" },
+  { key: "department", label: "DEPARTMENT", width: "16%" },
+  { key: "attendance", label: "ATTENDANCE %", width: "16%" },
+  { key: "totalLeaves", label: "TOTAL LEAVES", width: "16%" },
+  { key: "workingDays", label: "WORKING DAYS", width: "16%" },
+  { key: "empStatus", label: "CURRENT STATUS", width: "20%" },
 ];
 const employeesRows = [
   { name: "Alice Smith", department: "Sales", date: "2024-01-15", attendance: "98%", totalLeaves: "2", workingDays: "22", status: "Active" },
@@ -56,13 +56,13 @@ const employeesRows = [
 
 // Attendance
 const attendanceColumns = [
-  { key: "name", label: "NAME", width: "20%" },
+  { key: "name", label: "NAME", width: "18%" },
   { key: "department", label: "DEPARTMENT", width: "15%" },
   { key: "date", label: "DATE", width: "15%" },
-  { key: "clockIn", label: "CLOCK IN", width: "13%" },
-  { key: "clockOut", label: "CLOCK OUT", width: "13%" },
+  { key: "clockIn", label: "CLOCK IN", width: "12%" },
+  { key: "clockOut", label: "CLOCK OUT", width: "12%" },
   { key: "totalHours", label: "TOTAL HOURS", width: "12%" },
-  { key: "status", label: "STATUS", width: "12%" },
+  { key: "attStatus", label: "STATUS", width: "16%" },
 ];
 const attendanceRows = [
   { name: "Alice Smith", department: "Sales", date: "2024-11-01", clockIn: "09:00 AM", clockOut: "05:00 PM", totalHours: "8h", status: "Present" },
@@ -109,6 +109,7 @@ export default function HRM() {
   // Modal states
   const [selectedApproval, setSelectedApproval] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [approvalsData, setApprovalsData] = useState(approvalsRows);
 
   // Attendance filter states
   const [filterDate, setFilterDate] = useState('');
@@ -119,6 +120,10 @@ export default function HRM() {
   const [empFilterDept, setEmpFilterDept] = useState('');
 
   // Handle Approvals actions
+  const handleRejectApproval = (id) => {
+    setApprovalsData(prev => prev.map(row => row.id === id ? { ...row, status: 'Rejected' } : row));
+  };
+
   const approvalActions = [
     {
       label: "Approve",
@@ -132,7 +137,7 @@ export default function HRM() {
     {
       label: "Reject",
       icon: <X size={16} />,
-      onClick: (row) => console.log("Rejected", row),
+      onClick: (row) => handleRejectApproval(row.id),
       variant: "danger"
     }
   ];
@@ -170,10 +175,118 @@ export default function HRM() {
     if (empFilterDate) matchesDate = row.date === empFilterDate;
     if (empFilterDept) matchesDept = row.department === empFilterDept;
     return matchesDate && matchesDept;
-  });
+  }).map(row => ({
+    ...row,
+    empStatus: (
+      <span 
+        title={row.status === 'Active' ? 'Employee is active' : 'Employee is inactive'} 
+        className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${row.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}
+      >
+        {row.status}
+      </span>
+    )
+  }));
+
+  const getAttendanceStatusStyle = (status) => {
+    switch(status) {
+      case 'Present': return 'bg-emerald-100 text-emerald-700';
+      case 'Late': return 'bg-amber-100 text-amber-700';
+      case 'Absent': return 'bg-rose-100 text-rose-700';
+      case 'Half Day': return 'bg-blue-100 text-blue-700';
+      case 'On Leave': return 'bg-purple-100 text-purple-700';
+      default: return 'bg-slate-100 text-slate-700';
+    }
+  };
+
+  const styledFilteredAttendanceRows = filteredAttendanceRows.map(row => ({
+    ...row,
+    attStatus: (
+      <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getAttendanceStatusStyle(row.status)}`}>
+        {row.status}
+      </span>
+    )
+  }));
 
   return (
     <div className="w-full min-h-screen bg-white p-4 md:p-8">
+      <style>{`
+        /* Employees Table Styles */
+        .hrm-employees-table table {
+          table-layout: fixed;
+          width: 100%;
+        }
+        .hrm-employees-table th, 
+        .hrm-employees-table td {
+          white-space: normal !important;
+          word-break: normal !important;
+          overflow-wrap: break-word;
+          padding: 12px 8px !important;
+        }
+        .hrm-employees-table th:nth-child(1) { width: 20%; }
+        .hrm-employees-table th:nth-child(2) { width: 17%; }
+        .hrm-employees-table th:nth-child(3) { width: 16%; }
+        .hrm-employees-table th:nth-child(4) { width: 15%; }
+        .hrm-employees-table th:nth-child(5) { width: 15%; }
+        .hrm-employees-table th:nth-child(6) { width: 17%; }
+        .hrm-employees-table .data-table-scroll {
+          overflow-x: hidden !important;
+        }
+
+        /* Attendance Table Styles */
+        .hrm-attendance-table table {
+          table-layout: fixed;
+          width: 100%;
+        }
+        .hrm-attendance-table th, 
+        .hrm-attendance-table td {
+          white-space: normal !important;
+          word-break: normal !important;
+          overflow-wrap: break-word;
+          padding: 12px 8px !important;
+        }
+        .hrm-attendance-table th:nth-child(1) { width: 18%; }
+        .hrm-attendance-table th:nth-child(2) { width: 16%; }
+        .hrm-attendance-table th:nth-child(3) { width: 15%; }
+        .hrm-attendance-table th:nth-child(4) { width: 12%; }
+        .hrm-attendance-table th:nth-child(5) { width: 12%; }
+        .hrm-attendance-table th:nth-child(6) { width: 13%; }
+        .hrm-attendance-table th:nth-child(7) { width: 14%; }
+        .hrm-attendance-table .data-table-scroll {
+          overflow-x: hidden !important;
+        }
+
+        /* Approvals Table Styles */
+        .hrm-approvals-table table {
+          table-layout: fixed;
+          width: 100%;
+        }
+        .hrm-approvals-table th, 
+        .hrm-approvals-table td {
+          white-space: nowrap !important;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          padding: 12px 8px !important;
+        }
+        .hrm-approvals-table th:nth-child(1) { width: 20%; }
+        .hrm-approvals-table th:nth-child(2) { width: 28%; }
+        .hrm-approvals-table th:nth-child(3) { width: 27%; }
+        .hrm-approvals-table th:last-child,
+        .hrm-approvals-table td:last-child {
+          width: 190px !important;
+          min-width: 190px !important;
+          white-space: nowrap !important;
+          text-align: center;
+          overflow: visible;
+        }
+        .hrm-approvals-table td:last-child > div {
+          flex-wrap: nowrap !important;
+          justify-content: center;
+        }
+        .hrm-approvals-table .data-table-scroll {
+          overflow-x: hidden !important;
+        }
+      `}</style>
+      
       {/* Header & Tabs Wrap */}
       <div className="mb-6">
         <div className="flex flex-col mb-6">
@@ -270,7 +383,7 @@ export default function HRM() {
 
       {/* ── Employees Tab ── */}
       {activeTab === 'Employees' && (
-        <div className="bg-[#efefefb1] rounded-xl p-3 flex-col gap-3 w-full">
+        <div className="bg-white rounded-xl p-3 flex-col gap-3 w-full hrm-employees-table">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-2 p-2">
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex flex-col">
@@ -325,7 +438,7 @@ export default function HRM() {
 
       {/* ── Attendance Tab ── */}
       {activeTab === 'Attendance' && (
-        <div className="bg-[#efefefb1] rounded-xl p-3 flex-col gap-3 w-full">
+        <div className="bg-white rounded-xl p-3 flex-col gap-3 w-full hrm-attendance-table">
           {/* Custom Filter Controls for Attendance */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-2 p-2">
             <div className="flex flex-wrap items-end gap-4">
@@ -372,7 +485,7 @@ export default function HRM() {
           
           <DataTable
             columns={attendanceColumns}
-            rows={filteredAttendanceRows}
+            rows={styledFilteredAttendanceRows}
             size={12}
             pageSize={5}
             searchable={true}
@@ -383,7 +496,7 @@ export default function HRM() {
 
       {/* ── Leave Requests Tab ── */}
       {activeTab === 'Leave Requests' && (
-        <div className="bg-[#efefefb1] rounded-xl p-3 flex-col gap-3 w-full">
+        <div className="bg-white rounded-xl p-3 flex-col gap-3 w-full">
           <div className="flex justify-end mb-2 p-2">
              <button
                 onClick={() => handleExportCSV(leaveColumns, leaveRows, 'leave_export.csv')}
@@ -404,10 +517,10 @@ export default function HRM() {
 
       {/* ── Approvals Tab ── */}
       {activeTab === 'Approvals' && (
-        <div className="bg-[#efefefb1] rounded-xl p-3 flex-col gap-3 w-full">
+        <div className="bg-white rounded-xl p-3 flex-col gap-3 w-full hrm-approvals-table">
           <DataTable
             columns={approvalsColumns}
-            rows={approvalsRows.filter(row => row.status === 'Pending')}
+            rows={approvalsData.filter(row => row.status === 'Pending')}
             actions={approvalActions}
             size={12}
             pageSize={5}
@@ -443,7 +556,7 @@ export default function HRM() {
               </button>
               <button
                 onClick={() => {
-                  console.log("Confirmed Approval for", selectedApproval);
+                  setApprovalsData(prev => prev.map(row => row.id === selectedApproval.id ? { ...row, status: 'Approved' } : row));
                   setIsModalOpen(false);
                 }}
                 className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#355872] text-white hover:bg-[#2a465a] transition-colors flex items-center gap-2"

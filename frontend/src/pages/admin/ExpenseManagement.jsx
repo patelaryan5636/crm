@@ -48,12 +48,29 @@ export default function ExpenseManagement({ isEmbedded }) {
     closeModal('add-expense-modal');
   };
 
+  const handleExportReport = () => {
+    const headers = ['Expense Title', 'Category', 'Date', 'Amount', 'Status'];
+    const csvContent = [
+      headers.join(','),
+      ...expenses.map(exp => `"${exp.title}","${exp.category}","${exp.date}","${exp.amount}","${exp.status}"`)
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'expense_report.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const columns = [
-    { key: "title", label: "Expense Title", width: "20%" },
-    { key: "category", label: "Category", width: "15%" },
+    { key: "title", label: "Expense Title", width: "25%" },
+    { key: "category", label: "Category", width: "20%" },
     { key: "date", label: "Date", width: "15%" },
-    { key: "amount", label: "Amount", width: "10%" },
-    { key: "status", label: "Status", width: "15%" }
+    { key: "amount", label: "Amount", width: "15%" },
+    { key: "status", label: "Status", width: "25%" }
   ];
 
   const formattedExpenses = expenses.map(exp => ({
@@ -64,34 +81,60 @@ export default function ExpenseManagement({ isEmbedded }) {
   }));
 
   return (
-    <div className={`w-full ${isEmbedded ? '' : 'min-h-screen bg-[#f8fafc] p-4 md:p-8'}`}>
+    <div className={`w-full ${isEmbedded ? '' : 'min-h-screen bg-white p-4 md:p-8'}`}>
+      <style>{`
+        .expense-table-container table {
+          table-layout: fixed;
+          width: 100%;
+        }
+        .expense-table-container th, 
+        .expense-table-container td {
+          white-space: normal !important;
+          word-break: break-word;
+          padding: 12px 8px !important;
+        }
+        .expense-table-container th:nth-child(1) { width: 25%; }
+        .expense-table-container th:nth-child(2) { width: 20%; }
+        .expense-table-container th:nth-child(3) { width: 15%; }
+        .expense-table-container th:nth-child(4) { width: 15%; }
+        .expense-table-container th:nth-child(5) { width: 15%; }
+        .expense-table-container th:last-child,
+        .expense-table-container td:last-child {
+          width: 90px !important;
+          min-width: 90px !important;
+          text-align: center;
+          padding: 12px 4px !important;
+        }
+        .expense-table-container .data-table-scroll {
+          overflow-x: hidden !important;
+        }
+      `}</style>
+
       <div className="flex flex-col gap-4 mb-8 w-full">
-        <div>
-          <Heading primaryText="Expense" secondaryText="Management" size={12} />
-          <P text="Track company expenses and manage approvals." size="sm" />
-          <p className="mt-2 text-sm text-[#2a465a] font-semibold">Active Limit: ${expenseLimit}</p>
-        </div>
+
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="ghost" text="Limits & Rules" onClick={() => openModal('settings-modal')} />
-          <Button variant="secondary" text="Export Report" />
+          <Button variant="secondary" text="Export Report" onClick={handleExportReport} />
           <Button variant="primary" text="Add Expense" onClick={() => openModal('add-expense-modal')} />
         </div>
       </div>
 
       <DashGrid cols={12} gap={6}>
-        <DataTable
-          title="Recent Expenses"
-          columns={columns}
-          rows={formattedExpenses}
-          actions={[
-            { label: "Approve", variant: "primary", onClick: (row) => handleApprove(row.id) },
-            { label: "Reject", variant: "danger", onClick: (row) => handleReject(row.id) }
-          ]}
-          size={12}
-          pageSize={10}
-          hideTopBar={true}
-          hidePagination={true}
-        />
+        <div className="col-span-12 w-full expense-table-container">
+          <DataTable
+            title="Recent Expenses"
+            columns={columns}
+            rows={formattedExpenses}
+            actions={[
+              { icon: <Check size={16} />, tooltip: "Approve", variant: "primary", onClick: (row) => handleApprove(row.id) },
+              { icon: <X size={16} />, tooltip: "Reject", variant: "danger", onClick: (row) => handleReject(row.id) }
+            ]}
+            size={12}
+            pageSize={10}
+            hideTopBar={true}
+            hidePagination={true}
+          />
+        </div>
       </DashGrid>
 
       <Modal id="settings-modal" title="Limits & Rules" size="sm">

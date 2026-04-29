@@ -3,17 +3,32 @@ import { Bell, Menu, PanelLeft, Search } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 const ROLE_LABELS = {
-  "super-admin": { short: "SA", label: "Super Admin" },
-  admin:         { short: "A",  label: "Admin"       },
-  sales:         { short: "S",  label: "Sales"       },
-  finance:       { short: "F",  label: "Finance"     },
-  management:    { short: "M",  label: "Management"  },
-  client:        { short: "C",  label: "Client"      },
+  "super-admin":        { short: "SA",  label: "Super Admin"              },
+  admin:                { short: "AD",  label: "Admin"                    },
+  "sales-manager":      { short: "SM",  label: "Sales Manager"            },
+  "sales-team-leader":  { short: "STL", label: "Sales Team Leader"        },
+  "sales-executive":    { short: "SE",  label: "Sales Executive"          },
+  finance:              { short: "FN",  label: "Finance"                  },
+  "management-manager": { short: "MM",  label: "Management Manager"       },
+  "management-leader":  { short: "ML",  label: "Management Team Leader"   },
+  "management-employee":{ short: "ME",  label: "Management Employee"      },
+  client:               { short: "CL",  label: "Client"                   },
 };
 
 function useRole() {
   const { pathname } = useLocation();
-  const roles = ["super-admin", "admin", "sales", "finance", "management", "client"];
+  const roles = [
+    "super-admin",
+    "admin",
+    "sales-manager",
+    "sales-team-leader",
+    "sales-executive",
+    "finance",
+    "management-manager",
+    "management-leader",
+    "management-employee",
+    "client",
+  ];
   return roles.find((r) => pathname.startsWith(`/${r}`)) ?? "admin";
 }
 

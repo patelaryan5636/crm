@@ -8,6 +8,7 @@ import DepartmentLogin from "../pages/auth/DepartmentLogin";
 import SuperAdminLogin from "../pages/auth/SuperAdminLogin";
 import DepartmentWorkspace from "../pages/department/DepartmentWorkspace";
 import SalesTeamLeaderRoutes from "./Sales/salesTeamLeaderRoutes";
+import SalesExecutiveRoutes from "./Sales/salesExecutiveRoutes";
 
 function AppRoutes() {
   return (
@@ -27,6 +28,7 @@ function AppRoutes() {
         {/* Sales Routes */}
         <Route path="/sales-manager/*" element={<SalesManagerRoutes />} />
         <Route path="/sales-team-leader/*" element={<SalesTeamLeaderRoutes />} />
+        <Route path="/sales-executive/*" element={<SalesExecutiveRoutes />} />
       </Routes>
     </BrowserRouter>
   );

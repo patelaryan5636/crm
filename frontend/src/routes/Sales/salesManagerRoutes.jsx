@@ -1,5 +1,6 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route,Navigate  } from "react-router-dom";
 import MainLayout           from "../../layouts/MainLayout";
+import SalesManagerLeads from "../../pages/sales/salesManager/Leads";
 import SalesManagerDashboard from "../../pages/sales/salesManager/dashboard";
 import SalesTeamLeaders     from "../../pages/sales/salesManager/TeamLeader";
 import Communication        from "../../pages/sales/salesManager/Communication";

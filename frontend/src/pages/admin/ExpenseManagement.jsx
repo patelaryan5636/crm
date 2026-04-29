@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Settings, Check, X } from 'lucide-react';
-import { Heading, P, Button, DashGrid, DataTable, openModal, Modal, closeModal, InputField } from '../../components/Shared/Common_Components';
+import { Heading, P, Button, DashGrid, DataTable, openModal, Modal, closeModal, InputField } from '../../components/shared/Common_Components';
 
 export default function ExpenseManagement({ isEmbedded }) {
   const [expenseLimit, setExpenseLimit] = useState(1000);

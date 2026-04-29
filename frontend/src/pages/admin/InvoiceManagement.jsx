@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, DashGrid, DataTable, Modal, openModal, closeModal, P, InputField } from '../../components/Shared/Common_Components';
+import { Button, DashGrid, DataTable, Modal, openModal, closeModal, P, InputField } from '../../components/shared/Common_Components';
 import { Eye, Download } from 'lucide-react';
 
 export default function InvoiceManagement({ isEmbedded }) {

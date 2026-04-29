@@ -772,6 +772,59 @@ export const Option = ({ value, label, disabled = false }) => (
 //   If icon is provided and label is omitted → renders as a square icon-only button
 //   with an optional tooltip on hover.
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ── ActionButton — portal tooltip so it overlaps the table, never clipped ────
+function ActionButton({ action, row, isIconOnly, actionVariantCls }) {
+  const [tipPos, setTipPos] = useState(null);
+  const btnRef = useRef(null);
+
+  const showTip = () => {
+    if (!isIconOnly || !action.tooltip) return;
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (rect) setTipPos({ top: rect.top - 8, left: rect.left + rect.width / 2 });
+  };
+  const hideTip = () => setTipPos(null);
+
+  return (
+    <div className="relative">
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => action.onClick(row)}
+        onMouseEnter={showTip}
+        onMouseLeave={hideTip}
+        onFocus={showTip}
+        onBlur={hideTip}
+        className={`
+          flex flex-nowrap items-center justify-center gap-1.5
+          transition duration-150 active:scale-95
+          ${isIconOnly
+            ? `w-8 h-8 rounded-xl ${actionVariantCls[action.variant ?? "ghost"]}`
+            : `px-3 py-1.5 rounded-xl text-xs font-bold ${actionVariantCls[action.variant ?? "ghost"]}`
+          }
+        `}
+      >
+        {action.icon && <span className={isIconOnly ? "w-4 h-4" : "w-3.5 h-3.5"}>{action.icon}</span>}
+        {action.label && <span className="text-xs font-bold">{action.label}</span>}
+      </button>
+
+      {/* Portal tooltip — fixed to viewport, never clipped by overflow */}
+      {isIconOnly && action.tooltip && tipPos && createPortal(
+        <div
+          className="pointer-events-none fixed z-[9999] -translate-x-1/2 -translate-y-full"
+          style={{ top: tipPos.top, left: tipPos.left }}
+        >
+          <div className="bg-[#1e293b] text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
+            {action.tooltip}
+          </div>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1e293b]" />
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 export const DataTable = ({
   columns = [],        // [{ key: "name", label: "Name" }, ...]
   rows = [],           // [{ name: "Alice", email: "..." }, ...]
@@ -1318,6 +1371,36 @@ export const DataTable = ({
         document.body
       )}
 
+      {/* Bulk action bar — shown above the table when rows are selected */}
+      {bulkAction && someSelected && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#2a465a] text-white shadow-lg">
+          <span className="text-sm font-semibold whitespace-nowrap">
+            {selectedRows.size} row{selectedRows.size > 1 ? "s" : ""} selected
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {bulkActions.map((ba, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => ba.onClick(selectedRowData)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors duration-150 active:scale-95"
+              >
+                {ba.icon && <span className="w-3.5 h-3.5 flex-shrink-0">{ba.icon}</span>}
+                {ba.title}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setSelectedRows(new Set())}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs font-semibold transition-colors duration-150"
+            >
+              <X size={13} />
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table wrapper */}
       <div className="data-table-scroll overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-md">
         <table className="w-full text-sm">
@@ -1368,7 +1451,7 @@ export const DataTable = ({
                 </th>
               ))}
               {actions.length > 0 && (
-                <th style={{ width: "auto", minWidth: "200px" }} className="py-4 px-4 text-left text-xs font-black text-white uppercase tracking-[0.1em]">
+                <th style={{ width: "1%", whiteSpace: "nowrap" }} className="py-4 px-4 text-left text-xs font-black text-white uppercase tracking-[0.1em]">
                   Actions
                 </th>
               )}
@@ -1476,51 +1559,12 @@ export const DataTable = ({
                       );
                     })}
                     {actions.length > 0 && (
-                      <td style={{ width: "auto", minWidth: "200px" }} className="py-3 px-4 align-middle">
+                      <td style={{ width: "1%", whiteSpace: "nowrap" }} className="py-3 px-4 align-middle">
                         <div className="flex flex-nowrap items-center gap-2">
                           {actions.map((action, ai) => {
                             const isIconOnly = action.icon && !action.label;
                             return (
-                              <div key={ai} className="relative group/tip">
-                                <button
-                                  type="button"
-                                  onClick={() => action.onClick(row)}
-                                  className={`
-                                  flex flex-nowrap items-center justify-center gap-1.5
-                                  transition duration-150 active:scale-95
-                                  ${isIconOnly
-                                      ? `w-8 h-8 rounded-xl ${actionVariantCls[action.variant ?? "ghost"]}`
-                                      : `px-3 py-1.5 rounded-xl text-xs font-bold ${actionVariantCls[action.variant ?? "ghost"]}`
-                                    }
-                                `}
-                                >
-                                  {action.icon && (
-                                    <span className={isIconOnly ? "w-4 h-4" : "w-3.5 h-3.5"}>
-                                      {action.icon}
-                                    </span>
-                                  )}
-                                  {action.label && (
-                                    <span className="text-xs font-bold">{action.label}</span>
-                                  )}
-                                </button>
-
-                                {/* Tooltip — only shown when icon-only */}
-                                {isIconOnly && action.tooltip && (
-                                  <div className="
-                                  pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2
-                                  opacity-0 group-hover/tip:opacity-100
-                                  translate-y-1 group-hover/tip:translate-y-0
-                                  transition-all duration-150 ease-out
-                                  z-50 whitespace-nowrap
-                                ">
-                                    <div className="bg-[#1e293b] text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-lg">
-                                      {action.tooltip}
-                                    </div>
-                                    {/* Arrow */}
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1e293b]" />
-                                  </div>
-                                )}
-                              </div>
+                              <ActionButton key={ai} action={action} row={row} isIconOnly={isIconOnly} actionVariantCls={actionVariantCls} />
                             );
                           })}
                         </div>
@@ -1533,36 +1577,6 @@ export const DataTable = ({
           </tbody>
         </table>
       </div>
-
-      {/* Bulk action bar — slides up when rows are selected */}
-      {bulkAction && someSelected && (
-        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#2a465a] text-white shadow-lg">
-          <span className="text-sm font-semibold whitespace-nowrap">
-            {selectedRows.size} row{selectedRows.size > 1 ? "s" : ""} selected
-          </span>
-          <div className="flex items-center gap-2 flex-wrap">
-            {bulkActions.map((ba, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => ba.onClick(selectedRowData)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors duration-150 active:scale-95"
-              >
-                {ba.icon && <span className="w-3.5 h-3.5 flex-shrink-0">{ba.icon}</span>}
-                {ba.title}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => setSelectedRows(new Set())}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs font-semibold transition-colors duration-150"
-            >
-              <X size={13} />
-              Clear
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Pagination */}
       {!(hideRecordSummary && hidePagination) && <div className="flex items-center justify-between px-1">

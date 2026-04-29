@@ -17,6 +17,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
 const bulkUserUploadRoutes = require('./routes/bulkUserUpload');
 const userRoutes = require('./routes/users');
+const superAdminRoutes = require('./routes/superadmin');
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.get('/', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users/bulk', bulkUserUploadRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/superadmin', superAdminRoutes);
 
 // ────────────────────────────────────────────────────────────
 // 404 HANDLER (Express 5 safe)

@@ -1074,6 +1074,39 @@ export const DataTable = ({
     ghost: "bg-slate-100 text-slate-600 hover:bg-slate-200",
   };
 
+  // ── CSV Export — exports ALL fields from every row (not just visible columns)
+  const handleExport = () => {
+    if (!rows.length) return;
+
+    // Collect every unique key across all rows (preserves insertion order)
+    const allKeys = [...new Set(rows.flatMap((r) => Object.keys(r)))];
+
+    // Build header row using column labels where available, otherwise the raw key
+    const keyToLabel = Object.fromEntries(columns.map((c) => [c.key, c.label]));
+    const header = allKeys.map((k) => keyToLabel[k] ?? k);
+
+    // Build data rows — stringify each cell, wrap in quotes if it contains comma/newline
+    const escape = (val) => {
+      const str = val == null ? "" : String(val);
+      return str.includes(",") || str.includes("\n") || str.includes('"')
+        ? `"${str.replace(/"/g, '""')}"`
+        : str;
+    };
+
+    const csvLines = [
+      header.map(escape).join(","),
+      ...rows.map((row) => allKeys.map((k) => escape(row[k])).join(",")),
+    ];
+
+    const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${exportFileName}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const showFilterButton = filters.length > 0 || date === true;
 
   // ── Bulk selection helpers ────────────────────────────────────────────────
@@ -1148,6 +1181,22 @@ export const DataTable = ({
 
         {/* Filter button + page size — flex-1 on mobile so it fills remaining space */}
         <div className="flex flex-1 items-center gap-2 whitespace-nowrap sm:flex-none">
+          {/* Export CSV button — only shown when exportable={true} */}
+          {exportable && (
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={rows.length === 0}
+              className="flex items-center gap-1.5 px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-[#2a465a] hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Export all data as CSV"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export
+            </button>
+          )}
+
           {/* Filter button — only shown when filters array is provided or date is "on" */}
           {showFilterButton && (
             <button

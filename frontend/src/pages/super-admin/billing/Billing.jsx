@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import {
   Grid,
   Heading,
-  DashCard,
+  EnhancedDashCard,
   GLineChart,
   GPieChart,
   DataTable,
-  DataField,
   SelectField,
   Button
 } from '../../../components/shared/Common_Components';
@@ -84,52 +83,53 @@ export default function Billing() {
   ];
 
   return (
-    <div className="w-full h-full flex flex-col p-6 lg:p-8 font-sans bg-[#f8fafc] min-h-screen space-y-8">
+    <div className="w-full max-w-[1600px] mx-auto space-y-6">
       {/* ── 1. Top Section (Dashboard Stats) ── */}
-      <Grid cols={12} gap={6}>
+      <Grid cols={12} gap={4}>
         <Heading
           primaryText="Billing &"
           secondaryText="Finance"
           size={12}
           fontSize="3xl"
+          showAnimation={true}
         />
 
-        <DashCard
+        <EnhancedDashCard
           title="Total Revenue"
           value="$124,500"
           icon={<DollarSign size={24} />}
           accentColor="#22c55e"
           size={4}
         />
-        <DashCard
+        <EnhancedDashCard
           title="Total Expenses"
           value="$45,200"
           icon={<TrendingDown size={24} />}
           accentColor="#f43f5e"
           size={4}
         />
-        <DashCard
+        <EnhancedDashCard
           title="Net Profit"
           value="$79,300"
           icon={<TrendingUp size={24} />}
           accentColor="#3b82f6"
           size={4}
         />
-        <DashCard
+        <EnhancedDashCard
           title="Pending Payments"
           value="$12,400"
           icon={<Clock size={24} />}
           accentColor="#f59e0b"
           size={4}
         />
-        <DashCard
+        <EnhancedDashCard
           title="Active Subscriptions"
           value="342"
           icon={<CheckCircle size={24} />}
           accentColor="#8b5cf6"
           size={4}
         />
-        <DashCard
+        <EnhancedDashCard
           title="Failed Transactions"
           value="$408"
           icon={<Clock size={24} />}

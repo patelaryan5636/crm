@@ -423,7 +423,7 @@ const AdminLogin = () => {
             <p className="mt-8 text-center text-slate-500 text-sm">
               Don't have an account?{" "}
               <Link
-                to="/register"
+                to="/admin-register"
                 className="text-crm-navy font-bold hover:underline"
               >
                 Register your company

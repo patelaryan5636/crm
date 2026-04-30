@@ -12,7 +12,6 @@ const {
   UserLimitOverride,
   Admin,
   AuditLog,
-  Team,
 } = require('../models');
 
 const { hashPassword } = require('../services/auth.service');
@@ -60,14 +59,30 @@ const normalizeUserRow = (row) => {
   return normalized;
 };
 
+const EXPECTED_HEADERS = ['name', 'email', 'phone', 'department', 'role'];
+
+const validateFileStructure = (rows) => {
+  if (!rows || rows.length === 0) {
+    throw new Error('Uploaded file is empty. Add at least one data row.');
+  }
+
+  const firstRow = normalizeUserRow(rows[0]);
+  const headers = Object.keys(firstRow);
+  const missingHeaders = EXPECTED_HEADERS.filter((header) => !headers.includes(header));
+
+  if (missingHeaders.length > 0) {
+    throw new Error(`Invalid file format. Missing required columns: ${missingHeaders.join(', ')}`);
+  }
+};
+
 // ─────────────────────────────────────────────────────────────
 // ROW VALIDATOR
 // Returns array of field-level errors for one row.
-// deptMap / teamMap are pre-built Maps to avoid per-row DB hits.
+// deptMap is pre-built Map to avoid per-row DB hits.
 // allowedRoles is a Set derived from the User schema enum.
 // ─────────────────────────────────────────────────────────────
 
-const validateRow = (row, { deptMap, teamMap, allowedRoles }) => {
+const validateRow = (row, { deptMap, allowedRoles }) => {
   const errors = [];
 
   // ── Required fields ───────────────────────────────────────
@@ -80,6 +95,12 @@ const validateRow = (row, { deptMap, teamMap, allowedRoles }) => {
   const phone = row.phone ? String(row.phone).replace(/\D/g, '') : '';
   if (row.phone && !/^\d{10}$/.test(phone)) {
     errors.push({ field: 'phone', message: 'Phone must be exactly 10 digits' });
+  }
+
+  // ── Email format ──────────────────────────────────────────
+  const email = row.email ? String(row.email).trim().toLowerCase() : '';
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.push({ field: 'email', message: 'Invalid email format' });
   }
 
   // ── Role check ────────────────────────────────────────────
@@ -109,14 +130,6 @@ const validateRow = (row, { deptMap, teamMap, allowedRoles }) => {
         field: 'role',
         message: `Role ${roleName} is not permitted for the ${deptName} department.`,
       });
-    }
-  }
-
-  // ── Team (optional) ───────────────────────────────────────
-  if (row.team) {
-    const teamName = row.team.toUpperCase();
-    if (!teamMap.has(teamName)) {
-      errors.push({ field: 'team', message: `Team "${row.team}" not found for this tenant` });
     }
   }
 
@@ -173,14 +186,13 @@ exports.processUploadPreview = async (uploadId) => {
       ? await parseCsv(upload.fileUrl)
       : parseExcel(upload.fileUrl);
 
+    validateFileStructure(rawRows);
+
     upload.totalRows = rawRows.length;
 
     // ── Build lookup maps (single DB round-trip each) ─────────
     const departments = await Department.findActive({ admin: upload.admin });
     const deptMap     = new Map(departments.map((d) => [d.name.toUpperCase(), d._id]));
-
-    const teams   = await Team.findActive({ admin: upload.admin });
-    const teamMap = new Map(teams.map((t) => [t.name.toUpperCase(), t._id]));
 
     // Derive allowed roles from the schema enum, minus restricted ones
     const allowedRoles = new Set(
@@ -206,7 +218,7 @@ exports.processUploadPreview = async (uploadId) => {
       const rowNumber = i + 2; // row 1 = header
       const email     = row.email ? row.email.toLowerCase() : '';
 
-      const fieldErrors = validateRow(row, { deptMap, teamMap, allowedRoles });
+      const fieldErrors = validateRow(row, { deptMap, allowedRoles });
 
       // ── Duplicate detection ───────────────────────────────
       let isDuplicate = false;
@@ -343,12 +355,11 @@ exports.commitUpload = async (uploadId, importMode) => {
       ? await parseCsv(upload.fileUrl)
       : parseExcel(upload.fileUrl);
 
+    validateFileStructure(rawRows);
+
     // ── Re-build lookup maps ──────────────────────────────────
     const departments = await Department.findActive({ admin: upload.admin });
     const deptMap     = new Map(departments.map((d) => [d.name.toUpperCase(), d._id]));
-
-    const teams   = await Team.findActive({ admin: upload.admin });
-    const teamMap = new Map(teams.map((t) => [t.name.toUpperCase(), t._id]));
 
     const allowedRoles = new Set(
       User.schema.path('role').enumValues
@@ -388,7 +399,7 @@ exports.commitUpload = async (uploadId, importMode) => {
       // ── Re-validate row (idempotency — file may have changed on disk) ──
       const errors = validateRow(
         { ...row, phone }, // use normalized phone
-        { deptMap, teamMap, allowedRoles },
+        { deptMap, allowedRoles },
       );
 
       // ── Duplicate detection at commit time ────────────────
@@ -428,20 +439,17 @@ exports.commitUpload = async (uploadId, importMode) => {
 
       // ── Build user document ───────────────────────────────
       const deptId  = deptMap.get(deptName);
-      const teamId  = row.team ? (teamMap.get(row.team.toUpperCase()) ?? null) : null;
       const defaultPassword = buildDefaultUserPassword(email, row.phone);
       const hashedPassword = await hashPassword(defaultPassword);
 
       usersToInsert.push({
         admin:             upload.admin,
         department:        deptId,
-        team:              teamId,
         name:              row.name,
         email,
         phone,
         password:          hashedPassword,
         role:              roleName,
-        leadDataLimit:     row.leaddatalimit ? Number(row.leaddatalimit) : null,
         mustChangePassword: true,
         isFirstLogin:       true,
         isActive:           true,

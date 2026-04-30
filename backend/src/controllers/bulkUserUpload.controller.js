@@ -152,12 +152,12 @@ exports.downloadErrors = catchAsync(async (req, res, next) => {
 // Returns a downloadable CSV template with required + optional columns.
 // ─────────────────────────────────────────────────────────────
 exports.downloadTemplate = catchAsync(async (_req, res) => {
-  // Columns: required first, optional after the pipe comment
-  const header = 'name,email,phone,department,role,team,leadDataLimit\n';
+  // Columns: required only
+  const header = 'name,email,phone,department,role\n';
   const sample =
-    'Rahul Sharma,rahul.sharma@example.com,9876543210,SALES,SALES_EXECUTIVE,Alpha Team,250\n' +
-    'Priya Mehta,priya.mehta@example.com,9123456789,FINANCE,FINANCE_MANAGER,,\n' +
-    'Arjun Rao,arjun.rao@example.com,9000011111,MANAGEMENT,MANAGEMENT_EMPLOYEE,Beta Team,\n';
+    'Rahul Sharma,rahul.sharma@example.com,9876543210,SALES,SALES_EXECUTIVE\n' +
+    'Priya Mehta,priya.mehta@example.com,9123456789,FINANCE,FINANCE_MANAGER\n' +
+    'Arjun Rao,arjun.rao@example.com,9000011111,MANAGEMENT,MANAGEMENT_EMPLOYEE\n';
 
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename=bulk-user-template.csv');

@@ -255,8 +255,8 @@ const AdminRegister = () => {
       if (!companyEmail.trim()) errs.companyEmail = "Email is required.";
       else if (!validateEmail(companyEmail))
         errs.companyEmail = "Enter a valid email address.";
-      else if (!otpVerified)
-        errs.otpInput = "Please verify your email before continuing.";
+      // else if (!otpVerified)
+      //   errs.otpInput = "Please verify your email before continuing.";
       if (!companyAddress.trim())
         errs.companyAddress = "Company address is required.";
     }
@@ -376,7 +376,7 @@ const AdminRegister = () => {
               <img src={GraphuraLogo} alt="Graphura Logo" className="h-20" />
             </div>
 
-            <h2 className="text-3xl font-extrabold text-[#2a465a] leading-tight mb-4">
+            <h2 className="text-3xl font-extrabold text-[#2a465a] leading-tight mb-4" style={{ fontFamily: "'Gugi', cursive" }}>
               Start Your Journey with Graphura.
             </h2>
             <p className="text-slate-500 text-sm leading-relaxed">
@@ -417,7 +417,7 @@ const AdminRegister = () => {
         {/* ── Right Panel ── */}
         <div className="w-full lg:w-7/12 p-8 md:p-14 flex flex-col justify-center">
           <div className="max-w-md mx-auto w-full">
-            <h1 className="text-3xl font-black text-[#2a465a] mb-2 text-center tracking-tight">
+            <h1 className="text-3xl font-black text-[#2a465a] mb-2 text-center tracking-tight" style={{ fontFamily: "'Courgette', cursive" }}>
               Register your Company 🏢
             </h1>
             <p className="text-center text-slate-400 text-sm mb-6">

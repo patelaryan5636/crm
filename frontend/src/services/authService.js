@@ -104,10 +104,57 @@ export const loginAdmin = async (payload) => {
 };
 
 /**
+ * Department member login
+ * @param {Object} payload - { email, password, latitude, longitude, rememberMe? }
+ * @returns {Promise<Object>} Response with tokens, user profile and next route
+ */
+export const loginDepartment = async (payload) => {
+  try {
+    const response = await apiClient.post('/users/login', payload, {
+      skipAuthRedirect: true,
+    });
+
+    if (response.data.data?.accessToken) {
+      localStorage.setItem('accessToken', response.data.data.accessToken);
+      localStorage.setItem('refreshToken', response.data.data.refreshToken);
+      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+    }
+
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Super Admin login
+ * @param {Object} payload - { email, password }
+ * @returns {Promise<Object>} Response with tokens and super admin profile
+ */
+export const loginSuperAdmin = async (payload) => {
+  try {
+    const response = await apiClient.post('/superadmin/login', payload, {
+      skipAuthRedirect: true,
+    });
+
+    if (response.data.data?.accessToken) {
+      localStorage.setItem('accessToken', response.data.data.accessToken);
+      localStorage.setItem('refreshToken', response.data.data.refreshToken);
+      localStorage.setItem('superAdmin', JSON.stringify(response.data.data.superAdmin));
+    }
+
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
  * Logout — Clear tokens
  */
 export const logout = () => {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('admin');
+  localStorage.removeItem('user');
 };

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Users,
   UserCheck,
@@ -26,22 +26,9 @@ import {
   Option,
   Grid,
 } from "../../../components/shared/Common_Components";
+import { userService } from "../../../services/userService";
 
-// ── Mock Data ──
-const mockUsers = [
-  { id: 1, name: "Rahul Sharma", email: "rahul@graphura.com", mobile: "9876543210", role: "Admin", department: "Management", status: "Active", joinedDate: "Jan 15, 2025", lastLogin: "2 min ago", avatar: "RS" },
-  { id: 2, name: "Priya Patel", email: "priya@graphura.com", mobile: "9876543211", role: "Sales Executive", department: "Sales", status: "Active", joinedDate: "Feb 20, 2025", lastLogin: "1 hr ago", avatar: "PP" },
-  { id: 3, name: "Amit Verma", email: "amit@graphura.com", mobile: "9876543212", role: "Finance Manager", department: "Finance", status: "Active", joinedDate: "Mar 10, 2025", lastLogin: "3 hr ago", avatar: "AV" },
-  { id: 4, name: "Sneha Joshi", email: "sneha@graphura.com", mobile: "9876543213", role: "Sales Team Lead", department: "Sales", status: "Inactive", joinedDate: "Apr 05, 2025", lastLogin: "2 days ago", avatar: "SJ" },
-  { id: 5, name: "Vikram Das", email: "vikram@graphura.com", mobile: "9876543214", role: "Management Employee", department: "Management", status: "Active", joinedDate: "May 12, 2025", lastLogin: "30 min ago", avatar: "VD" },
-  { id: 6, name: "Neha Singh", email: "neha@graphura.com", mobile: "9876543215", role: "Sales Executive", department: "Sales", status: "Active", joinedDate: "Jun 18, 2025", lastLogin: "15 min ago", avatar: "NS" },
-  { id: 7, name: "Arjun Kumar", email: "arjun@graphura.com", mobile: "9876543216", role: "Administrator", department: "Administration", status: "Active", joinedDate: "Jul 22, 2025", lastLogin: "5 min ago", avatar: "AK" },
-  { id: 8, name: "Kavita Reddy", email: "kavita@graphura.com", mobile: "9876543217", role: "Management TL", department: "Management", status: "Inactive", joinedDate: "Aug 30, 2025", lastLogin: "5 days ago", avatar: "KR" },
-  { id: 9, name: "Ravi Mehta", email: "ravi@graphura.com", mobile: "9876543218", role: "Finance Executive", department: "Finance", status: "Active", joinedDate: "Sep 14, 2025", lastLogin: "45 min ago", avatar: "RM" },
-  { id: 10, name: "Deepika Nair", email: "deepika@graphura.com", mobile: "9876543219", role: "Sales Executive", department: "Sales", status: "Active", joinedDate: "Oct 02, 2025", lastLogin: "10 min ago", avatar: "DN" },
-  { id: 11, name: "Suresh Gupta", email: "suresh@graphura.com", mobile: "9876543220", role: "Super Admin", department: "Administration", status: "Active", joinedDate: "Nov 08, 2025", lastLogin: "1 min ago", avatar: "SG" },
-  { id: 12, name: "Anita Bose", email: "anita@graphura.com", mobile: "9876543221", role: "Sales Executive", department: "Sales", status: "Active", joinedDate: "Dec 15, 2025", lastLogin: "20 min ago", avatar: "AB" },
-];
+
 
 const statusOptions = ["All", "Active", "Inactive"];
 const departmentOptions = ["All", "Sales", "Management", "Finance", "Administration"];
@@ -51,7 +38,91 @@ export default function AllUsers() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [deptFilter, setDeptFilter] = useState("All");
   const [selectedUser, setSelectedUser] = useState(null);
-  const [usersList, setUsersList] = useState(mockUsers);
+  const [usersList, setUsersList] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isBulkUploading, setIsBulkUploading] = useState(false);
+
+  // Form states for quick create
+  const [quickName, setQuickName] = useState("");
+  const [quickEmail, setQuickEmail] = useState("");
+  const [quickMobile, setQuickMobile] = useState("");
+  const [quickRole, setQuickRole] = useState("");
+  const [quickDept, setQuickDept] = useState("");
+  const [roleDeptMap, setRoleDeptMap] = useState({});
+  const [isCreating, setIsCreating] = useState(false);
+
+  const resetCreateForm = useCallback(() => {
+    setQuickName("");
+    setQuickEmail("");
+    setQuickMobile("");
+    setQuickRole("");
+    setQuickDept("");
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
+      const response = await userService.getUsers();
+      const mappedUsers = response.data.users.map(u => ({
+        id: u._id,
+        name: u.name,
+        email: u.email,
+        mobile: u.phone,
+        role: u.role,
+        department: u.department?.name || "N/A",
+        status: u.status || "Active",
+        joinedDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "N/A",
+        lastLogin: "Never", // Placeholder or fetch if available
+        avatar: u.name.split(" ").map(n => n[0]).join("").toUpperCase()
+      }));
+      setUsersList(mappedUsers);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const [deptRes, mapRes] = await Promise.all([
+        userService.getDepartments(),
+        userService.getRoleDepartmentMap()
+      ]);
+      setDepartments(deptRes.data.departments);
+      setRoleDeptMap(mapRes.data.roleDepartmentMap);
+    } catch (error) {
+      console.error("Failed to fetch department metadata:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+    fetchDepartments();
+  }, []);
+
+  const handleCreateUser = async () => {
+    try {
+      setIsCreating(true);
+      
+      await userService.createUser({
+        name: quickName,
+        email: quickEmail,
+        phone: quickMobile,
+        role: quickRole,
+        departmentId: quickDept
+      });
+      alert("User created successfully!");
+      closeModal("create-user-quick-modal");
+      resetCreateForm();
+      fetchUsers();
+    } catch (error) {
+      alert(error.message || "Failed to create user");
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const handleExport = () => {
     const csvContent = "data:text/csv;charset=utf-8,Name,Email,Role,Status\n" + 
@@ -66,12 +137,57 @@ export default function AllUsers() {
   };
 
   const handleBulkUpload = () => {
+    if (isBulkUploading) return;
+
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".csv, .xlsx";
-    input.onchange = (e) => {
-      if (e.target.files.length > 0) {
-        alert(`Successfully uploaded and processed ${e.target.files[0].name}`);
+    input.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      try {
+        setIsBulkUploading(true);
+
+        const previewResponse = await userService.uploadBulkUsers(file, {
+          skipDuplicates: true,
+          strictMode: false,
+        });
+        const preview = previewResponse.data;
+        const summary = preview.summary;
+
+        if (!summary || summary.validRows === 0) {
+          const firstError = preview.previewErrors?.[0]?.reason;
+          alert(
+            `No valid users found in ${file.name}.` +
+              (firstError ? `\nFirst issue: ${firstError}` : "")
+          );
+          return;
+        }
+
+        const commitResponse = await userService.commitBulkUsers(
+          preview.uploadId,
+          "VALID_ONLY"
+        );
+        const result = commitResponse.data;
+
+        await fetchUsers();
+
+        if (result.importedCount > 0 && result.failedCount > 0) {
+          alert(
+            `Bulk upload partially completed.\nImported: ${result.importedCount}\nSkipped/failed: ${result.failedCount}`
+          );
+        } else if (result.importedCount > 0) {
+          alert(`Successfully imported ${result.importedCount} users from ${file.name}`);
+        } else {
+          alert(
+            `Upload processed, but no users were inserted.\nStatus: ${result.status}\nFailed rows: ${result.failedCount}`
+          );
+        }
+      } catch (error) {
+        alert(error.message || "Bulk upload failed");
+      } finally {
+        setIsBulkUploading(false);
       }
     };
     input.click();
@@ -113,6 +229,15 @@ export default function AllUsers() {
 
   // ── Table rows (formatted for DataTable) ──
   const rows = filteredUsers;
+
+  const availableRoles = useMemo(() => {
+    if (!quickDept || !roleDeptMap) return [];
+    const dept = departments.find(d => d._id === quickDept);
+    if (!dept) return [];
+    const roles = roleDeptMap[dept.name] || [];
+    // Explicitly filter out admin and super admin roles as requested
+    return roles.filter(role => role !== 'ADMIN' && role !== 'SUPER_ADMIN');
+  }, [quickDept, roleDeptMap, departments]);
 
   // ── Actions ──
   const actions = [
@@ -162,10 +287,11 @@ export default function AllUsers() {
           </button>
           <button
             onClick={handleBulkUpload}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 hover:-translate-y-0.5 active:scale-95"
+            disabled={isBulkUploading}
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 hover:-translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Upload size={14} />
-            Bulk Upload
+            {isBulkUploading ? "Uploading..." : "Bulk Upload"}
           </button>
           <button
             onClick={() => openModal("create-user-quick-modal")}
@@ -237,17 +363,27 @@ export default function AllUsers() {
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
               Dept:
             </span>
-            {departmentOptions.map((d) => (
+            <button
+              onClick={() => setDeptFilter("All")}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all duration-200 ${
+                deptFilter === "All"
+                  ? "bg-[#2a465a] text-white shadow-md"
+                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+              }`}
+            >
+              All
+            </button>
+            {departments.map((d) => (
               <button
-                key={d}
-                onClick={() => setDeptFilter(d)}
+                key={d._id}
+                onClick={() => setDeptFilter(d.name)}
                 className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all duration-200 ${
-                  deptFilter === d
+                  deptFilter === d.name
                     ? "bg-[#2a465a] text-white shadow-md"
                     : "bg-slate-100 text-slate-500 hover:bg-slate-200"
                 }`}
               >
-                {d}
+                {d.name.charAt(0) + d.name.slice(1).toLowerCase()}
               </button>
             ))}
           </div>
@@ -350,7 +486,7 @@ export default function AllUsers() {
       </Modal>
 
       {/* ── Create User Modal ── */}
-      <Modal id="create-user-quick-modal" title="Create New User">
+      <Modal id="create-user-quick-modal" title="Create New User" onClose={resetCreateForm}>
         <div className="space-y-5">
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex items-start gap-4">
              <div className="w-10 h-10 rounded-full bg-[#2a465a]/10 flex items-center justify-center text-[#2a465a] mt-0.5">
@@ -362,43 +498,65 @@ export default function AllUsers() {
              </div>
           </div>
           <Grid cols={12} gap={4}>
-            <DataField label="Full Name" id="quick-name" size={12} placeholder="e.g. Rahul Sharma" />
-            <DataField label="Email Address" id="quick-email" type="email" size={6} placeholder="user@company.com" />
-            <DataField label="Mobile Number" id="quick-mobile" type="tel" size={6} placeholder="+91 9876543210" />
+            <DataField label="Full Name" id="quick-name" size={12} placeholder="e.g. Rahul Sharma" value={quickName} onChange={e => setQuickName(e.target.value)} />
+            <DataField label="Email Address" id="quick-email" type="email" size={6} placeholder="user@company.com" value={quickEmail} onChange={e => setQuickEmail(e.target.value)} />
+            <DataField label="Mobile Number" id="quick-mobile" type="tel" size={6} placeholder="+91 9876543210" value={quickMobile} onChange={e => setQuickMobile(e.target.value)} />
+            <DataField 
+              label="Auto-generated Password" 
+              id="quick-password" 
+              size={12} 
+              value={quickMobile.length >= 5 ? `Test@${quickMobile.slice(-5)}` : "Test@*****"} 
+              readOnly 
+              className="bg-slate-50 border-slate-200 text-slate-500 font-mono"
+            />
             
-            <SelectField label="Role Selection" id="quick-role" size={6} placeholder="Assign a role">
-              <Option value="admin" label="Admin" />
-              <Option value="sales_exec" label="Sales Executive" />
-              <Option value="sales_tl" label="Sales Team Lead" />
-              <Option value="mgmt_emp" label="Management Employee" />
-              <Option value="mgmt_tl" label="Management TL" />
-              <Option value="finance_mgr" label="Finance Manager" />
-              <Option value="finance_exec" label="Finance Executive" />
-              <Option value="super_admin" label="Super Admin" />
-              <Option value="administrator" label="Administrator" />
+            <SelectField 
+              label="Role Selection" 
+              id="quick-role" 
+              size={6} 
+              placeholder={quickDept ? "Assign a role" : "Select department first"} 
+              value={quickRole} 
+              onChange={e => setQuickRole(e.target.value)}
+              disabled={!quickDept}
+            >
+              {availableRoles.map(role => (
+                <Option key={role} value={role} label={role.replace(/_/g, ' ').split(' ').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')} />
+              ))}
             </SelectField>
-            <SelectField label="Department" id="quick-dept" size={6} placeholder="Auto-filled">
-              <Option value="sales" label="Sales" />
-              <Option value="management" label="Management" />
-              <Option value="finance" label="Finance" />
-              <Option value="administration" label="Administration" />
+
+            <SelectField 
+              label="Department" 
+              id="quick-dept" 
+              size={6} 
+              placeholder="Select department" 
+              value={quickDept} 
+              onChange={e => {
+                setQuickDept(e.target.value);
+                setQuickRole(""); // Reset role when department changes
+              }}
+            >
+              {departments.map(d => (
+                <Option key={d._id} value={d._id} label={d.displayName} />
+              ))}
             </SelectField>
           </Grid>
           <div className="flex justify-end gap-2 mt-6">
             <button
-              onClick={() => closeModal("create-user-quick-modal")}
+              onClick={() => {
+                closeModal("create-user-quick-modal");
+                resetCreateForm();
+              }}
               className="px-4 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition"
+              disabled={isCreating}
             >
               Cancel
             </button>
             <button
-              onClick={() => {
-                closeModal("create-user-quick-modal");
-                alert("User created successfully!");
-              }}
-              className="px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-[#2a465a] shadow-lg shadow-[#2a465a]/20 hover:bg-[#1e3a52] transition active:scale-95 shiny-sweep"
+              onClick={handleCreateUser}
+              disabled={isCreating}
+              className="px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-[#2a465a] shadow-lg shadow-[#2a465a]/20 hover:bg-[#1e3a52] transition active:scale-95 shiny-sweep disabled:opacity-50"
             >
-              Create User
+              {isCreating ? "Creating..." : "Create User"}
             </button>
           </div>
         </div>

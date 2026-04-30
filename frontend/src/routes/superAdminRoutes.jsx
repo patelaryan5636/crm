@@ -23,6 +23,7 @@ function SuperAdminRoutes() {
         <Route path="support" element={<Support />} />
         <Route path="api-config" element={<ApiConfig />} />
         <Route path="data-management" element={<DataManagement />} />
+        <Route path="*" element={<Navigate to="/super-admin" replace />} />
       </Route>
     </Routes>
   );

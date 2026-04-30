@@ -226,8 +226,8 @@ const AdminLogin = () => {
             <div className="mb-10">
               <img src={GraphuraLogo} alt="Graphura Logo" className="h-20" />
             </div>
-            <h2 className="text-3xl font-extrabold text-crm-navy leading-tight mb-4">
-              Manage Customers. Empower Teams. Grow Faster.
+            <h2 className="text-3xl font-extrabold text-crm-navy leading-tight mb-4" style={{ fontFamily: "'Gugi', cursive" }}>
+              Manage Customers. <br />Empower Teams. <br />Grow Faster.
             </h2>
             <p className="text-slate-500 text-sm leading-relaxed">
               Empower your business with one smart platform to manage leads,
@@ -254,8 +254,8 @@ const AdminLogin = () => {
                 className="w-40 h-15 mx-auto"
               />
             </div>
-            <h1 className="text-3xl font-black text-crm-navy mb-8 text-center tracking-tight">
-              Welcome back! 👋
+            <h1 className="text-3xl font-black text-crm-navy mb-8 text-center tracking-tight" style={{ fontFamily: "'Courgette', cursive" }}>
+              Admin Control Center 🏢
             </h1>
 
             {/* Input Form */}

@@ -2,13 +2,14 @@ import { useState } from "react";
 import {
   Grid,
   Heading,
-  DashCard,
+  EnhancedDashCard,
   GAreaChart,
   GLineChart,
   GColumnChart,
   GBarChart,
   GDoughnutChart,
   GPieChart,
+  GRadarChart,
   DataTable,
   Modal,
   ModalData,
@@ -18,6 +19,7 @@ import {
   Option,
   openModal,
   closeModal,
+  DashGrid,
 } from "../../../components/shared/Common_Components";
 import {
   Building2,
@@ -334,6 +336,16 @@ export default function Dashboard() {
   const ticketsData       = ticketsAll["This Year"];
   const apiHealthData     = apiHealthAll["This Year"];
 
+  // ── Ticket Resolution Status (radar chart in the ticket/API row) ─────────────
+  const ticketResolutionData = [
+    { subject: "Critical", resolved: 72, pending: 28 },
+    { subject: "High",     resolved: 81, pending: 19 },
+    { subject: "Medium",   resolved: 91, pending: 9  },
+    { subject: "Low",      resolved: 96, pending: 4  },
+    { subject: "Billing",  resolved: 85, pending: 15 },
+    { subject: "Tech",     resolved: 78, pending: 22 },
+  ];
+
   // ── Top Companies Table ──────────────────────────────────────────────────────
   const companyCols = [
     { key: "company", label: "Company" },
@@ -425,18 +437,20 @@ export default function Dashboard() {
           secondaryText="Dashboard"
           size={12}
           fontSize="3xl"
+          showAnimations={true}
         />
-
+        </Grid>
         {/* ── 2. Top KPI Cards ── */}
-        <DashCard title="Total Companies"        value="100"       icon={<Building2 size={22} />}       accentColor="#3b82f6" size={3} />
-        <DashCard title="Active Companies"       value="68"        icon={<CheckCircle2 size={22} />}    accentColor="#22c55e" size={3} />
-        <DashCard title="Inactive / Suspended"   value="15"        icon={<XCircle size={22} />}         accentColor="#f43f5e" size={3} />
-        <DashCard title="Total Platform Users"   value="4,820"     icon={<Users size={22} />}           accentColor="#8b5cf6" size={3} />
-        <DashCard title="Total Leads (All Cos.)" value="1,28,400"  icon={<TrendingUp size={22} />}      accentColor="#f59e0b" size={3} />
-        <DashCard title="Platform Revenue"       value="₹8,65,000" icon={<DollarSign size={22} />}     accentColor="#14b8a6" size={3} />
-        <DashCard title="Net Profit"             value="₹5,14,000" icon={<Wallet size={22} />}         accentColor="#38bdf8" size={3} />
-        <DashCard title="Open Support Tickets"   value="32"        icon={<HeadphonesIcon size={22} />} accentColor="#64748b" size={3} />
-      </Grid>
+        <DashGrid cols={12} gap={4}>
+        <EnhancedDashCard title="Total Companies"        value="100"       icon={<Building2 size={22} />}       accentColor="#3b82f6" size={3} />
+        <EnhancedDashCard title="Active Companies"       value="68"        icon={<CheckCircle2 size={22} />}    accentColor="#22c55e" size={3} />
+        <EnhancedDashCard title="Inactive / Suspended"   value="15"        icon={<XCircle size={22} />}         accentColor="#f43f5e" size={3} />
+        <EnhancedDashCard title="Total Platform Users"   value="4,820"     icon={<Users size={22} />}           accentColor="#8b5cf6" size={3} />
+        <EnhancedDashCard title="Total Leads (All Cos.)" value="1,28,400"  icon={<TrendingUp size={22} />}      accentColor="#f59e0b" size={3} />
+        <EnhancedDashCard title="Platform Revenue"       value="₹8,65,000" icon={<DollarSign size={22} />}     accentColor="#14b8a6" size={3} />
+        <EnhancedDashCard title="Net Profit"             value="₹5,14,000" icon={<Wallet size={22} />}         accentColor="#38bdf8" size={3} />
+        <EnhancedDashCard title="Open Support Tickets"   value="32"        icon={<HeadphonesIcon size={22} />} accentColor="#64748b" size={3} />
+      </DashGrid>
 
       {/* ── 3 & 4. Growth + Revenue Charts ── */}
       <Grid cols={12} gap={4}>
@@ -516,16 +530,23 @@ export default function Dashboard() {
           size={4}
           height={300}
         />
-      </Grid>
-
-      {/* ── Ticket Priority + API Health ── */}
-      <Grid cols={12} gap={4}>
         <GPieChart
           title="Tickets by Priority"
           subtitle="Open support tickets breakdown"
           data={ticketsData}
           colors={["#f43f5e", "#f59e0b", "#38bdf8", "#22c55e"]}
-          size={4}
+          size={3}
+          height={300}
+        />
+        <GRadarChart
+          title="Ticket Resolution Rate"
+          subtitle="Resolved vs pending % by category"
+          data={ticketResolutionData}
+          radars={[
+            { key: "resolved", label: "Resolved (%)", color: "#22c55e" },
+            { key: "pending",  label: "Pending (%)",  color: "#f43f5e" },
+          ]}
+          size={3}
           height={300}
         />
         <GBarChart
@@ -536,7 +557,7 @@ export default function Dashboard() {
             { key: "uptime",  label: "Uptime (%)",   color: "#22c55e" },
             { key: "latency", label: "Latency (ms)", color: "#f59e0b" },
           ]}
-          size={8}
+          size={6}
           height={300}
         />
       </Grid>
@@ -555,6 +576,7 @@ export default function Dashboard() {
           pageSize={5}
           date={true}
           filterSize="xl"
+          // onDateFilter={true}
           filters={[
             {
               title: "Plan",
@@ -665,7 +687,7 @@ export default function Dashboard() {
       {/* ══ MODALS ══════════════════════════════════════════════════════════ */}
 
       {/* Company: View */}
-      <Modal id="company-view" title="Company Details" size="md">
+      <Modal id="company-view" title="Company Details">
         {selectedCompany && (
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Grid,
   Heading,
-  DashCard,
+  EnhancedDashCard,
   DataTable,
   Button,
   DataField,
@@ -183,7 +183,7 @@ export default function ApiConfig() {
   }));
 
   return (
-    <div className="w-full h-full flex flex-col p-6 lg:p-8 font-sans bg-[#f8fafc] min-h-screen space-y-8">
+    <div className="w-full max-w-[1600px] mx-auto space-y-6">
       {/* 1. Header */}
       <Grid cols={12} gap={6}>
         <Heading
@@ -195,7 +195,7 @@ export default function ApiConfig() {
 
         {/* 2. Dashboard Stats */}
         {stats.map((stat, idx) => (
-          <DashCard
+          <EnhancedDashCard
             key={idx}
             title={stat.title}
             value={stat.value}

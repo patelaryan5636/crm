@@ -149,9 +149,8 @@ const MENUS = {
       {
         label: "Sales",
         items: [
-          { name: "My Leads", path: "/sales-team-leader/leads", icon: Target },
-          { name: "Pipeline", path: "/sales-team-leader/pipeline", icon: GitBranch },
-          { name: "Call Panel", path: "/sales-team-leader/calls", icon: PhoneCall },
+          { name: "Leads",   path: "/sales-team-leader/leads",   icon: Target },
+          { name: "My Team", path: "/sales-team-leader/my-team", icon: Users },
           { name: "Tickets", path: "/sales-team-leader/tickets", icon: Ticket },
         ],
       },
@@ -160,6 +159,12 @@ const MENUS = {
         items: [
           { name: "Targets", path: "/sales-team-leader/targets", icon: TrendingUp },
           { name: "Reports", path: "/sales-team-leader/reports", icon: BarChart2 },
+        ],
+      },
+      {
+        label: "Communication",
+        items: [
+          { name: "Announcements", path: "/sales-team-leader/communication", icon: MessageSquare },
         ],
       },
     ],

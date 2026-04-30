@@ -926,6 +926,11 @@ export const DataTable = ({
   // exportFileName — custom filename for the downloaded CSV (default: "export")
   exportable = false,
   exportFileName = "export",
+  // ellipse — optional word limit for cell text truncation (default: undefined = no truncation)
+  // When set to a number, every non-status cell value is truncated to that many words
+  // with "…" appended. Useful for long text columns like reason, description, notes.
+  // Example: ellipse={3} → "Vacation trip with…"
+  ellipse,
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -1632,8 +1637,12 @@ export const DataTable = ({
                           Approved: ["bg-emerald-100", "text-emerald-700"],
                           Won: ["bg-emerald-100", "text-emerald-700"],
                           Valid: ["bg-emerald-100", "text-emerald-700"],
+                          Paid: ["bg-emerald-100", "text-emerald-700"],
+                          Accepted: ["bg-emerald-100", "text-emerald-700"],
+                          Working: ["bg-emerald-100", "text-emerald-700"],
                           // ── Amber ──
                           "In Progress": ["bg-amber-100", "text-amber-700"],
+                          "Not Working": ["bg-amber-100", "text-amber-700"],
                           Pending: ["bg-amber-100", "text-amber-700"],
                           "Follow-up": ["bg-amber-100", "text-amber-700"],
                           Warm: ["bg-amber-100", "text-amber-700"],
@@ -1645,6 +1654,8 @@ export const DataTable = ({
                           // ── Purple ──
                           Prospect: ["bg-purple-100", "text-purple-700"],
                           Qualified: ["bg-purple-100", "text-purple-700"],
+                          // ── Slate ──
+                          "Not Respond": ["bg-slate-200", "text-slate-600"],
                           // ── Rose ──
                           Failed: ["bg-rose-100", "text-rose-700"],
                           Cancelled: ["bg-rose-100", "text-rose-700"],
@@ -1654,6 +1665,8 @@ export const DataTable = ({
                           Rejected: ["bg-rose-100", "text-rose-700"],
                           Inactive: ["bg-rose-100", "text-rose-700"],
                           Invalid: ["bg-rose-100", "text-rose-700"],
+                          Unpaid: ["bg-rose-100", "text-rose-700"],
+                          Absent: ["bg-rose-100", "text-rose-500"],
                         };
                         const [statusBg, statusText] = STATUS_MAP[val] ?? ["bg-slate-100", "text-slate-600"];
                         return (
@@ -1669,7 +1682,14 @@ export const DataTable = ({
                           key={col.key}
                           className="py-3.5 px-5 text-[#2a465a] font-medium whitespace-nowrap"
                         >
-                          {row[col.key] ?? "—"}
+                          {(() => {
+                            const raw = row[col.key] ?? "—";
+                            if (!ellipse || typeof raw !== "string") return raw;
+                            const words = raw.trim().split(/\s+/);
+                            return words.length > ellipse
+                              ? words.slice(0, ellipse).join(" ") + "…"
+                              : raw;
+                          })()}
                         </td>
                       );
                     })}
@@ -1858,6 +1878,10 @@ export const DataTable = ({
                          including fields not shown as table columns (hidden data is included).
   • exportFileName   — filename for the downloaded CSV without extension  (default: "export")
                          Example: exportFileName="leads-report" → downloads "leads-report.csv"
+  • ellipse          — optional number. When set, every non-status cell value is word-truncated
+                         to this many words with "…" appended.
+                         Example: ellipse={3} → "Vacation trip with…"
+                         Tip: only string values are truncated; numbers and "—" are left as-is.
 */
 
 // ─────────────────────────────────────────────────────────────────────────────

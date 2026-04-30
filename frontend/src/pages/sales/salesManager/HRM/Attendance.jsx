@@ -1,104 +1,89 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Heading, DashGrid, DashCard, DataTable,
-  Grid, DataField, Select, Option,
-  openModal, Modal, ModalData, ModalProfile,
+  openModal, closeModal, Modal, ModalData, ModalProfile, ModalGrid, Button,
 } from "../../../../components/shared/Common_Components";
 import { kpiAttendance, attendanceRows } from "./HrmStore";
-import { Users, UserCheck, UserX, Clock, Calendar } from "lucide-react";
+import { Users, UserCheck, UserX, Clock, Calendar, Eye } from "lucide-react";
 
-const kpiIcons = [
-  <Users size={22} />, <UserCheck size={22} />, <UserX size={22} />,
-  <Calendar size={22} />, <Clock size={22} />,
-];
-const kpiAccents = ["#3b82f6","#22c55e","#f43f5e","#f59e0b","#8b5cf6"];
+const KPI_ICONS   = [<Users size={22} />, <UserCheck size={22} />, <UserX size={22} />, <Calendar size={22} />, <Clock size={22} />];
+const KPI_ACCENTS = ["#3b82f6", "#22c55e", "#f43f5e", "#f59e0b", "#8b5cf6"];
 
-const attCols = [
-  { key: "name",      label: "Employee Name" },
-  { key: "role",      label: "Role" },
-  { key: "teamLeader",label: "Team Leader" },
-  { key: "date",      label: "Date" },
-  { key: "clockIn",   label: "Clock In" },
-  { key: "clockOut",  label: "Clock Out" },
-  { key: "hours",     label: "Working Hours" },
-  { key: "status",    label: "Status" },
+const COLS = [
+  { key: "name",          label: "Employee" },
+  { key: "role",          label: "Role" },
+  { key: "date",          label: "Date" },
+  { key: "clockIn",       label: "Clock In" },
+  { key: "clockOut",      label: "Clock Out" },
+  { key: "hours",         label: "Hours" },
+  { key: "attendancePct", label: "Attendance" },
+  { key: "status", label: "Status" },
 ];
+
+// Unique team leaders for the filter dropdown
+const TEAM_LEADERS = [...new Set(attendanceRows.map((r) => r.teamLeader).filter((t) => t !== "Self"))];
 
 export default function Attendance() {
   const [selected, setSelected] = useState(null);
 
-  const actions = [
-    { label: "View",   variant: "ghost",   onClick: (row) => { setSelected(row); openModal("att-view-modal"); } },
-    { label: "Export", variant: "primary", onClick: () => alert("Export triggered (UI only)") },
-  ];
-
   return (
     <div className="flex flex-col gap-6">
+      {/* KPI cards */}
       <DashGrid cols={12} gap={4}>
         <Heading primaryText="HRM" secondaryText="Attendance" size={12} />
         {kpiAttendance.map((k, i) => (
           <DashCard key={k.title} title={k.title} value={k.value}
-            icon={kpiIcons[i]} accentColor={kpiAccents[i]} size={2} />
+            icon={KPI_ICONS[i]} accentColor={KPI_ACCENTS[i]} size={3} />
         ))}
       </DashGrid>
 
-      {/* Filters */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-        <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Filters</p>
-        <Grid cols={12} gap={4}>
-          <DataField label="Date" id="attDate" type="date" size={3} />
-          <div className="col-span-12 sm:col-span-3 flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Team Leader</label>
-            <Select placeholder="All Team Leaders" size={12} value="" onChange={() => {}}>
-              <Option value="Ankit Verma" label="Ankit Verma" />
-              <Option value="Sonal Gupta" label="Sonal Gupta" />
-              <Option value="Nisha Patel" label="Nisha Patel" />
-            </Select>
-          </div>
-          <div className="col-span-12 sm:col-span-3 flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Role</label>
-            <Select placeholder="All Roles" size={12} value="" onChange={() => {}}>
-              <Option value="Executive"   label="Executive" />
-              <Option value="Team Leader" label="Team Leader" />
-            </Select>
-          </div>
-          <div className="col-span-12 sm:col-span-3 flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Status</label>
-            <Select placeholder="All Statuses" size={12} value="" onChange={() => {}}>
-              <Option value="Active"   label="Present" />
-              <Option value="Rejected" label="Absent" />
-              <Option value="Pending"  label="Late" />
-            </Select>
-          </div>
-        </Grid>
-      </div>
-
+      {/* Table — filters live inside the DataTable filter modal */}
       <DataTable
         title="Attendance Records"
-        columns={attCols}
+        columns={COLS}
         rows={attendanceRows}
-        actions={actions}
+        actions={[
+          {
+            icon: <Eye size={15} />,
+            tooltip: "View Details",
+            variant: "ghost",
+            onClick: (row) => { setSelected(row); openModal("att-view-modal"); },
+          },
+        ]}
         size={12}
-        pageSize={8}
+        pageSize={10}
         searchable
+        onDateFilter={true}
+        date
         exportable
         exportFileName="attendance-report"
         filters={[
-          { title: "Status", type: "toggle", key: "status", options: ["Active", "Pending", "Rejected"] },
-          { title: "Role",   type: "toggle", key: "role",   options: ["Executive", "Team Leader"] },
+          { title: "Current Status", type: "toggle", key: "currentStatus", options: ["Working", "Not Working"] },
+          { title: "Role",           type: "toggle", key: "role",          options: ["Executive", "Team Leader"] },
+          { title: "Team Leader",    type: "select", key: "teamLeader",    options: TEAM_LEADERS },
         ]}
       />
 
+      {/* View modal */}
       <Modal id="att-view-modal" title="Attendance Details" size="md">
         {selected && (
           <div className="flex flex-col gap-4">
-            <ModalProfile name={selected.name} subtitle={`${selected.role} · ${selected.teamLeader}`} />
-            <div className="grid grid-cols-2 gap-3">
-              <ModalData label="Date"          value={selected.date} />
+            <ModalProfile
+              name={selected.name}
+              subtitle={`${selected.role} · ${selected.teamLeader}`}
+              meta={`Date: ${selected.date}`}
+            />
+            <ModalGrid title="Attendance Info" cols={2}>
               <ModalData label="Clock In"      value={selected.clockIn} />
               <ModalData label="Clock Out"     value={selected.clockOut} />
-              <ModalData label="Working Hours" value={selected.hours} />
-              <ModalData label="Status"        value={selected.status} />
+              <ModalData label="Working Hours"  value={selected.hours} />
+              <ModalData label="Attendance %"   value={selected.attendancePct} />
+              <ModalData label="Current Status" value={selected.currentStatus} />
+              <ModalData label="Team Leader"    value={selected.teamLeader} />
+              <ModalData label="Role"          value={selected.role} />
+            </ModalGrid>
+            <div className="flex justify-end pt-2">
+              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("att-view-modal")} />
             </div>
           </div>
         )}

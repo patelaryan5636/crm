@@ -190,7 +190,7 @@ const MENUS = {
         label: "Leads",
         items: [
           { name: "Leads",         path: "/sales-executive/leads",         icon: Target },
-          { name: "Prospect Form", path: "/sales-executive/prospect-form", icon: ClipboardList },
+          { name: "Prospects", path: "/sales-executive/prospects", icon: ClipboardList },
           { name: "Dump Data",     path: "/sales-executive/dump",          icon: Database },
         ],
       },

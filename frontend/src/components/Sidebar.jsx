@@ -121,7 +121,6 @@ const MENUS = {
         label: "Sales",
         items: [
           { name: "Leads",        path: "/sales-manager/leads",       icon: Target },
-          { name: "Team Leaders", path: "/sales-manager/team-leader", icon: UserCheck },
           { name: "Teams",        path: "/sales-manager/teams",       icon: Users },
         ],
       },

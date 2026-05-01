@@ -4,6 +4,7 @@ import SuperAdminRoutes from "./superAdminRoutes";
 import AdminLogin from "../pages/auth/AdminLogin";
 import AdminRegister from "../pages/auth/AdminRegister";
 import SalesManagerRoutes from "./Sales/salesManagerRoutes";
+import SalesExecutiveRoutes from "./Sales/salesExecutiveRoutes";
 import DepartmentLogin from "../pages/auth/DepartmentLogin";
 import DepartmentWorkspace from "../pages/department/DepartmentWorkspace";
 import SuperAdminLogin from "../pages/auth/SuperAdminLogin";
@@ -25,6 +26,8 @@ function AppRoutes() {
         <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
         {/* Sales manager Routes */}
         <Route path="/sales-manager/*" element={<SalesManagerRoutes />} />
+        {/* Sales Executive Routes */}
+        <Route path="/sales-executive/*" element={<SalesExecutiveRoutes />} />
       </Routes>
     </BrowserRouter>
   );

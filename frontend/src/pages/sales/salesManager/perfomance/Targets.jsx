@@ -103,12 +103,9 @@ export default function Targets() {
       </DashGrid>
 
       <div className="flex justify-end">
-        <button
+        <Button text="+ &nbsp; Create Target" variant="primary" size={3}
           onClick={() => { setEditId(null); setForm(BLANK); setErrors({}); openModal("tgt-form-modal"); }}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#2a465a] text-white text-sm font-bold hover:bg-[#1e3a52] transition active:scale-95"
-        >
-          <Plus size={15} /> Create Target
-        </button>
+        />
       </div>
 
       {/* Table — key columns only */}
@@ -143,7 +140,7 @@ export default function Targets() {
           },
         ]}
         size={12}
-        pageSize={8}
+        pageSize={10}
         searchable
         exportable
         exportFileName="targets"

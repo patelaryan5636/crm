@@ -58,7 +58,7 @@ export default function Attendance() {
         exportable
         exportFileName="attendance-report"
         filters={[
-          { title: "Current Status", type: "toggle", key: "currentStatus", options: ["Working", "Not Working"] },
+          { title: "Status", type: "toggle", key: "Status", options: ["Working", "Not Working","Completed"] },
           { title: "Role",           type: "toggle", key: "role",          options: ["Executive", "Team Leader"] },
           { title: "Team Leader",    type: "select", key: "teamLeader",    options: TEAM_LEADERS },
         ]}
@@ -78,7 +78,7 @@ export default function Attendance() {
               <ModalData label="Clock Out"     value={selected.clockOut} />
               <ModalData label="Working Hours"  value={selected.hours} />
               <ModalData label="Attendance %"   value={selected.attendancePct} />
-              <ModalData label="Current Status" value={selected.currentStatus} />
+              <ModalData label="Status" value={selected.status} />
               <ModalData label="Team Leader"    value={selected.teamLeader} />
               <ModalData label="Role"          value={selected.role} />
             </ModalGrid>

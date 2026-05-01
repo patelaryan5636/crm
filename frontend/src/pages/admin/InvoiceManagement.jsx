@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
-<<<<<<< HEAD
-import { Button, DashGrid, DataTable, Modal, openModal, closeModal, P, InputField } from '../../components/shared/Common_Components';
-=======
 import { Button, DashGrid, DataTable, Modal, openModal, closeModal, P, InputField, ModalGrid, ModalData } from '../../components/shared/Common_Components';
->>>>>>> hrm-fix
 import { Eye, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';

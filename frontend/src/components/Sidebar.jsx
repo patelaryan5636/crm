@@ -120,18 +120,24 @@ const MENUS = {
       {
         label: "Sales",
         items: [
-          { name: "My Leads", path: "/sales-manager/leads", icon: Target },
-          { name: "Teams", path: "/sales-manager/team-leader", icon: Users },
-          { name: "Pipeline", path: "/sales-manager/pipeline", icon: GitBranch },
-          { name: "Call Panel", path: "/sales-manager/calls", icon: PhoneCall },
-          { name: "Tickets", path: "/sales-manager/tickets", icon: Ticket },
+          { name: "Leads",        path: "/sales-manager/leads",       icon: Target },
+          { name: "Teams",        path: "/sales-manager/teams",       icon: Users },
         ],
       },
       {
         label: "Performance",
         items: [
-          { name: "Targets", path: "/sales-manager/targets", icon: TrendingUp },
-          { name: "Reports", path: "/sales-manager/reports", icon: BarChart2 },
+          { name: "Performance", path: "/sales-manager/performance", icon: TrendingUp },
+        ],
+      },
+      {
+        label: "Management",
+        items: [
+          { name: "HRM",           path: "/sales-manager/hrm",           icon: ClipboardList },
+          { name: "Support",       path: "/sales-manager/support",       icon: LifeBuoy },
+          { name: "Communication", path: "/sales-manager/communication", icon: MessageSquare },
+          { name: "Logs",          path: "/sales-manager/logs",          icon: History },
+          { name: "Reports",       path: "/sales-manager/reports",       icon: BarChart2 },
         ],
       },
     ],
@@ -149,9 +155,8 @@ const MENUS = {
       {
         label: "Sales",
         items: [
-          { name: "My Leads", path: "/sales-team-leader/leads", icon: Target },
-          { name: "Pipeline", path: "/sales-team-leader/pipeline", icon: GitBranch },
-          { name: "Call Panel", path: "/sales-team-leader/calls", icon: PhoneCall },
+          { name: "Leads",   path: "/sales-team-leader/leads",   icon: Target },
+          { name: "My Team", path: "/sales-team-leader/my-team", icon: Users },
           { name: "Tickets", path: "/sales-team-leader/tickets", icon: Ticket },
         ],
       },
@@ -160,6 +165,12 @@ const MENUS = {
         items: [
           { name: "Targets", path: "/sales-team-leader/targets", icon: TrendingUp },
           { name: "Reports", path: "/sales-team-leader/reports", icon: BarChart2 },
+        ],
+      },
+      {
+        label: "Communication",
+        items: [
+          { name: "Announcements", path: "/sales-team-leader/communication", icon: MessageSquare },
         ],
       },
     ],
@@ -175,19 +186,25 @@ const MENUS = {
         ],
       },
       {
-        label: "Sales",
+        label: "Leads",
         items: [
-          { name: "My Leads", path: "/sales-executive/leads", icon: Target },
-          { name: "Pipeline", path: "/sales-executive/pipeline", icon: GitBranch },
-          { name: "Call Panel", path: "/sales-executive/calls", icon: PhoneCall },
-          { name: "Tickets", path: "/sales-executive/tickets", icon: Ticket },
+          { name: "Leads",         path: "/sales-executive/leads",         icon: Target },
+          { name: "Prospects", path: "/sales-executive/prospects", icon: ClipboardList },
+          { name: "Dump Data",     path: "/sales-executive/dump",          icon: Database },
         ],
       },
       {
-        label: "Performance",
+        label: "Personal",
         items: [
-          { name: "Targets", path: "/sales-executive/targets", icon: TrendingUp },
-          { name: "Reports", path: "/sales-executive/reports", icon: BarChart2 },
+          { name: "My Login Logs", path: "/sales-executive/login-logs", icon: History },
+          { name: "Payments",      path: "/sales-executive/payments",   icon: CreditCard },
+        ],
+      },
+      {
+        label: "Management",
+        items: [
+          { name: "HRM",     path: "/sales-executive/hrm",     icon: UserCheck },
+          { name: "Support", path: "/sales-executive/support", icon: LifeBuoy },
         ],
       },
     ],

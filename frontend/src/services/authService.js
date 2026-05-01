@@ -127,6 +127,29 @@ export const loginDepartment = async (payload) => {
 };
 
 /**
+ * Super Admin login
+ * @param {Object} payload - { email, password }
+ * @returns {Promise<Object>} Response with tokens and super admin profile
+ */
+export const loginSuperAdmin = async (payload) => {
+  try {
+    const response = await apiClient.post('/superadmin/login', payload, {
+      skipAuthRedirect: true,
+    });
+
+    if (response.data.data?.accessToken) {
+      localStorage.setItem('accessToken', response.data.data.accessToken);
+      localStorage.setItem('refreshToken', response.data.data.refreshToken);
+      localStorage.setItem('superAdmin', JSON.stringify(response.data.data.superAdmin));
+    }
+
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
  * Logout — Clear tokens
  */
 export const logout = () => {

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Users,
   DollarSign,
@@ -24,6 +25,9 @@ import {
   Button,
   Modal,
   openModal,
+  ModalProfile,
+  ModalGrid,
+  ModalData,
   DataField,
   P,
   Grid,
@@ -176,14 +180,18 @@ const financeColumns = [
 ];
 
 export default function Departments() {
+  const location = useLocation();
+  const adminData = location.state?.admin;
+
   const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [selectedData, setSelectedData] = useState(null);
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
   const handleView = (row) => {
-    // Safely handling row object
     if (!row) return;
-    console.log("View row:", row);
+    setSelectedData(row);
+    openModal("department-details-modal");
   };
 
   const handleDepartmentView = (type) => {
@@ -219,12 +227,12 @@ export default function Departments() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
             <div className="flex items-center gap-4 mb-6">
               <img
-                src={company.logo}
+                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(adminData?.company || company.name)}&background=2a465a&color=fff&size=80&bold=true`}
                 alt="Company Logo"
                 className="w-16 h-16 rounded-2xl shadow-md"
               />
               <div>
-                <h2 className="text-xl font-bold text-[#2a465a]">{company.name}</h2>
+                <h2 className="text-xl font-bold text-[#2a465a]">{adminData?.company || company.name}</h2>
                 <span className={`inline-block mt-1 px-3 py-0.5 rounded-full text-xs font-bold ${company.status === "Active"
                     ? "bg-emerald-100 text-emerald-700"
                     : "bg-rose-100 text-rose-700"
@@ -234,9 +242,9 @@ export default function Departments() {
               </div>
             </div>
             <Grid cols={12} gap={4}>
-              <DataField label="Company Name" id="co_name" size={6} value={company.name} disabled />
-              <DataField label="Email" id="co_email" size={6} value={company.email} disabled />
-              <DataField label="Phone" id="co_phone" size={4} value={company.phone} disabled />
+              <DataField label="Company Name" id="co_name" size={6} value={adminData?.company || company.name} disabled />
+              <DataField label="Email" id="co_email" size={6} value={adminData?.email || company.email} disabled />
+              <DataField label="Phone" id="co_phone" size={4} value={adminData?.phone || company.phone} disabled />
               <DataField label="Website" id="co_website" size={4} value={company.website} disabled />
               <DataField label="Subscription Plan" id="co_plan" size={4} value={company.plan} disabled />
               <DataField label="Address" id="co_address" size={8} value={company.address} disabled />
@@ -252,9 +260,9 @@ export default function Departments() {
               <Heading primaryText="Admin" secondaryText="Details" size={12} />
             </div>
             <Grid cols={12} gap={4}>
-              <DataField label="Admin Name" id="ad_name" size={4} value={admin.name} disabled />
-              <DataField label="Admin Email" id="ad_email" size={4} value={admin.email} disabled />
-              <DataField label="Admin Phone" id="ad_phone" size={4} value={admin.phone} disabled />
+              <DataField label="Admin Name" id="ad_name" size={4} value={adminData?.adminName || admin.name} disabled />
+              <DataField label="Admin Email" id="ad_email" size={4} value={adminData?.email || admin.email} disabled />
+              <DataField label="Admin Phone" id="ad_phone" size={4} value={adminData?.phone || admin.phone} disabled />
               <DataField label="Last Login" id="ad_login" size={6} value={admin.lastLogin} disabled />
               <DataField label="Account Status" id="ad_status" size={6} value={admin.status} disabled />
             </Grid>
@@ -328,14 +336,6 @@ export default function Departments() {
         <DashCard title="Net Profit" value="₹1.12Cr" icon={<TrendingUp size={22} />} accentColor="#8b5cf6" size={3} />
 
         {/* ─── Sales Department Table ───────────────────────────────────────── */}
-        <div className="col-span-12 flex justify-end">
-          <Button
-            text="View Sales"
-            variant="primary"
-            size={12}
-            onClick={() => handleDepartmentView("sales")}
-          />
-        </div>
         <DataTable
           title="Sales Department"
           columns={salesColumns}
@@ -369,14 +369,6 @@ export default function Departments() {
         />
 
         {/* ─── Project Management Table ─────────────────────────────────────── */}
-        <div className="col-span-12 flex justify-end">
-          <Button
-            text="View Management"
-            variant="primary"
-            size={12}
-            onClick={() => handleDepartmentView("management")}
-          />
-        </div>
         <DataTable
           title="Project Management"
           columns={projectColumns}
@@ -410,14 +402,6 @@ export default function Departments() {
         />
 
         {/* ─── Finance Table ────────────────────────────────────────────────── */}
-        <div className="col-span-12 flex justify-end">
-          <Button
-            text="View Finance"
-            variant="primary"
-            size={12}
-            onClick={() => handleDepartmentView("finance")}
-          />
-        </div>
         <DataTable
           title="Finance & Payments"
           columns={financeColumns}
@@ -509,6 +493,40 @@ export default function Departments() {
               { title: "Payment Type", key: "type", type: "toggle", options: ["Milestone", "Full Payment", "Post-Delivery"] },
             ]}
           />
+        )}
+      </Modal>
+
+      {/* ─── Department Details Row Modal ────────────────────────────────────── */}
+      <Modal
+        id="department-details-modal"
+        title="Department Details"
+        size="md"
+      >
+        {selectedData && (
+          <div className="flex flex-col gap-4">
+            <ModalProfile
+              name={selectedData.name ?? selectedData.assignedTo ?? selectedData.client ?? "—"}
+              subtitle={selectedData.role ?? selectedData.priority ?? selectedData.type ?? ""}
+              meta={selectedData.status ? `Status: ${selectedData.status}` : ""}
+            />
+            <ModalGrid title="Details" cols={2}>
+              {selectedData.name       && <ModalData label="Employee Name"   value={selectedData.name} />}
+              {selectedData.assignedTo && <ModalData label="Assigned To"     value={selectedData.assignedTo} />}
+              {selectedData.client     && <ModalData label="Client"          value={selectedData.client} />}
+              {selectedData.project    && <ModalData label="Project"         value={selectedData.project} />}
+              {selectedData.role       && <ModalData label="Role"            value={selectedData.role} />}
+              {selectedData.totalLeads && <ModalData label="Total Leads"     value={selectedData.totalLeads} />}
+              {selectedData.activeLeads&& <ModalData label="Active Leads"    value={selectedData.activeLeads} />}
+              {selectedData.conversion && <ModalData label="Conversion %"    value={selectedData.conversion} />}
+              {selectedData.revenue    && <ModalData label="Revenue"         value={selectedData.revenue} />}
+              {selectedData.progress   && <ModalData label="Progress"        value={selectedData.progress} />}
+              {selectedData.deadline   && <ModalData label="Deadline"        value={selectedData.deadline} />}
+              {selectedData.total      && <ModalData label="Total Amount"    value={selectedData.total} />}
+              {selectedData.paid       && <ModalData label="Paid"            value={selectedData.paid} />}
+              {selectedData.remaining  && <ModalData label="Remaining"       value={selectedData.remaining} />}
+              {selectedData.status     && <ModalData label="Status"          value={selectedData.status} />}
+            </ModalGrid>
+          </div>
         )}
       </Modal>
     </div>

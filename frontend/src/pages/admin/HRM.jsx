@@ -10,7 +10,7 @@ import {
   GDoughnutChart,
   GColumnChart
 } from '../../components/shared/Common_Components';
-import { StatCard } from '../../components/UI/StatCard';
+import { StatCard } from '../../components/ui/StatCard';
 
 // -- Dummy Data for Charts & Overview --
 const attendanceTrendData = [

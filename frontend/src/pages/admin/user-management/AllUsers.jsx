@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Users,
   UserCheck,
@@ -41,6 +41,7 @@ export default function AllUsers() {
   const [usersList, setUsersList] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isBulkUploading, setIsBulkUploading] = useState(false);
 
   // Form states for quick create
   const [quickName, setQuickName] = useState("");
@@ -48,7 +49,16 @@ export default function AllUsers() {
   const [quickMobile, setQuickMobile] = useState("");
   const [quickRole, setQuickRole] = useState("");
   const [quickDept, setQuickDept] = useState("");
+  const [roleDeptMap, setRoleDeptMap] = useState({});
   const [isCreating, setIsCreating] = useState(false);
+
+  const resetCreateForm = useCallback(() => {
+    setQuickName("");
+    setQuickEmail("");
+    setQuickMobile("");
+    setQuickRole("");
+    setQuickDept("");
+  }, []);
 
   const fetchUsers = async () => {
     try {
@@ -76,10 +86,14 @@ export default function AllUsers() {
 
   const fetchDepartments = async () => {
     try {
-      const response = await userService.getDepartments();
-      setDepartments(response.data.departments);
+      const [deptRes, mapRes] = await Promise.all([
+        userService.getDepartments(),
+        userService.getRoleDepartmentMap()
+      ]);
+      setDepartments(deptRes.data.departments);
+      setRoleDeptMap(mapRes.data.roleDepartmentMap);
     } catch (error) {
-      console.error("Failed to fetch departments:", error);
+      console.error("Failed to fetch department metadata:", error);
     }
   };
 
@@ -92,32 +106,16 @@ export default function AllUsers() {
     try {
       setIsCreating(true);
       
-      const roleMap = {
-        "admin": "ADMIN",
-        "sales_exec": "SALES_EXECUTIVE",
-        "sales_tl": "SALES_TL",
-        "mgmt_emp": "MANAGEMENT_EMPLOYEE",
-        "mgmt_tl": "MANAGEMENT_TL",
-        "finance_mgr": "FINANCE_MANAGER",
-        "finance_exec": "FINANCE_EXECUTIVE",
-        "super_admin": "SUPER_ADMIN",
-        "administrator": "ADMIN"
-      };
-
       await userService.createUser({
         name: quickName,
         email: quickEmail,
         phone: quickMobile,
-        role: roleMap[quickRole] || quickRole,
-        departmentId: quickDept // backend will lookup by name if not ObjectId
+        role: quickRole,
+        departmentId: quickDept
       });
       alert("User created successfully!");
       closeModal("create-user-quick-modal");
-      setQuickName("");
-      setQuickEmail("");
-      setQuickMobile("");
-      setQuickRole("");
-      setQuickDept("");
+      resetCreateForm();
       fetchUsers();
     } catch (error) {
       alert(error.message || "Failed to create user");
@@ -139,12 +137,57 @@ export default function AllUsers() {
   };
 
   const handleBulkUpload = () => {
+    if (isBulkUploading) return;
+
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".csv, .xlsx";
-    input.onchange = (e) => {
-      if (e.target.files.length > 0) {
-        alert(`Successfully uploaded and processed ${e.target.files[0].name}`);
+    input.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      try {
+        setIsBulkUploading(true);
+
+        const previewResponse = await userService.uploadBulkUsers(file, {
+          skipDuplicates: true,
+          strictMode: false,
+        });
+        const preview = previewResponse.data;
+        const summary = preview.summary;
+
+        if (!summary || summary.validRows === 0) {
+          const firstError = preview.previewErrors?.[0]?.reason;
+          alert(
+            `No valid users found in ${file.name}.` +
+              (firstError ? `\nFirst issue: ${firstError}` : "")
+          );
+          return;
+        }
+
+        const commitResponse = await userService.commitBulkUsers(
+          preview.uploadId,
+          "VALID_ONLY"
+        );
+        const result = commitResponse.data;
+
+        await fetchUsers();
+
+        if (result.importedCount > 0 && result.failedCount > 0) {
+          alert(
+            `Bulk upload partially completed.\nImported: ${result.importedCount}\nSkipped/failed: ${result.failedCount}`
+          );
+        } else if (result.importedCount > 0) {
+          alert(`Successfully imported ${result.importedCount} users from ${file.name}`);
+        } else {
+          alert(
+            `Upload processed, but no users were inserted.\nStatus: ${result.status}\nFailed rows: ${result.failedCount}`
+          );
+        }
+      } catch (error) {
+        alert(error.message || "Bulk upload failed");
+      } finally {
+        setIsBulkUploading(false);
       }
     };
     input.click();
@@ -186,6 +229,15 @@ export default function AllUsers() {
 
   // ── Table rows (formatted for DataTable) ──
   const rows = filteredUsers;
+
+  const availableRoles = useMemo(() => {
+    if (!quickDept || !roleDeptMap) return [];
+    const dept = departments.find(d => d._id === quickDept);
+    if (!dept) return [];
+    const roles = roleDeptMap[dept.name] || [];
+    // Explicitly filter out admin and super admin roles as requested
+    return roles.filter(role => role !== 'ADMIN' && role !== 'SUPER_ADMIN');
+  }, [quickDept, roleDeptMap, departments]);
 
   // ── Actions ──
   const actions = [
@@ -235,10 +287,11 @@ export default function AllUsers() {
           </button>
           <button
             onClick={handleBulkUpload}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 hover:-translate-y-0.5 active:scale-95"
+            disabled={isBulkUploading}
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 hover:-translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Upload size={14} />
-            Bulk Upload
+            {isBulkUploading ? "Uploading..." : "Bulk Upload"}
           </button>
           <button
             onClick={() => openModal("create-user-quick-modal")}
@@ -433,7 +486,7 @@ export default function AllUsers() {
       </Modal>
 
       {/* ── Create User Modal ── */}
-      <Modal id="create-user-quick-modal" title="Create New User">
+      <Modal id="create-user-quick-modal" title="Create New User" onClose={resetCreateForm}>
         <div className="space-y-5">
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex items-start gap-4">
              <div className="w-10 h-10 rounded-full bg-[#2a465a]/10 flex items-center justify-center text-[#2a465a] mt-0.5">
@@ -457,18 +510,31 @@ export default function AllUsers() {
               className="bg-slate-50 border-slate-200 text-slate-500 font-mono"
             />
             
-            <SelectField label="Role Selection" id="quick-role" size={6} placeholder="Assign a role" value={quickRole} onChange={e => setQuickRole(e.target.value)}>
-              <Option value="admin" label="Admin" />
-              <Option value="sales_exec" label="Sales Executive" />
-              <Option value="sales_tl" label="Sales Team Lead" />
-              <Option value="mgmt_emp" label="Management Employee" />
-              <Option value="mgmt_tl" label="Management TL" />
-              <Option value="finance_mgr" label="Finance Manager" />
-              <Option value="finance_exec" label="Finance Executive" />
-              <Option value="super_admin" label="Super Admin" />
-              <Option value="administrator" label="Administrator" />
+            <SelectField 
+              label="Role Selection" 
+              id="quick-role" 
+              size={6} 
+              placeholder={quickDept ? "Assign a role" : "Select department first"} 
+              value={quickRole} 
+              onChange={e => setQuickRole(e.target.value)}
+              disabled={!quickDept}
+            >
+              {availableRoles.map(role => (
+                <Option key={role} value={role} label={role.replace(/_/g, ' ').split(' ').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')} />
+              ))}
             </SelectField>
-            <SelectField label="Department" id="quick-dept" size={6} placeholder="Select department" value={quickDept} onChange={e => setQuickDept(e.target.value)}>
+
+            <SelectField 
+              label="Department" 
+              id="quick-dept" 
+              size={6} 
+              placeholder="Select department" 
+              value={quickDept} 
+              onChange={e => {
+                setQuickDept(e.target.value);
+                setQuickRole(""); // Reset role when department changes
+              }}
+            >
               {departments.map(d => (
                 <Option key={d._id} value={d._id} label={d.displayName} />
               ))}
@@ -476,7 +542,10 @@ export default function AllUsers() {
           </Grid>
           <div className="flex justify-end gap-2 mt-6">
             <button
-              onClick={() => closeModal("create-user-quick-modal")}
+              onClick={() => {
+                closeModal("create-user-quick-modal");
+                resetCreateForm();
+              }}
               className="px-4 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition"
               disabled={isCreating}
             >

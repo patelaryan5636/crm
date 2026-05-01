@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Grid,
   Heading,
@@ -87,6 +88,7 @@ const adminCols = [
 export default function Admins() {
   // ── Live admin data (stateful) ──
   const [admins, setAdmins] = useState(INITIAL_ADMINS);
+  const navigate = useNavigate();
   const [nextId, setNextId] = useState(INITIAL_ADMINS.length + 1);
 
   // ── Selected row states ──
@@ -226,7 +228,7 @@ export default function Admins() {
               { title: "Plan",   type: "toggle", key: "plan",   options: ["Starter", "Pro", "Enterprise"] },
             ]}
             actions={[
-              { icon: <Eye size={15} />,      tooltip: "View",       variant: "ghost",   onClick: (row) => { setSelectedAdmin(row); openModal("admin-view"); } },
+              { icon: <Eye size={15} />,      tooltip: "View",       variant: "ghost",   onClick: (row) => { navigate("/super-admin/departments", { state: { admin: row } }); } },
               { icon: <Pencil size={15} />,    tooltip: "Edit",       variant: "primary", onClick: (row) => openEditModal(row) },
               { icon: <Power size={15} />,     tooltip: "Toggle Status", variant: "ghost", onClick: (row) => { setSelectedAdmin(row); openModal("admin-toggle"); } },
               { icon: <KeyRound size={15} />,  tooltip: "Reset Password", variant: "ghost", onClick: (row) => { setSelectedAdmin(row); openModal("admin-reset"); } },
@@ -344,14 +346,14 @@ export default function Admins() {
             <DataField label="Company Name" id="create-company" size={6} value={createForm.company} onChange={handleCreateField("company")} placeholder="Company name" />
             <DataField label="Email" id="create-email" type="email" size={6} value={createForm.email} onChange={handleCreateField("email")} placeholder="admin@company.com" />
             <DataField label="Phone" id="create-phone" type="tel" size={6} value={createForm.phone} onChange={handleCreateField("phone")} placeholder="+91 98101 XXXXX" />
-            <SelectField label="Plan" id="create-plan" size={4} value={createForm.plan} onChange={handleCreateField("plan")}>
+            <SelectField label="Plan" id="create-plan" size={6} value={createForm.plan} onChange={handleCreateField("plan")}>
               <Option value="Starter" label="Starter" />
               <Option value="Pro" label="Pro" />
               <Option value="Enterprise" label="Enterprise" />
             </SelectField>
-            <DataField label="User Limit" id="create-userMax" type="number" size={4} value={createForm.userMax} onChange={handleCreateField("userMax")} placeholder="40" />
-            <DataField label="Data Limit" id="create-dataMax" type="number" size={4} value={createForm.dataMax} onChange={handleCreateField("dataMax")} placeholder="5000" />
             <DataField label="Renewal Date" id="create-renewal" type="date" size={6} value={createForm.renewal} onChange={handleCreateField("renewal")} />
+            <DataField label="User Limit" id="create-userMax" type="number" size={6} value={createForm.userMax} onChange={handleCreateField("userMax")} placeholder="40" />
+            <DataField label="Data Limit" id="create-dataMax" type="number" size={6} value={createForm.dataMax} onChange={handleCreateField("dataMax")} placeholder="5000" />
           </Grid>
           <div className="flex justify-end gap-2 pt-1">
             <Button text="Cancel" variant="ghost" size={2} onClick={() => closeModal("admin-create")} />

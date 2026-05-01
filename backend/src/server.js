@@ -15,8 +15,11 @@ const connectDB = require('./config/db');
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const authController = require('./controllers/auth.controller');
 const bulkUserUploadRoutes = require('./routes/bulkUserUpload');
 const userRoutes = require('./routes/users');
+const superAdminRoutes = require('./routes/superadmin');
+const teamRoutes = require('./routes/teams');
 
 dotenv.config();
 
@@ -47,12 +50,17 @@ app.get('/', (_req, res) => {
 	});
 });
 
+// Logout shortcut for browsers: GET /logout
+app.get('/logout', authController.logout);
+
 // ────────────────────────────────────────────────────────────
 // API ROUTES
 // ────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/users/bulk', bulkUserUploadRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/superadmin', superAdminRoutes);
+app.use('/api/teams', teamRoutes);
 
 // ────────────────────────────────────────────────────────────
 // 404 HANDLER (Express 5 safe)

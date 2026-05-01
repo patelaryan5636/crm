@@ -190,13 +190,16 @@ export const Label = ({ text, htmlFor, size = 12 }) => (
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3. DATA FIELD  (Label + Input wrapped in a single slot)
+// 3. DATA FIELD  (Label + Input / Textarea wrapped in a single slot)
 // Combines a label and input into one grid slot. Optionally displays a left icon.
+// When type="textarea", renders a <textarea> instead of <input>.
 //
 // Props:
 //   label       — label text shown above the input
 //   id          — html id (links label + input)
-//   type        — input type  (default: "text")
+//   type        — input type OR "textarea"  (default: "text")
+//                 Any valid HTML input type works: "text" | "email" | "password" |
+//                 "number" | "date" | "tel" | "url" | "textarea"
 //   placeholder — placeholder string
 //   autoFocus   — true | false  (default: false)
 //   size        — 1–12 grid columns  (default: 12)
@@ -204,8 +207,10 @@ export const Label = ({ text, htmlFor, size = 12 }) => (
 //   onChange    — change handler (e) => void
 //   disabled    — true | false  (default: false)
 //   readOnly    — true | false  (default: false)
-//   className   — additional CSS classes for the input
-//   icon        — optional Lucide icon component (e.g., Mail, Lock) to show on the left
+//   className   — additional CSS classes for the input/textarea element
+//   icon        — optional Lucide icon component (e.g., Mail, Lock) shown on the left
+//                 Note: icon is not shown when type="textarea"
+//   rows        — number of visible text rows for textarea  (default: 3)
 // ─────────────────────────────────────────────────────────────────────────────
 export const DataField = ({
   label,
@@ -220,53 +225,72 @@ export const DataField = ({
   readOnly = false,
   className = "",
   icon: Icon,
-}) => (
-  <div className={`${colSpan(size)} flex flex-col gap-1.5`}>
-    {label && (
-      <label
-        htmlFor={id}
-        className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em] select-none"
-      >
-        {label}
-      </label>
-    )}
-    <div className="relative">
-      {Icon && (
-        <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
-          <Icon size={18} />
-        </div>
+  rows = 3,
+}) => {
+  const sharedCls = `
+    w-full rounded-2xl border border-slate-200 bg-slate-50/90
+    text-[#2a465a] placeholder:text-slate-400 text-sm font-medium
+    focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40
+    disabled:opacity-50 disabled:cursor-not-allowed
+    transition duration-200
+    ${className}
+  `;
+
+  return (
+    <div className={`${colSpan(size)} flex flex-col gap-1.5`}>
+      {label && (
+        <label
+          htmlFor={id}
+          className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em] select-none"
+        >
+          {label}
+        </label>
       )}
-      <input
-        id={id}
-        type={type}
-        placeholder={placeholder}
-        autoFocus={autoFocus}
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        readOnly={readOnly}
-        className={`
-          w-full rounded-2xl border border-slate-200 bg-slate-50/90
-          ${Icon ? "pl-12 pr-4" : "px-4"} py-3.5
-          text-[#2a465a] placeholder:text-slate-400 text-sm font-medium
-          focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40
-          disabled:opacity-50 disabled:cursor-not-allowed
-          transition duration-200
-          ${className}
-        `}
-      />
+      <div className="relative">
+        {/* Icon — only shown for non-textarea types */}
+        {Icon && type !== "textarea" && (
+          <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
+            <Icon size={18} />
+          </div>
+        )}
+
+        {type === "textarea" ? (
+          <textarea
+            id={id}
+            placeholder={placeholder}
+            autoFocus={autoFocus}
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+            readOnly={readOnly}
+            rows={rows}
+            className={`${sharedCls} px-4 py-3.5 resize-y`}
+          />
+        ) : (
+          <input
+            id={id}
+            type={type}
+            placeholder={placeholder}
+            autoFocus={autoFocus}
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+            readOnly={readOnly}
+            className={`${sharedCls} ${Icon ? "pl-12 pr-4" : "px-4"} py-3.5`}
+          />
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /*
   ── HOW TO USE DataField ────────────────────────────────────────────────────
 
-  Basic usage:
+  Basic text input:
   <DataField
     label="Company Name"
     id="company_name"
-    type="text"
     placeholder="Acme Corp"
     size={6}
     value={companyName}
@@ -275,7 +299,6 @@ export const DataField = ({
 
   With icon:
   import { Mail } from "lucide-react";
-  
   <DataField
     label="Work Email"
     id="email"
@@ -287,19 +310,55 @@ export const DataField = ({
     size={12}
   />
 
+  Textarea (multi-line):
+  <DataField
+    label="Notes"
+    id="notes"
+    type="textarea"
+    placeholder="Enter any additional notes..."
+    rows={4}
+    value={notes}
+    onChange={(e) => setNotes(e.target.value)}
+    size={12}
+  />
+
+  Number input:
+  <DataField
+    label="Amount"
+    id="amount"
+    type="number"
+    placeholder="0"
+    value={amount}
+    onChange={(e) => setAmount(e.target.value)}
+    size={6}
+  />
+
+  Read-only display field:
+  <DataField
+    label="Employee ID"
+    id="emp_id"
+    value="EMP-00123"
+    readOnly
+    size={6}
+  />
+
   Props:
   • label       — label text shown above the input
   • id          — html id (links label + input)
-  • type        — input type  (default: "text")
+  • type        — input type OR "textarea"  (default: "text")
+                  Supports all HTML input types: "text" | "email" | "password" |
+                  "number" | "date" | "tel" | "url" | "textarea"
   • placeholder — placeholder string
   • autoFocus   — true | false  (default: false)
   • size        — 1–12 grid columns  (default: 12)
   • value       — controlled value
-  • onChange    — change handler (e) => void
+  • onChange    — (e) => void
   • disabled    — true | false  (default: false)
   • readOnly    — true | false  (default: false)
-  • className   — additional CSS classes for the input
+  • className   — additional CSS classes for the input/textarea element
   • icon        — optional Lucide icon component (e.g., Mail, Lock, User)
+                  Not shown when type="textarea"
+  • rows        — visible row count for textarea  (default: 3)
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -772,6 +831,59 @@ export const Option = ({ value, label, disabled = false }) => (
 //   If icon is provided and label is omitted → renders as a square icon-only button
 //   with an optional tooltip on hover.
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ── ActionButton — portal tooltip so it overlaps the table, never clipped ────
+function ActionButton({ action, row, isIconOnly, actionVariantCls }) {
+  const [tipPos, setTipPos] = useState(null);
+  const btnRef = useRef(null);
+
+  const showTip = () => {
+    if (!isIconOnly || !action.tooltip) return;
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (rect) setTipPos({ top: rect.top - 8, left: rect.left + rect.width / 2 });
+  };
+  const hideTip = () => setTipPos(null);
+
+  return (
+    <div className="relative">
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => action.onClick(row)}
+        onMouseEnter={showTip}
+        onMouseLeave={hideTip}
+        onFocus={showTip}
+        onBlur={hideTip}
+        className={`
+          flex flex-nowrap items-center justify-center gap-1.5
+          transition duration-150 active:scale-95
+          ${isIconOnly
+            ? `w-8 h-8 rounded-xl ${actionVariantCls[action.variant ?? "ghost"]}`
+            : `px-3 py-1.5 rounded-xl text-xs font-bold ${actionVariantCls[action.variant ?? "ghost"]}`
+          }
+        `}
+      >
+        {action.icon && <span className={isIconOnly ? "w-4 h-4" : "w-3.5 h-3.5"}>{action.icon}</span>}
+        {action.label && <span className="text-xs font-bold">{action.label}</span>}
+      </button>
+
+      {/* Portal tooltip — fixed to viewport, never clipped by overflow */}
+      {isIconOnly && action.tooltip && tipPos && createPortal(
+        <div
+          className="pointer-events-none fixed z-[9999] -translate-x-1/2 -translate-y-full"
+          style={{ top: tipPos.top, left: tipPos.left }}
+        >
+          <div className="bg-[#1e293b] text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
+            {action.tooltip}
+          </div>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1e293b]" />
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 export const DataTable = ({
   columns = [],        // [{ key: "name", label: "Name" }, ...]
   rows = [],           // [{ name: "Alice", email: "..." }, ...]
@@ -807,6 +919,18 @@ export const DataTable = ({
   // bulkActions — array of { title, icon, onClick: (selectedRows) => void }
   bulkAction = false,
   bulkActions = [],
+  // exportable — true | false (default false)
+  // true → shows an Export CSV button in the toolbar.
+  //        Exports ALL fields from every row in the `rows` prop (not just
+  //        the columns shown in the table), so hidden fields are included.
+  // exportFileName — custom filename for the downloaded CSV (default: "export")
+  exportable = false,
+  exportFileName = "export",
+  // ellipse — optional word limit for cell text truncation (default: undefined = no truncation)
+  // When set to a number, every non-status cell value is truncated to that many words
+  // with "…" appended. Useful for long text columns like reason, description, notes.
+  // Example: ellipse={3} → "Vacation trip with…"
+  ellipse,
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -1021,6 +1145,39 @@ export const DataTable = ({
     ghost: "bg-slate-100 text-slate-600 hover:bg-slate-200",
   };
 
+  // ── CSV Export — exports ALL fields from every row (not just visible columns)
+  const handleExport = () => {
+    if (!rows.length) return;
+
+    // Collect every unique key across all rows (preserves insertion order)
+    const allKeys = [...new Set(rows.flatMap((r) => Object.keys(r)))];
+
+    // Build header row using column labels where available, otherwise the raw key
+    const keyToLabel = Object.fromEntries(columns.map((c) => [c.key, c.label]));
+    const header = allKeys.map((k) => keyToLabel[k] ?? k);
+
+    // Build data rows — stringify each cell, wrap in quotes if it contains comma/newline
+    const escape = (val) => {
+      const str = val == null ? "" : String(val);
+      return str.includes(",") || str.includes("\n") || str.includes('"')
+        ? `"${str.replace(/"/g, '""')}"`
+        : str;
+    };
+
+    const csvLines = [
+      header.map(escape).join(","),
+      ...rows.map((row) => allKeys.map((k) => escape(row[k])).join(",")),
+    ];
+
+    const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${exportFileName}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const showFilterButton = filters.length > 0 || date === true;
 
   // ── Bulk selection helpers ────────────────────────────────────────────────
@@ -1095,6 +1252,22 @@ export const DataTable = ({
 
         {/* Filter button + page size — flex-1 on mobile so it fills remaining space */}
         <div className="flex flex-1 items-center gap-2 whitespace-nowrap sm:flex-none">
+          {/* Export CSV button — only shown when exportable={true} */}
+          {exportable && (
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={rows.length === 0}
+              className="flex items-center gap-1.5 px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-[#2a465a] hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Export all data as CSV"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export
+            </button>
+          )}
+
           {/* Filter button — only shown when filters array is provided or date is "on" */}
           {showFilterButton && (
             <button
@@ -1318,6 +1491,36 @@ export const DataTable = ({
         document.body
       )}
 
+      {/* Bulk action bar — shown above the table when rows are selected */}
+      {bulkAction && someSelected && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#2a465a] text-white shadow-lg">
+          <span className="text-sm font-semibold whitespace-nowrap">
+            {selectedRows.size} row{selectedRows.size > 1 ? "s" : ""} selected
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {bulkActions.map((ba, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => ba.onClick(selectedRowData)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors duration-150 active:scale-95"
+              >
+                {ba.icon && <span className="w-3.5 h-3.5 flex-shrink-0">{ba.icon}</span>}
+                {ba.title}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setSelectedRows(new Set())}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs font-semibold transition-colors duration-150"
+            >
+              <X size={13} />
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table wrapper */}
       <div className="data-table-scroll overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-md">
         <table className="w-full text-sm">
@@ -1368,7 +1571,7 @@ export const DataTable = ({
                 </th>
               ))}
               {actions.length > 0 && (
-                <th style={{ width: "auto", minWidth: "200px" }} className="py-4 px-4 text-left text-xs font-black text-white uppercase tracking-[0.1em]">
+                <th style={{ width: "1%", whiteSpace: "nowrap" }} className="py-4 px-4 text-center text-xs font-black text-white uppercase tracking-[0.1em]">
                   Actions
                 </th>
               )}
@@ -1435,8 +1638,11 @@ export const DataTable = ({
                           Won: ["bg-emerald-100", "text-emerald-700"],
                           Valid: ["bg-emerald-100", "text-emerald-700"],
                           Paid: ["bg-emerald-100", "text-emerald-700"],
+                          Accepted: ["bg-emerald-100", "text-emerald-700"],
+                          Working: ["bg-emerald-100", "text-emerald-700"],
                           // ── Amber ──
                           "In Progress": ["bg-amber-100", "text-amber-700"],
+                          "Not Working": ["bg-amber-100", "text-amber-700"],
                           Pending: ["bg-amber-100", "text-amber-700"],
                           "Follow-up": ["bg-amber-100", "text-amber-700"],
                           Warm: ["bg-amber-100", "text-amber-700"],
@@ -1448,6 +1654,8 @@ export const DataTable = ({
                           // ── Purple ──
                           Prospect: ["bg-purple-100", "text-purple-700"],
                           Qualified: ["bg-purple-100", "text-purple-700"],
+                          // ── Slate ──
+                          "Not Respond": ["bg-slate-200", "text-slate-600"],
                           // ── Rose ──
                           Failed: ["bg-rose-100", "text-rose-700"],
                           Cancelled: ["bg-rose-100", "text-rose-700"],
@@ -1458,6 +1666,7 @@ export const DataTable = ({
                           Inactive: ["bg-rose-100", "text-rose-700"],
                           Invalid: ["bg-rose-100", "text-rose-700"],
                           Unpaid: ["bg-rose-100", "text-rose-700"],
+                          Absent: ["bg-rose-100", "text-rose-500"],
                         };
                         const [statusBg, statusText] = STATUS_MAP[val] ?? ["bg-slate-100", "text-slate-600"];
                         return (
@@ -1473,56 +1682,24 @@ export const DataTable = ({
                           key={col.key}
                           className="py-3.5 px-5 text-[#2a465a] font-medium whitespace-nowrap"
                         >
-                          {row[col.key] ?? "—"}
+                          {(() => {
+                            const raw = row[col.key] ?? "—";
+                            if (!ellipse || typeof raw !== "string") return raw;
+                            const words = raw.trim().split(/\s+/);
+                            return words.length > ellipse
+                              ? words.slice(0, ellipse).join(" ") + "…"
+                              : raw;
+                          })()}
                         </td>
                       );
                     })}
                     {actions.length > 0 && (
-                      <td style={{ width: "auto", minWidth: "200px" }} className="py-3 px-4 align-middle">
-                        <div className="flex flex-nowrap items-center gap-2">
+                      <td style={{ width: "1%", whiteSpace: "nowrap" }} className="py-3 px-4 align-middle">
+                        <div className="flex flex-nowrap items-center justify-center gap-2">
                           {actions.map((action, ai) => {
                             const isIconOnly = action.icon && !action.label;
                             return (
-                              <div key={ai} className="relative group/tip">
-                                <button
-                                  type="button"
-                                  onClick={() => action.onClick(row)}
-                                  className={`
-                                  flex flex-nowrap items-center justify-center gap-1.5
-                                  transition duration-150 active:scale-95
-                                  ${isIconOnly
-                                      ? `w-8 h-8 rounded-xl ${actionVariantCls[action.variant ?? "ghost"]}`
-                                      : `px-3 py-1.5 rounded-xl text-xs font-bold ${actionVariantCls[action.variant ?? "ghost"]}`
-                                    }
-                                `}
-                                >
-                                  {action.icon && (
-                                    <span className={isIconOnly ? "w-4 h-4" : "w-3.5 h-3.5"}>
-                                      {action.icon}
-                                    </span>
-                                  )}
-                                  {action.label && (
-                                    <span className="text-xs font-bold">{action.label}</span>
-                                  )}
-                                </button>
-
-                                {/* Tooltip — only shown when icon-only */}
-                                {isIconOnly && action.tooltip && (
-                                  <div className="
-                                  pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2
-                                  opacity-0 group-hover/tip:opacity-100
-                                  translate-y-1 group-hover/tip:translate-y-0
-                                  transition-all duration-150 ease-out
-                                  z-50 whitespace-nowrap
-                                ">
-                                    <div className="bg-[#1e293b] text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-lg">
-                                      {action.tooltip}
-                                    </div>
-                                    {/* Arrow */}
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1e293b]" />
-                                  </div>
-                                )}
-                              </div>
+                              <ActionButton key={ai} action={action} row={row} isIconOnly={isIconOnly} actionVariantCls={actionVariantCls} />
                             );
                           })}
                         </div>
@@ -1535,36 +1712,6 @@ export const DataTable = ({
           </tbody>
         </table>
       </div>
-
-      {/* Bulk action bar — slides up when rows are selected */}
-      {bulkAction && someSelected && (
-        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#2a465a] text-white shadow-lg">
-          <span className="text-sm font-semibold whitespace-nowrap">
-            {selectedRows.size} row{selectedRows.size > 1 ? "s" : ""} selected
-          </span>
-          <div className="flex items-center gap-2 flex-wrap">
-            {bulkActions.map((ba, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => ba.onClick(selectedRowData)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors duration-150 active:scale-95"
-              >
-                {ba.icon && <span className="w-3.5 h-3.5 flex-shrink-0">{ba.icon}</span>}
-                {ba.title}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => setSelectedRows(new Set())}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs font-semibold transition-colors duration-150"
-            >
-              <X size={13} />
-              Clear
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Pagination */}
       {!(hideRecordSummary && hidePagination) && <div className="flex items-center justify-between px-1">
@@ -1725,6 +1872,16 @@ export const DataTable = ({
   • filterSize       — max-width of the Filter modal: "sm"|"md"|"lg"|"xl"|"2xl"  (default: "xl")
   • bulkAction       — true | false  (default: false) — enables row checkboxes + bulk bar
   • bulkActions      — array of { title, icon?, onClick: (selectedRows) => void }
+  • exportable       — true | false  (default: false)
+                         true → shows an "Export" button in the toolbar.
+                         Exports ALL fields from every row in the `rows` prop as a CSV,
+                         including fields not shown as table columns (hidden data is included).
+  • exportFileName   — filename for the downloaded CSV without extension  (default: "export")
+                         Example: exportFileName="leads-report" → downloads "leads-report.csv"
+  • ellipse          — optional number. When set, every non-status cell value is word-truncated
+                         to this many words with "…" appended.
+                         Example: ellipse={3} → "Vacation trip with…"
+                         Tip: only string values are truncated; numbers and "—" are left as-is.
 */
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -4,10 +4,12 @@ import SuperAdminRoutes from "./superAdminRoutes";
 import AdminLogin from "../pages/auth/AdminLogin";
 import AdminRegister from "../pages/auth/AdminRegister";
 import SalesManagerRoutes from "./Sales/salesManagerRoutes";
-import SalesExecutiveRoutes from "./Sales/salesExecutiveRoutes";
 import DepartmentLogin from "../pages/auth/DepartmentLogin";
-import DepartmentWorkspace from "../pages/department/DepartmentWorkspace";
 import SuperAdminLogin from "../pages/auth/SuperAdminLogin";
+import DepartmentWorkspace from "../pages/department/DepartmentWorkspace";
+import SalesTeamLeaderRoutes from "./Sales/salesTeamLeaderRoutes";
+import SalesExecutiveRoutes from "./Sales/salesExecutiveRoutes";
+
 function AppRoutes() {
   return (
     <BrowserRouter>
@@ -15,18 +17,17 @@ function AppRoutes() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         {/* Authentication Pages */}
         <Route path="/super-admin-login" element={<SuperAdminLogin />} />
-        <Route path="/Admin-login" element={<AdminLogin />} />
-        <Route path="/Admin-register" element={<AdminRegister />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/admin-register" element={<AdminRegister />} />
         <Route path="/login" element={<DepartmentLogin />} />
-        <Route path="/department" element={<DepartmentWorkspace />} />
         {/* Admin Routes */}
         <Route path="/admin/*" element={<AdminRoutes />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
         {/* Super_Admin Routes */}
         <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
-        {/* Sales manager Routes */}
+        {/* Sales Routes */}
         <Route path="/sales-manager/*" element={<SalesManagerRoutes />} />
-        {/* Sales Executive Routes */}
+        <Route path="/sales-team-leader/*" element={<SalesTeamLeaderRoutes />} />
         <Route path="/sales-executive/*" element={<SalesExecutiveRoutes />} />
       </Routes>
     </BrowserRouter>

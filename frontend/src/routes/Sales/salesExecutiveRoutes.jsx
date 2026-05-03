@@ -7,6 +7,9 @@ import LeadsLayout from "../../pages/sales/salesExecutive/leads/LeadsLayout";
 import LeadsPage from "../../pages/sales/salesExecutive/leads/LeadsPage";
 import DumpDataPage from "../../pages/sales/salesExecutive/dumpData/DumpDataPage";
 import PaymentsPage from "../../pages/sales/salesExecutive/payments/PaymentsPage";
+import HRMPage from "../../pages/sales/salesExecutive/hrm/HRMPage";
+import LoginLogs from "../../pages/sales/salesExecutive/LoginLogs/LoginLogs";
+import Support from "../../pages/sales/salesExecutive/Support/Support";
 
 function SalesExecutiveRoutes() {
     return (
@@ -16,6 +19,9 @@ function SalesExecutiveRoutes() {
                 <Route path="prospects" element={<ProspectList />} />
                 <Route path="edit-prospect/:id" element={<EditProspect />} />
                 <Route path="payments" element={<PaymentsPage />} />
+                <Route path="hrm" element={<HRMPage />} />
+                <Route path="login-logs" element={<LoginLogs />} />
+                <Route path="support" element={<Support />} />
                 <Route path="leads" element={<LeadsLayout />}>
                     <Route index element={<LeadsPage />} />
                     <Route path="dump" element={<DumpDataPage />} />

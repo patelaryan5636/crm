@@ -120,8 +120,9 @@ const MENUS = {
       {
         label: "Sales",
         items: [
-          { name: "Leads",        path: "/sales-manager/leads",       icon: Target },
-          { name: "Teams",        path: "/sales-manager/teams",       icon: Users },
+          { name: "Leads",     path: "/sales-manager/leads",     icon: Target },
+          { name: "Teams",     path: "/sales-manager/teams",     icon: Users  },
+          { name: "Employees", path: "/sales-manager/employees", icon: UserCheck },
         ],
       },
       {
@@ -135,7 +136,7 @@ const MENUS = {
         items: [
           { name: "HRM",           path: "/sales-manager/hrm",           icon: ClipboardList },
           { name: "Support",       path: "/sales-manager/support",       icon: LifeBuoy },
-          { name: "Communication", path: "/sales-manager/communication", icon: MessageSquare },
+          { name: "Announcements", path: "/sales-manager/announcements", icon: MessageSquare },
           { name: "Logs",          path: "/sales-manager/logs",          icon: History },
           { name: "Reports",       path: "/sales-manager/reports",       icon: BarChart2 },
         ],

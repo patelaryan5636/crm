@@ -40,6 +40,7 @@ export default function Attendance() {
       {/* Table — filters live inside the DataTable filter modal */}
       <DataTable
         title="Attendance Records"
+        userProfile="name"
         columns={COLS}
         rows={attendanceRows}
         actions={[

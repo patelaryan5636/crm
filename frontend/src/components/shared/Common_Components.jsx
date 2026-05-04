@@ -40,6 +40,7 @@
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import UserAvatar from "./UserAvatar";
 import {
   Search,
   ChevronLeft,
@@ -934,6 +935,11 @@ export const DataTable = ({
   // with "…" appended. Useful for long text columns like reason, description, notes.
   // Example: ellipse={3} → "Vacation trip with…"
   ellipse,
+  // userProfile — key name of the column that should show a user avatar before the text.
+  // The row must have a matching key for the name, and optionally a `photoUrl` field
+  // for the actual photo. Clicking the avatar opens the photo in a new tab.
+  // Example: userProfile="name"  → the "name" column gets an avatar prefix
+  userProfile,
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -1692,11 +1698,35 @@ export const DataTable = ({
                         >
                           {(() => {
                             const raw = row[col.key] ?? "—";
-                            if (!ellipse || typeof raw !== "string") return raw;
-                            const words = raw.trim().split(/\s+/);
-                            return words.length > ellipse
-                              ? words.slice(0, ellipse).join(" ") + "…"
-                              : raw;
+                            const text = (() => {
+                              if (!ellipse || typeof raw !== "string") return raw;
+                              const words = raw.trim().split(/\s+/);
+                              return words.length > ellipse
+                                ? words.slice(0, ellipse).join(" ") + "…"
+                                : raw;
+                            })();
+
+                            // ── userProfile avatar prefix ──
+                            if (userProfile && col.key === userProfile) {
+                              const photoUrl = row.photoUrl ?? null;
+                              return (
+                                <div className="flex items-center gap-2.5">
+                                  <UserAvatar
+                                    name={String(raw)}
+                                    src={photoUrl}
+                                    size={28}
+                                    rounded="rounded-lg"
+                                    onClick={photoUrl
+                                      ? (e) => { e.stopPropagation(); window.open(photoUrl, "_blank"); }
+                                      : undefined
+                                    }
+                                  />
+                                  <span>{text}</span>
+                                </div>
+                              );
+                            }
+
+                            return text;
                           })()}
                         </td>
                       );
@@ -3375,36 +3405,29 @@ export const ModalProfile = ({
   subtitle = "",
   meta = "",
   avatarColor = "#2a465a",
-}) => {
-  const initials = name
-    .split(" ")
-    .filter(Boolean)
-    .map((n) => n[0].toUpperCase())
-    .slice(0, 2)
-    .join("");
-
-  return (
-    <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-      {/* Avatar */}
-      <div
-        className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-black flex-shrink-0 select-none"
-        style={{ background: avatarColor }}
-      >
-        {initials}
-      </div>
-      {/* Info */}
-      <div className="min-w-0">
-        <p className="text-lg font-bold text-[#2a465a] leading-tight truncate">{name}</p>
-        {subtitle && (
-          <p className="text-sm text-slate-500 mt-0.5 truncate">{subtitle}</p>
-        )}
-        {meta && (
-          <p className="text-xs text-slate-400 mt-0.5 truncate">{meta}</p>
-        )}
-      </div>
+  photoUrl,           // optional photo URL — passed to UserAvatar
+}) => (
+  <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+    {/* Avatar — photo if available, else coloured initials */}
+    <UserAvatar
+      name={name}
+      src={photoUrl}
+      size={56}
+      rounded="rounded-2xl"
+      onClick={photoUrl ? () => window.open(photoUrl, "_blank") : undefined}
+    />
+    {/* Info */}
+    <div className="min-w-0">
+      <p className="text-lg font-bold text-[#2a465a] leading-tight truncate">{name}</p>
+      {subtitle && (
+        <p className="text-sm text-slate-500 mt-0.5 truncate">{subtitle}</p>
+      )}
+      {meta && (
+        <p className="text-xs text-slate-400 mt-0.5 truncate">{meta}</p>
+      )}
     </div>
-  );
-};
+  </div>
+);
 
 /*
   ── HOW TO USE ModalProfile ─────────────────────────────────────────────────

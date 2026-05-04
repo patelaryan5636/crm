@@ -120,8 +120,9 @@ const MENUS = {
       {
         label: "Sales",
         items: [
-          { name: "Leads",        path: "/sales-manager/leads",       icon: Target },
-          { name: "Teams",        path: "/sales-manager/teams",       icon: Users },
+          { name: "Leads",     path: "/sales-manager/leads",     icon: Target },
+          { name: "Teams",     path: "/sales-manager/teams",     icon: Users  },
+          { name: "Employees", path: "/sales-manager/employees", icon: UserCheck },
         ],
       },
       {

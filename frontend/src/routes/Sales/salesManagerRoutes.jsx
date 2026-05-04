@@ -16,6 +16,7 @@ import HRMLayout from "../../pages/sales/salesManager/HRM/HrmLayout";
 import LoginLogs from "../../pages/sales/salesManager/LoginLogs/LoginLogs";
 import ReportLayout from "../../pages/sales/salesManager/Reports/ReportLayout";
 import AnnouncementLayout from "../../pages/sales/salesManager/Announcements/AnnouncementLayout";
+import Employees from "../../pages/sales/salesManager/Employees/Employees";
 
 function SalesManagerRoutes() {
   return (
@@ -46,7 +47,10 @@ function SalesManagerRoutes() {
         {/* Login Logs — /sales-manager/logs */}
         <Route path="logs" element={<LoginLogs />} />
 
-        {/* Self Report — /sales-manager/self-report */}
+        {/* Employees — /sales-manager/employees */}
+        <Route path="employees" element={<Employees />} />
+
+        {/* Reports — /sales-manager/reports */}
         <Route path="reports" element={<ReportLayout />} />
       </Route>
     </Routes>

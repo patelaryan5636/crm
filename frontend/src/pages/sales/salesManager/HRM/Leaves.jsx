@@ -255,6 +255,7 @@ export default function Leaves() {
       {/* ── Pending Leaves ─────────────────────────────────────────────────── */}
       <DataTable
         title="Pending Leaves"
+        userProfile="name"
         columns={PENDING_COLS}
         rows={pending}
         actions={pendingActions}
@@ -274,6 +275,7 @@ export default function Leaves() {
       {/* ── Leave History ───────────────────────────────────────────────────── */}
       <DataTable
         title="Leave History"
+        userProfile={"name"}
         columns={HISTORY_COLS}
         rows={history}
         actions={historyActions}

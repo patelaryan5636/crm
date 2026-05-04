@@ -135,7 +135,7 @@ const MENUS = {
         items: [
           { name: "HRM",           path: "/sales-manager/hrm",           icon: ClipboardList },
           { name: "Support",       path: "/sales-manager/support",       icon: LifeBuoy },
-          { name: "Communication", path: "/sales-manager/communication", icon: MessageSquare },
+          { name: "Announcements", path: "/sales-manager/announcements", icon: MessageSquare },
           { name: "Logs",          path: "/sales-manager/logs",          icon: History },
           { name: "Reports",       path: "/sales-manager/reports",       icon: BarChart2 },
         ],

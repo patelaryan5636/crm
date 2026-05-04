@@ -837,6 +837,9 @@ function ActionButton({ action, row, isIconOnly, actionVariantCls }) {
   const [tipPos, setTipPos] = useState(null);
   const btnRef = useRef(null);
 
+  // Support per-row visibility: action.show can be a function (row) => bool
+  if (action.show && !action.show(row)) return null;
+
   const showTip = () => {
     if (!isIconOnly || !action.tooltip) return;
     const rect = btnRef.current?.getBoundingClientRect();

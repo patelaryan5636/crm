@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import SalesManagerDashboard from "../../pages/sales/salesManager/Dashboard";
 import SalesTeams from "../../pages/sales/salesManager/Teams";
-import Communication from "../../pages/sales/salesManager/Communication";
 
 // Leads section — layout + sub-pages
 import LeadsLayout from "../../pages/sales/salesManager/leads/LeadsLayout";
@@ -14,9 +13,10 @@ import DumpData from "../../pages/sales/salesManager/leads/DumpData";
 import PerformanceLayout from "../../pages/sales/salesManager/perfomance/PerfomanceLayout";
 import SupportLayout from "../../pages/sales/salesManager/Support/SupportLayout";
 import HRMLayout from "../../pages/sales/salesManager/HRM/HrmLayout";
-import CommunicationLayout from "../../pages/sales/salesManager/Communication/CommunicationLayout";
 import LoginLogs from "../../pages/sales/salesManager/LoginLogs/LoginLogs";
-import Report from "../../pages/sales/salesManager/Reports/Reports";
+import ReportLayout from "../../pages/sales/salesManager/Reports/ReportLayout";
+import AnnouncementLayout from "../../pages/sales/salesManager/Announcements/AnnouncementLayout";
+import Employees from "../../pages/sales/salesManager/Employees/Employees";
 
 function SalesManagerRoutes() {
   return (
@@ -24,7 +24,6 @@ function SalesManagerRoutes() {
       <Route element={<MainLayout />}>
         <Route index element={<SalesManagerDashboard />} />
         <Route path="teams" element={<SalesTeams/>} />
-        <Route path="communication" element={<Communication />} />
 
         {/* Leads section — nested under /sales-manager/leads */}
         <Route path="leads" element={<LeadsLayout />}>
@@ -43,13 +42,16 @@ function SalesManagerRoutes() {
         <Route path="hrm" element={<HRMLayout />} />
 
         {/* Communication — /sales-manager/communication */}
-        <Route path="communication" element={<CommunicationLayout />} />
+        <Route path="announcements" element={<AnnouncementLayout />} />
 
         {/* Login Logs — /sales-manager/logs */}
         <Route path="logs" element={<LoginLogs />} />
 
-        {/* Self Report — /sales-manager/self-report */}
-        <Route path="reports" element={<Report />} />
+        {/* Employees — /sales-manager/employees */}
+        <Route path="employees" element={<Employees />} />
+
+        {/* Reports — /sales-manager/reports */}
+        <Route path="reports" element={<ReportLayout />} />
       </Route>
     </Routes>
   );

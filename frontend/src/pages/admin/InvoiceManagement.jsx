@@ -7,8 +7,6 @@ import autoTable from 'jspdf-autotable';
 export default function InvoiceManagement({ isEmbedded }) {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [newInvoice, setNewInvoice] = useState({ client: '', amount: '' });
-  const [filterClient, setFilterClient] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
 
   const rawInvoices = [
     { idText: 'INV-2023-001', client: 'Acme Corp', date: 'Oct 24, 2023', amount: '1,200.00', status: 'Paid' },
@@ -30,14 +28,6 @@ export default function InvoiceManagement({ isEmbedded }) {
     ...inv,
     status: inv.status === 'Paid' ? 'Paid' : inv.status === 'Pending' ? 'Pending' : 'Unpaid'
   }));
-
-  const filteredInvoices = invoices.filter(inv => {
-    let matchesClient = true;
-    let matchesStatus = true;
-    if (filterClient) matchesClient = inv.client.toLowerCase().includes(filterClient.toLowerCase());
-    if (filterStatus) matchesStatus = inv.status === filterStatus;
-    return matchesClient && matchesStatus;
-  });
 
   const handleViewInvoice = (invoice) => {
     setSelectedInvoice(invoice);
@@ -96,40 +86,7 @@ export default function InvoiceManagement({ isEmbedded }) {
       `}</style>
 
       <div className="flex flex-col gap-4 mb-6 w-full">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-4 bg-white border border-slate-200 p-3 rounded-xl shadow-sm">
-            <div className="flex flex-col">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 ml-1">Filter by Client</label>
-              <input
-                type="text"
-                placeholder="Client Name..."
-                value={filterClient}
-                onChange={e => setFilterClient(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 w-full sm:w-auto"
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 ml-1">Filter by Status</label>
-              <select
-                value={filterStatus}
-                onChange={e => setFilterStatus(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 w-full sm:w-auto min-w-[150px]"
-              >
-                <option value="">All Statuses</option>
-                <option value="Paid">Paid</option>
-                <option value="Pending">Pending</option>
-                <option value="Unpaid">Unpaid</option>
-              </select>
-            </div>
-            {(filterClient || filterStatus) && (
-              <button
-                onClick={() => { setFilterClient(''); setFilterStatus(''); }}
-                className="mt-4 text-xs text-rose-500 hover:text-rose-600 transition-colors font-semibold px-2"
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
+        <div className="flex justify-end gap-4">
           <div className="flex items-center gap-3 w-full md:w-auto">
             <Button variant="primary" text="Create Invoice" onClick={() => openModal('create-invoice-modal')} />
           </div>
@@ -141,7 +98,7 @@ export default function InvoiceManagement({ isEmbedded }) {
           <DataTable
             title="All Invoices"
             columns={columns}
-            rows={filteredInvoices}
+            rows={invoices}
             actions={[
               { icon: <Eye size={16} />, tooltip: "View", variant: "ghost", onClick: (row) => handleViewInvoice(row) },
               { icon: <Download size={16} />, tooltip: "Download", variant: "primary", onClick: (row) => handleDownloadInvoice(row) }
@@ -151,6 +108,10 @@ export default function InvoiceManagement({ isEmbedded }) {
             hideTopBar={false}
             hidePagination={true}
             searchable={true}
+            filters={[
+              { title: "Client", key: "client", type: "text" },
+              { title: "Status", key: "status", type: "select", options: ["Paid", "Pending", "Unpaid"] }
+            ]}
           />
         </div>
       </DashGrid>

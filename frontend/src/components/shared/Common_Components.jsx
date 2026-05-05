@@ -839,7 +839,9 @@ function ActionButton({ action, row, isIconOnly, actionVariantCls }) {
   const btnRef = useRef(null);
 
   // Support per-row visibility: action.show can be a function (row) => bool
-  if (action.show && !action.show(row)) return null;
+  if (action.show && !action.show(row)) {
+    return <div className={isIconOnly ? "w-8 h-8 flex-shrink-0" : "px-3 py-1.5 flex-shrink-0"} />;
+  }
 
   const showTip = () => {
     if (!isIconOnly || !action.tooltip) return;
@@ -1451,6 +1453,18 @@ export const DataTable = ({
                         <Option key={opt} value={opt} label={opt} />
                       ))}
                     </Select>
+                  )}
+
+                  {/* ── DATE: input ── */}
+                  {f.type === "date" && (
+                    <input
+                      type="date"
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 transition-all text-slate-500"
+                      value={filterValues[f.title] ?? ""}
+                      onChange={(e) =>
+                        setFilterValues((prev) => ({ ...prev, [f.title]: e.target.value }))
+                      }
+                    />
                   )}
 
                   {/* ── TEXT: plain input (default) ── */}

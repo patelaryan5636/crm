@@ -27,8 +27,8 @@ const MOCK_PROSPECTS = [
   },
   {
     id: "2", name: "Priya Singh", phone: "9123456789", email: "priya.s@example.com",
-    company: "Global Trade LLC", city: "Delhi", source: "Referral", status: "Untouched",
-    priority: "Medium", dealValue: "1,20,000", followUpDate: "2026-05-05", followUpTime: "10:00",
+    company: "Global Trade LLC", city: "Delhi", source: "Referral", status: "Not Talk (Untouched)",
+    priority: "Medium", dealValue: "0", followUpDate: "2026-05-05", followUpTime: "10:00",
     assignedTo: "John Doe (You)",
     activities: [
       { id: 1, icon: "check", color: "text-slate-500", bg: "bg-slate-200", title: "Lead Created", desc: "Lead acquired via Referral.", date: "Yesterday, 11:00 AM" },
@@ -86,12 +86,12 @@ const MOCK_PROSPECTS = [
 ];
 
 const STATUS_COLORS = {
-  Interested:       "bg-purple-100 text-purple-700",
-  Untouched:        "bg-slate-100 text-slate-600",
-  Talk:             "bg-blue-100 text-blue-700",
-  "Not Interested": "bg-rose-100 text-rose-700",
-  Won:              "bg-emerald-100 text-emerald-700",
-  Lost:             "bg-red-100 text-red-700",
+  Interested:             "bg-purple-100 text-purple-700",
+  "Not Talk (Untouched)": "bg-slate-100 text-slate-600",
+  Talk:                   "bg-blue-100 text-blue-700",
+  "Not Interested":       "bg-rose-100 text-rose-700",
+  Won:                    "bg-emerald-100 text-emerald-700",
+  Lost:                   "bg-red-100 text-red-700",
 };
 
 const PRIORITY_DOT = {
@@ -121,17 +121,17 @@ const fmtTime = (t) => {
 
 // ── Status config — colors for card accent, avatar bg, strip ─────────────────
 const STATUS_CARD_CFG = {
-  Interested:       { strip: "bg-purple-500",  avatar: "bg-purple-100 text-purple-700",  ring: "hover:border-purple-300" },
-  Talk:             { strip: "bg-blue-500",    avatar: "bg-blue-100 text-blue-700",      ring: "hover:border-blue-300"   },
-  "Not Interested": { strip: "bg-rose-400",    avatar: "bg-rose-100 text-rose-700",      ring: "hover:border-rose-300"   },
-  Untouched:        { strip: "bg-slate-400",   avatar: "bg-slate-100 text-slate-600",    ring: "hover:border-slate-300"  },
-  Won:              { strip: "bg-emerald-500", avatar: "bg-emerald-100 text-emerald-700",ring: "hover:border-emerald-300"},
-  Lost:             { strip: "bg-red-400",     avatar: "bg-red-100 text-red-700",        ring: "hover:border-red-300"    },
+  Interested:             { strip: "bg-purple-500",  avatar: "bg-purple-100 text-purple-700",  ring: "hover:border-purple-300" },
+  Talk:                   { strip: "bg-blue-500",    avatar: "bg-blue-100 text-blue-700",      ring: "hover:border-blue-300"   },
+  "Not Interested":       { strip: "bg-rose-400",    avatar: "bg-rose-100 text-rose-700",      ring: "hover:border-rose-300"   },
+  "Not Talk (Untouched)": { strip: "bg-slate-400",   avatar: "bg-slate-100 text-slate-600",    ring: "hover:border-slate-300"  },
+  Won:                    { strip: "bg-emerald-500", avatar: "bg-emerald-100 text-emerald-700",ring: "hover:border-emerald-300"},
+  Lost:                   { strip: "bg-red-400",     avatar: "bg-red-100 text-red-700",        ring: "hover:border-red-300"    },
 };
 
 // ── Prospect Card ─────────────────────────────────────────────────────────────
 const ProspectCard = ({ prospect, onView, onEdit, index }) => {
-  const cfg = STATUS_CARD_CFG[prospect.status] || STATUS_CARD_CFG.Untouched;
+  const cfg = STATUS_CARD_CFG[prospect.status] || STATUS_CARD_CFG["Not Talk (Untouched)"];
   return (
     <div
       onClick={() => onView(prospect)}
@@ -174,7 +174,7 @@ const ProspectCard = ({ prospect, onView, onEdit, index }) => {
         <div className="flex items-center justify-between pt-3 border-t border-slate-100">
           <div>
             <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Deal Value</p>
-            <p className="text-sm font-black text-[#1a2e3f]">₹ {prospect.dealValue}</p>
+            <p className="text-sm font-black text-[#1a2e3f]">{prospect.dealValue && prospect.dealValue !== "0" ? `₹ ${prospect.dealValue}` : "-"}</p>
           </div>
           <div className="text-right">
             <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Follow-up</p>
@@ -230,11 +230,11 @@ const ProspectList = () => {
   const notInterested = prospects.filter(p => p.status === "Not Interested").length;
   const won           = prospects.filter(p => p.status === "Won").length;
 
-  const STATUS_TABS = ["All", "Untouched", "Talk", "Interested", "Won", "Lost", "Not Interested"];
+  const STATUS_TABS = ["All", "Talk", "Not Talk (Untouched)", "Interested", "Not Interested"];
   const filtered = prospects.filter(p => {
     const q = search.toLowerCase();
     const matchSearch = p.name.toLowerCase().includes(q) || p.phone.includes(q) || p.company.toLowerCase().includes(q);
-    const matchStatus = statusFilter === "All" || p.status === statusFilter;
+    const matchStatus = statusFilter === "All" || p.status === statusFilter || (!STATUS_TABS.includes(p.status) && statusFilter === "All");
     return matchSearch && matchStatus;
   });
 
@@ -251,18 +251,21 @@ const ProspectList = () => {
         <EnhancedDashCard title="NOT INTERESTED"  value={String(notInterested)} icon={<AlertCircle size={20} />} accentColor="#f43f5e" size={3} />
       </DashGrid>
 
-      {/* ── Search + Status tabs ── */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-        <div className="relative flex-1 max-w-xs">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input type="text" placeholder="Search name, phone, company…" value={search}
+      <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center w-full">
+        <div className="relative flex-1 max-w-sm w-full">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input type="text" placeholder="Search name, phone, company..." value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-400 transition" />
+            className="w-full pl-10 pr-4 py-2 text-[13px] font-medium rounded-full border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2e3f]/20 focus:border-[#1a2e3f]/40 transition text-[#1a2e3f] placeholder:text-slate-400" />
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mb-1 xl:pb-0 xl:mb-0 max-w-full">
           {STATUS_TABS.map(s => (
             <button key={s} onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${statusFilter === s ? "bg-[#1a2e3f] text-white shadow-sm" : "bg-white border border-slate-200 text-slate-500 hover:border-slate-300"}`}>
+              className={`px-4 py-2 rounded-full text-[13px] font-bold whitespace-nowrap transition-all flex-shrink-0 ${
+                statusFilter === s 
+                  ? "bg-[#1a2e3f] text-white shadow-md border-transparent" 
+                  : "bg-white border border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 hover:bg-slate-50"
+              }`}>
               {s}
             </button>
           ))}
@@ -319,7 +322,7 @@ const ProspectList = () => {
               <div className="relative mt-4 bg-white/10 border border-white/15 rounded-xl px-4 py-2.5 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-white/60 font-semibold uppercase tracking-wider">Deal Value</p>
-                  <p className="text-xl font-black text-white mt-0.5">₹ {selectedProspect.dealValue}</p>
+                  <p className="text-xl font-black text-white mt-0.5">{selectedProspect.dealValue && selectedProspect.dealValue !== "0" ? `₹ ${selectedProspect.dealValue}` : "-"}</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   <IndianRupee size={18} className="text-white/80" />
@@ -360,7 +363,7 @@ const ProspectList = () => {
                 <ModalData label="Company"     value={selectedProspect.company} />
                 <ModalData label="City"        value={selectedProspect.city} />
                 <ModalData label="Assigned To" value={selectedProspect.assignedTo} />
-                <ModalData label="Deal Value"  value={`₹ ${selectedProspect.dealValue}`} />
+                <ModalData label="Deal Value"  value={selectedProspect.dealValue && selectedProspect.dealValue !== "0" ? `₹ ${selectedProspect.dealValue}` : "-"} />
               </ModalGrid>
 
               {/* Follow-up */}

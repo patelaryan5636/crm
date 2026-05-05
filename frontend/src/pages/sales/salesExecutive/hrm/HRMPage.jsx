@@ -395,30 +395,26 @@ export default function HRMPage() {
 
       {/* ── Summary Cards — compact, single row ── */}
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {Array(5).fill(0).map((_, i) => <Sk key={i} className="h-20" />)}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          {Array(5).fill(0).map((_, i) => <Sk key={i} className="h-[120px]" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {[
-            { label: "Working Days",     value: totalWorkingDays, icon: <CalendarDays size={18} />, accent: "#38bdf8", bg: "bg-sky-500/10",     text: "text-sky-400"     },
-            { label: "Present",          value: presentDays,      icon: <CheckCircle2 size={18} />, accent: "#22c55e", bg: "bg-emerald-500/10", text: "text-emerald-400" },
-            { label: "Absent",           value: absentDays,       icon: <XCircle size={18} />,      accent: "#f43f5e", bg: "bg-rose-500/10",    text: "text-rose-400"    },
-            { label: "Leaves Taken",     value: leavesTaken,      icon: <Palmtree size={18} />,     accent: "#f59e0b", bg: "bg-amber-500/10",   text: "text-amber-400"   },
-            { label: "Remaining Leaves", value: remainingLeaves,  icon: <CalendarCheck size={18} />,accent: "#8b5cf6", bg: "bg-violet-500/10",  text: "text-violet-400"  },
-          ].map(({ label, value, icon, accent, bg, text }) => (
-            <div key={label}
-              className="bg-gradient-to-br from-[#1e3448] to-[#243f55] rounded-2xl border border-white/8 shadow-md p-3.5 flex items-center gap-3 hover:scale-[1.02] transition-transform duration-200">
-              <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center flex-shrink-0`}
-                style={{ color: accent }}>
-                {icon}
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 truncate">{label}</p>
-                <p className="text-2xl font-black text-white leading-tight">{value}</p>
-              </div>
-            </div>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="w-full">
+            <EnhancedDashCard title="WORKING DAYS" value={String(totalWorkingDays)} icon={<CalendarDays size={22} />} accentColor="#38bdf8" size={12} />
+          </div>
+          <div className="w-full">
+            <EnhancedDashCard title="PRESENT" value={String(presentDays)} icon={<CheckCircle2 size={22} />} accentColor="#22c55e" size={12} />
+          </div>
+          <div className="w-full">
+            <EnhancedDashCard title="ABSENT" value={String(absentDays)} icon={<XCircle size={22} />} accentColor="#f43f5e" size={12} />
+          </div>
+          <div className="w-full">
+            <EnhancedDashCard title="LEAVES TAKEN" value={String(leavesTaken)} icon={<Palmtree size={22} />} accentColor="#f59e0b" size={12} />
+          </div>
+          <div className="w-full">
+            <EnhancedDashCard title="REMAINING LEAVES" value={String(remainingLeaves)} icon={<CalendarCheck size={22} />} accentColor="#8b5cf6" size={12} />
+          </div>
         </div>
       )}
 

@@ -5,7 +5,7 @@ import {
   AlertTriangle, X, Bell, Search,
 } from "lucide-react";
 import {
-  Heading, GAreaChart, GPieChart, GBarChart, EnhancedDashCard,
+  Heading, GAreaChart, GPieChart, GBarChart, EnhancedDashCard, DashGrid, SelectField, Option, DataField, DataTable, Button
 } from "../../../../components/shared/Common_Components";
 import { paymentService } from "../../../../services/paymentService";
 import PaymentDetailsPanel from "./PaymentDetailsPanel";
@@ -61,6 +61,7 @@ const ErrorBanner = ({ message, onRetry }) => (
 export default function PaymentsPage() {
   // Data
   const [payments, setPayments]         = useState([]);
+  const [allPayments, setAllPayments]   = useState([]);
   const [kpis, setKpis]                 = useState(null);
   const [revenueTrend, setRevenueTrend] = useState([]);
 
@@ -96,16 +97,14 @@ export default function PaymentsPage() {
     if (!silent) setLoading(true);
     setError("");
     try {
-      const res = await paymentService.getPayments({
-        status: statusFilter, mode: modeFilter, search,
-      });
+      const res = await paymentService.getPayments({});
       setPayments(res.data);
     } catch {
       setError("Failed to load payments. Check your connection.");
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [statusFilter, modeFilter, search]);
+  }, []);
 
   // ── Fetch KPIs + charts ────────────────────────────────────────────────────
   const fetchMeta = useCallback(async (silent = false) => {
@@ -200,28 +199,8 @@ export default function PaymentsPage() {
     }
   };
 
-  // ── Filters ───────────────────────────────────────────────────────────────
-  const applyFilters = () => fetchPayments();
+  // ── Filters (Handled via DataTable) ───────────────────────────────────────
 
-  const resetFilters = async () => {
-    setStatusFilter("");
-    setModeFilter("");
-    setSearch("");
-    setDateRange("all");
-    // Fetch directly with empty params — bypasses stale closure in fetchPayments
-    setLoading(true);
-    setError("");
-    try {
-      const res = await paymentService.getPayments({});
-      setPayments(res.data);
-    } catch {
-      setError("Failed to load payments.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ── Chart data ────────────────────────────────────────────────────────────
   const PIE_COLOR_MAP = { Success: "#10b981", Failed: "#f43f5e", Pending: "#f59e0b" };
   const allStatusData = [
     { name: "Success", value: payments.filter(p => p.status === "Success").length },
@@ -253,67 +232,7 @@ export default function PaymentsPage() {
         </button>
       </div>
 
-      {/* ── STEP 1: Filters ── */}
-      <div className="bg-white rounded-xl border-2 border-slate-200 shadow-sm p-4">
-        <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-100">
-          <Filter size={13} className="text-[#1a2e3f]" />
-          <span className="text-xs font-bold uppercase tracking-widest text-[#1a2e3f]">Filters</span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="border border-slate-200 rounded-lg p-2.5 bg-slate-50/50">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Date Range</label>
-            <select value={dateRange} onChange={e => setDateRange(e.target.value)}
-              className="w-full px-2 py-1.5 text-sm rounded-md border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-400 transition">
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="custom">Custom</option>
-            </select>
-          </div>
-          <div className="border border-slate-200 rounded-lg p-2.5 bg-slate-50/50">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Status</label>
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-              className="w-full px-2 py-1.5 text-sm rounded-md border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-400 transition">
-              <option value="">All</option>
-              <option value="Success">✅ Success</option>
-              <option value="Failed">❌ Failed</option>
-              <option value="Pending">⏳ Pending</option>
-            </select>
-          </div>
-          <div className="border border-slate-200 rounded-lg p-2.5 bg-slate-50/50">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Mode</label>
-            <select value={modeFilter} onChange={e => setModeFilter(e.target.value)}
-              className="w-full px-2 py-1.5 text-sm rounded-md border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-400 transition">
-              <option value="">All</option>
-              <option value="UPI">🔵 UPI</option>
-              <option value="Card">💳 Card</option>
-              <option value="Cash">💵 Cash</option>
-              <option value="Bank Transfer">🏦 Bank Transfer</option>
-            </select>
-          </div>
-          <div className="border border-slate-200 rounded-lg p-2.5 bg-slate-50/50">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Search</label>
-            <div className="relative">
-              <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input type="text" placeholder="Client / TXN ID…" value={search}
-                onChange={e => setSearch(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && applyFilters()}
-                className="w-full pl-6 pr-2 py-1.5 text-sm rounded-md border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-400 transition" />
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
-          <button onClick={applyFilters}
-            className="px-4 py-2 rounded-lg bg-[#1a2e3f] text-white text-xs font-bold hover:bg-[#2a465a] transition-colors">
-            Apply Filters
-          </button>
-          <button onClick={resetFilters}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-colors">
-            <RotateCcw size={11} /> Reset
-          </button>
-        </div>
-      </div>
+
 
       {/* ── STEP 2: KPI Cards (EnhancedDashCard) ── */}
       {chartsError && <ErrorBanner message={chartsError} onRetry={fetchMeta} />}
@@ -363,89 +282,164 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      {/* ── All Transactions — simple table, no scrollbar ── */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm mb-6 min-w-0">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-          <h3 className="text-sm font-bold text-[#1a2e3f]">All Transactions</h3>
-          <span className="text-xs text-slate-400">{payments.length} records</span>
-        </div>
 
-        {error && <div className="p-4"><ErrorBanner message={error} onRetry={fetchPayments} /></div>}
 
+
+
+      {/* ── All Transactions — using shared DataTable ── */}
+      <div className="mb-6">
+        {error && <div className="mb-4"><ErrorBanner message={error} onRetry={fetchPayments} /></div>}
+        
         {loading ? (
-          <div className="p-4 space-y-2">
-            {Array(6).fill(0).map((_, i) => <Sk key={i} className="h-9" />)}
+          <div className="p-4 space-y-2 bg-white rounded-xl border border-slate-200">
+            {Array(6).fill(0).map((_, i) => <Sk key={i} className="h-10" />)}
           </div>
         ) : payments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-col items-center justify-center py-10 text-slate-400">
             <IndianRupee size={28} className="mb-2 opacity-30" />
             <p className="text-xs font-medium">No transactions found</p>
           </div>
         ) : (
-          <table className="w-full table-fixed text-xs border-collapse">
-            <colgroup>
-              <col style={{ width: "15%" }} />  {/* Txn ID */}
-              <col style={{ width: "17%" }} />  {/* Client */}
-              <col style={{ width: "13%" }} />  {/* Amount */}
-              <col style={{ width: "11%" }} />  {/* Status */}
-              <col style={{ width: "15%" }} />  {/* Mode */}
-              <col style={{ width: "19%" }} />  {/* Date */}
-              <col style={{ width: "10%" }} />  {/* Actions */}
-            </colgroup>
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-3 py-2.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wide">Txn ID</th>
-                <th className="px-3 py-2.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wide">Client</th>
-                <th className="px-3 py-2.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wide">Amount</th>
-                <th className="px-3 py-2.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wide">Status</th>
-                <th className="px-3 py-2.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wide">Mode</th>
-                <th className="px-3 py-2.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wide">Date & Time</th>
-                <th className="px-3 py-2.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {payments.map((p, i) => (
-                <tr key={p.id}
-                  className={`border-b border-slate-100 last:border-0 transition-colors
-                    ${p.status === "Failed" ? "bg-rose-50/40" : i % 2 === 0 ? "bg-white" : "bg-slate-50/30"}
-                    hover:bg-sky-50/30`}>
-                  <td className="px-3 py-2.5 font-mono text-[11px] font-bold text-[#1a2e3f] truncate">{p.id}</td>
-                  <td className="px-3 py-2.5 font-medium text-[#1a2e3f] truncate">{p.clientName}</td>
-                  <td className="px-3 py-2.5 font-bold text-emerald-700 truncate">{fmt(p.amount)}</td>
-                  <td className="px-3 py-2.5">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold leading-tight ${STATUS_BADGE[p.status] || "bg-slate-100 text-slate-600"}`}>
-                      {p.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5 text-slate-600 truncate">{MODE_ICON[p.mode] || ""} {p.mode}</td>
-                  <td className="px-3 py-2.5 text-slate-500 truncate">{fmtDate(p.date)}</td>
-                  <td className="px-3 py-2.5">
-                    <div className="flex items-center gap-1.5">
-                      <button onClick={() => setSelectedPayment(p)} title="View Details"
-                        className="p-1.5 rounded-md bg-slate-100 hover:bg-sky-100 text-slate-500 hover:text-sky-600 transition-colors">
-                        <Eye size={13} />
-                      </button>
-                      <button onClick={() => handleDownload(p)} title="Download Invoice"
-                        className="p-1.5 rounded-md bg-slate-100 hover:bg-emerald-100 text-slate-500 hover:text-emerald-600 transition-colors">
-                        <Download size={13} />
-                      </button>
-                      <button
-                        onClick={() => p.status === "Failed" && handleRetry(p)}
-                        disabled={p.status !== "Failed" || retrying === p.id}
-                        title={p.status === "Failed" ? "Retry Payment" : "Retry (only for failed)"}
-                        className={`p-1.5 rounded-md transition-colors
-                          ${p.status === "Failed"
-                            ? "bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700"
-                            : "bg-slate-50 text-slate-300 cursor-not-allowed"
-                          } disabled:opacity-50`}>
-                        <RefreshCw size={13} className={retrying === p.id ? "animate-spin" : ""} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          // 🔥 ONLY IMPORTANT PART REPLACE (DataTable SECTION)
+
+<DataTable
+  title={`All Transactions (${payments.length} records)`}
+  columns={[
+    {
+      key: "id",
+      label: "Txn ID",
+      render: (row) => (
+        <span className="font-mono text-[11px] font-bold text-[#1a2e3f] min-w-[80px] block">
+          {row.id}
+        </span>
+      ),
+    },
+    {
+      key: "clientName",
+      label: "Client",
+      render: (row) => (
+        <span className="font-medium text-[#1a2e3f] min-w-[100px] block">
+          {row.clientName}
+        </span>
+      ),
+    },
+    {
+      key: "amount",
+      label: "Amount",
+      render: (row) => (
+        <span className="font-bold text-emerald-700 min-w-[80px] block">
+          ₹{row.amount}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (row) => (
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+          row.status === "Success"
+            ? "bg-emerald-100 text-emerald-700"
+            : row.status === "Failed"
+            ? "bg-rose-100 text-rose-700"
+            : "bg-amber-100 text-amber-700"
+        }`}>
+          {row.status}
+        </span>
+      ),
+    },
+    {
+      key: "mode",
+      label: "Mode",
+      render: (row) => (
+        <span className="text-slate-600 min-w-[100px] block">
+          {row.mode}
+        </span>
+      ),
+    },
+    {
+      key: "date",
+      label: "Date & Time",
+      render: (row) => (
+        <span className="text-slate-500 whitespace-nowrap min-w-[130px] block">
+          {fmtDate(row.date)}
+        </span>
+      ),
+    },
+  ]}
+
+  rows={payments}
+
+  filters={[
+    {
+      title: "Date Range",
+      type: "select",
+      options: ["All", "All Time", "Today", "This Week", "This Month", "Custom"],
+      fn: (row, val) => {
+        if (!val || val === "All" || val === "All Time") return true;
+
+        const d = new Date(row.date);
+        const today = new Date();
+
+        if (val === "Today") return d.toDateString() === today.toDateString();
+
+        if (val === "This Week") {
+          const firstDay = new Date();
+          firstDay.setDate(today.getDate() - today.getDay());
+          const lastDay = new Date(firstDay);
+          lastDay.setDate(firstDay.getDate() + 6);
+          return d >= firstDay && d <= lastDay;
+        }
+
+        if (val === "This Month") {
+          return (
+            d.getMonth() === today.getMonth() &&
+            d.getFullYear() === today.getFullYear()
+          );
+        }
+
+        return true;
+      },
+    },
+    {
+      title: "Status",
+      type: "select",
+      options: ["All", "Success", "Pending", "Failed"],
+      fn: (row, val) => (!val || val === "All") ? true : row.status === val,
+    },
+    {
+      title: "Mode",
+      type: "select",
+      options: ["All", "UPI", "Card", "Cash", "Bank Transfer"],
+      fn: (row, val) => (!val || val === "All") ? true : row.mode === val,
+    },
+  ]}
+
+  pageSize={10}
+
+  actions={[
+  {
+    icon: <Eye size={14} />,
+    tooltip: "View",
+    onClick: (row) => setSelectedPayment(row),
+    variant: "ghost",
+    show: () => true,
+  },
+  {
+    icon: <Download size={14} />,
+    tooltip: "Download",
+    onClick: (row) => handleDownload(row),
+    variant: "ghost",
+    show: () => true,
+  },
+  {
+    icon: <RefreshCw size={14} />,
+    tooltip: "Retry Payment",
+    onClick: (row) => handleRetry(row),
+    variant: "ghost",
+    show: (row) => row.status === "Failed",
+  },
+]}
+/>
         )}
       </div>
 

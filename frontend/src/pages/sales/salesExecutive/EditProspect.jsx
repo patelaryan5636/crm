@@ -7,6 +7,7 @@ import {
   Bell, ArrowLeft, TrendingUp, Sparkles,
 } from "lucide-react";
 import { DataField, SelectField, Option, Button } from "../../../components/shared/Common_Components";
+import DatePicker from "../../../components/shared/DatePicker";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK_DATA = {
@@ -25,7 +26,6 @@ const MOCK_ACTIVITIES = [
 ];
 
 const STATUS_MAP = {
-  Untouched:        { dot: "bg-slate-400",  badge: "bg-slate-100 text-slate-600 border-slate-200"   },
   Talk:             { dot: "bg-blue-500",   badge: "bg-blue-50 text-blue-700 border-blue-200"       },
   Interested:       { dot: "bg-purple-500", badge: "bg-purple-50 text-purple-700 border-purple-200" },
   "Not Interested": { dot: "bg-rose-500",   badge: "bg-rose-50 text-rose-700 border-rose-200"       },
@@ -92,7 +92,7 @@ export default function EditProspect() {
     setToast(true); setTimeout(() => setToast(false), 3000);
   };
 
-  const sCfg = STATUS_MAP[form.status]    || STATUS_MAP.Untouched;
+  const sCfg = STATUS_MAP[form.status]    || STATUS_MAP.Talk;
   const pCfg = PRIORITY_MAP[form.priority] || PRIORITY_MAP.Medium;
 
   return (
@@ -219,7 +219,6 @@ export default function EditProspect() {
                 <div>
                   <SelectField label="Status" id="status" value={form.status}
                     onChange={(e) => onSel("status", e.target.value)} size={12} searchable={false}>
-                    <Option value="Untouched"      label="Untouched" />
                     <Option value="Talk"           label="Talk" />
                     <Option value="Interested"     label="Interested" />
                     <Option value="Won"            label="Won" />
@@ -229,10 +228,17 @@ export default function EditProspect() {
                   {ch("status") && <Modified />}
                 </div>
 
-                <div>
+                <div className="relative">
                   <DataField label="Deal Value (₹)" id="dealValue" type="number" icon={IndianRupee}
-                    value={form.dealValue} onChange={onChange} size={12} className={ring("dealValue")} />
-                  {ch("dealValue") && <Modified />}
+                    value={form.status === "Interested" ? form.dealValue : ""} onChange={onChange} size={12} 
+                    className={form.status !== "Interested" ? "bg-slate-50 cursor-not-allowed opacity-60" : ring("dealValue")}
+                    readOnly={form.status !== "Interested"} disabled={form.status !== "Interested"} />
+                  {form.status !== "Interested" && (
+                    <span className="absolute top-1 right-2 text-[9px] font-bold text-slate-400 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-full pointer-events-none">
+                      Locked
+                    </span>
+                  )}
+                  {form.status === "Interested" && ch("dealValue") && <Modified />}
                 </div>
 
                 <div>
@@ -260,8 +266,8 @@ export default function EditProspect() {
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
 
                 <div>
-                  <DataField label="Follow-up Date" id="followUpDate" type="date" icon={Calendar}
-                    value={form.followUpDate} onChange={onChange} size={12} className={ring("followUpDate")} />
+                  <DatePicker label="Follow-up Date" id="followUpDate"
+                    value={form.followUpDate} onChange={val => onSel("followUpDate", val)} />
                   {ch("followUpDate") && <Modified />}
                 </div>
 

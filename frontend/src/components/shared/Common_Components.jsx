@@ -1,39 +1,54 @@
 /**
- * LineNumber Line
----------- ----
-        // Priyanshu's Components
-        93   ── HOW TO USE InputField ──────────────────────────────────────────────────
-       132   ── HOW TO USE Label ────────────────────────────────────────────────────────
-       190   ── HOW TO USE DataField ────────────────────────────────────────────────────
-       267   ── HOW TO USE Button ───────────────────────────────────────────────────────
-       433   ── HOW TO USE SelectField ──────────────────────────────────────────────────
-       461   ── HOW TO USE Select ───────────────────────────────────────────────────────
-       500   ── HOW TO USE Option ───────────────────────────────────────────────────────
-      1416   ── HOW TO USE DataTable ────────────────────────────────────────────────────
-      1568   ── HOW TO USE Heading ──────────────────────────────────────────────────────
-      1618   ── HOW TO USE HeadingForDataTable ──────────────────────────────────────────
-      1668   ── HOW TO USE Grid ─────────────────────────────────────────────────────────
-      2056   ── HOW TO USE DashCard ─────────────────────────────────────────────────────
-      2136   ── HOW TO USE GLineChart ─────────────────────────────────────────────────── 
-      2228   ── HOW TO USE GBarChart ────────────────────────────────────────────────────
-      2306   ── HOW TO USE GColumnChart ─────────────────────────────────────────────────
-      2409   ── HOW TO USE GAreaChart ───────────────────────────────────────────────────
-      2513   ── HOW TO USE GDoughnutChart ───────────────────────────────────────────────
-      2586   ── HOW TO USE GPieChart ────────────────────────────────────────────────────
-      2663   ── HOW TO USE GRadarChart (Spider / Radar) ─────────────────────────────────
-      2723   ── HOW TO USE DashGrid ─────────────────────────────────────────────────────
-      2911   ── HOW TO USE Modal ────────────────────────────────────────────────────────
-      2975   ── HOW TO USE ModalData ────────────────────────────────────────────────────
-      3028   ── HOW TO USE ModalProfile ─────────────────────────────────────────────────
-      3089   ── HOW TO USE ModalGrid ────────────────────────────────────────────────────
-      3134   ── HOW TO USE P ────────────────────────────────────────────────────────────
-      3210   ── HOW TO USE ToggleButton ──────────────────────────────────────────────────
-
-      // Kartik Yadav's Components
-      3347   ── HOW TO USE EnhancedDashCard ─────────────────────────────────────────────
-      3469   ── HOW TO USE EnhancedModal ────────────────────────────────────────────────
-      3680   ── HOW TO USE EnhancedDataTable ────────────────────────────────────────────
-      3774   ── HOW TO USE PanelModal ───────────────────────────────────────────────────
+ * Common_Components.jsx — Shared UI Component Library
+ * ─────────────────────────────────────────────────────────────────────────────
+ * All reusable components for the CRM project live here.
+ * Import only what you need:
+ *   import { Button, DataTable, Modal } from "../../components/shared/Common_Components";
+ *
+ * ── COMPONENT INDEX (Line Numbers) ───────────────────────────────────────────
+ *
+ *  // ── Priyanshu's Components ──────────────────────────────────────────────
+ *
+ *  Line  122  InputField          — Styled text input with label + icon support
+ *  Line  186  Label               — Standalone form label
+ *  Line  235  DataField           — Full input field (text/textarea/date/etc.) with label
+ *  Line  388  Button              — Action button (primary/secondary/danger/success/ghost)
+ *  Line  495  Select              — Styled native select dropdown
+ *  Line  654  SelectField         — Select with label wrapper
+ *  Line  760  Option              — Option item for Select/SelectField
+ *  Line  914  DataTable           — Full-featured sortable/filterable/exportable table
+ *  Line 1995  Heading             — Section heading with primary + secondary text
+ *  Line 2082  HeadingForDataTable — Compact heading for use inside DashGrid
+ *  Line 2120  Grid                — 12-column CSS grid layout wrapper
+ *  Line 2386  DashCard            — Animated KPI stat card
+ *  Line 2568  GLineChart          — Line chart (Recharts wrapper)
+ *  Line 2655  GBarChart           — Horizontal bar chart (Recharts wrapper)
+ *  Line 2744  GColumnChart        — Vertical column/bar chart (Recharts wrapper)
+ *  Line 2823  GAreaChart          — Area chart (Recharts wrapper)
+ *  Line 2954  GDoughnutChart      — Doughnut chart (Recharts wrapper)
+ *  Line 3029  GPieChart           — Pie chart (Recharts wrapper)
+ *  Line 3099  GRadarChart         — Spider/Radar chart (Recharts wrapper)
+ *  Line 3182  DashGrid            — 12-column grid for dashboard layouts
+ *  Line 3281  openModal           — Imperative: open a Modal by id
+ *  Line 3285  closeModal          — Imperative: close a Modal by id
+ *  Line 3289  Modal               — Animated overlay modal dialog
+ *  Line 3441  ModalData           — Label + value row inside a modal
+ *  Line 3469  ModalProfile        — Avatar + name/subtitle/meta header for modals
+ *  Line 3527  ModalGrid           — Titled grid section inside a modal
+ *  Line 3587  P                   — Paragraph text with size variants
+ *  Line 3620  ToggleButton        — Animated on/off toggle switch
+ *
+ *  // ── Kartik Yadav's Components ────────────────────────────────────────────
+ *
+ *  Line 3736  EnhancedDashCard    — Animated KPI card with wave background
+ *
+ *  // ── Shared Utilities ─────────────────────────────────────────────────────
+ *
+ *  Line 4380  UserChat            — Self-contained chat widget (messages + reply + image attach)
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * HOW TO USE comments are placed directly above each component's export.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
 
@@ -41,6 +56,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import UserAvatar from "./UserAvatar";
+import DatePicker from "./DatePicker";
 import {
   Search,
   ChevronLeft,
@@ -1154,17 +1170,17 @@ export const DataTable = ({
 
   const actionVariantCls = {
     primary: "bg-[#2a465a] text-white hover:bg-[#1e3a52]",
-    danger:  "bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100",
+    danger: "bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100",
     success: "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100",
-    ghost:   "bg-slate-100 text-slate-600 hover:bg-slate-200",
+    ghost: "bg-slate-100 text-slate-600 hover:bg-slate-200",
   };
 
-  // ── CSV Export — exports ALL fields from every row (not just visible columns)
+  // ── CSV Export — exports only the currently filtered/visible rows
   const handleExport = () => {
-    if (!rows.length) return;
+    if (!filtered.length) return;
 
-    // Collect every unique key across all rows (preserves insertion order)
-    const allKeys = [...new Set(rows.flatMap((r) => Object.keys(r)))];
+    // Collect every unique key across filtered rows (preserves insertion order)
+    const allKeys = [...new Set(filtered.flatMap((r) => Object.keys(r)))];
 
     // Build header row using column labels where available, otherwise the raw key
     const keyToLabel = Object.fromEntries(columns.map((c) => [c.key, c.label]));
@@ -1180,7 +1196,7 @@ export const DataTable = ({
 
     const csvLines = [
       header.map(escape).join(","),
-      ...rows.map((row) => allKeys.map((k) => escape(row[k])).join(",")),
+      ...filtered.map((row) => allKeys.map((k) => escape(row[k])).join(",")),
     ];
 
     const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
@@ -1271,7 +1287,7 @@ export const DataTable = ({
             <button
               type="button"
               onClick={handleExport}
-              disabled={rows.length === 0}
+              disabled={filtered.length === 0}
               className="flex items-center gap-1.5 px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-[#2a465a] hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
               title="Export all data as CSV"
             >
@@ -1656,60 +1672,78 @@ export const DataTable = ({
                         // Slate   — neutral / not-respond / unassigned
                         // Rose    — failed / rejected / escalated / dump / overdue / inactive
                         const STATUS_MAP = {
-                          // ── Emerald (positive / done) ──
-                          Completed:      ["bg-emerald-100", "text-emerald-700"],
-                          Converted:      ["bg-emerald-100", "text-emerald-700"],
-                          Done:           ["bg-emerald-100", "text-emerald-700"],
-                          done:           ["bg-emerald-100", "text-emerald-700"],
-                          Active:         ["bg-emerald-100", "text-emerald-700"],
-                          Approved:       ["bg-emerald-100", "text-emerald-700"],
-                          Won:            ["bg-emerald-100", "text-emerald-700"],
-                          Valid:          ["bg-emerald-100", "text-emerald-700"],
-                          Paid:           ["bg-emerald-100", "text-emerald-700"],
-                          Accepted:       ["bg-emerald-100", "text-emerald-700"],
-                          Resolved:       ["bg-emerald-100", "text-emerald-700"],
-                          Success:        ["bg-emerald-100", "text-emerald-700"],
-                          // ── Teal (live / working session) ──
-                          Working:        ["bg-teal-100",    "text-teal-700"],
-                          // ── Blue (new / info / open / replied) ──
-                          New:            ["bg-blue-100",    "text-blue-700"],
-                          new:            ["bg-blue-100",    "text-blue-700"],
-                          Cold:           ["bg-blue-100",    "text-blue-700"],
-                          Open:           ["bg-blue-100",    "text-blue-700"],
-                          Replied:        ["bg-blue-100",    "text-blue-700"],
-                          // ── Purple (prospect / qualified) ──
-                          Prospect:       ["bg-purple-100",  "text-purple-700"],
-                          Qualified:      ["bg-purple-100",  "text-purple-700"],
-                          // ── Amber (pending / in-progress / paused / warm) ──
-                          "In Progress":  ["bg-amber-100",   "text-amber-700"],
-                          Pending:        ["bg-amber-100",   "text-amber-700"],
-                          pending:        ["bg-amber-100",   "text-amber-700"],
-                          "Follow-up":    ["bg-amber-100",   "text-amber-700"],
-                          Warm:           ["bg-amber-100",   "text-amber-700"],
-                          Proposal:       ["bg-amber-100",   "text-amber-700"],
-                          Interested:     ["bg-amber-100",   "text-amber-700"],
-                          Paused:         ["bg-amber-100",   "text-amber-700"],
-                          "Not Working":  ["bg-amber-100",   "text-amber-700"],
-                          Hot:            ["bg-amber-100",   "text-amber-700"],
-                          // ── Slate (neutral / no response) ──
-                          "Not Respond":  ["bg-slate-200",   "text-slate-600"],
-                          Unassigned:     ["bg-slate-200",   "text-slate-600"],
-                          // ── Rose (failed / rejected / escalated / overdue / inactive) ──
-                          Failed:         ["bg-rose-100",    "text-rose-700"],
-                          Cancelled:      ["bg-rose-100",    "text-rose-700"],
-                          Dump:           ["bg-rose-100",    "text-rose-700"],
-                          Lost:           ["bg-rose-100",    "text-rose-700"],
-                          Rejected:       ["bg-rose-100",    "text-rose-700"],
-                          Inactive:       ["bg-rose-100",    "text-rose-700"],
-                          Invalid:        ["bg-rose-100",    "text-rose-700"],
-                          Unpaid:         ["bg-rose-100",    "text-rose-700"],
-                          Absent:         ["bg-rose-100",    "text-rose-700"],
-                          Escalated:      ["bg-rose-100",    "text-rose-700"],
-                          overdue:        ["bg-rose-100",    "text-rose-700"],
-                          Overdue:        ["bg-rose-100",    "text-rose-700"],
-                          // ── Orange (expired / warning) ──
-                          Expired:        ["bg-orange-100",  "text-orange-700"],
-                          Warning:        ["bg-orange-100",  "text-orange-700"],
+                          // ── Emerald (positive / done / approved / won) ──
+                          Completed: ["bg-emerald-100", "text-emerald-700"],
+                          Converted: ["bg-emerald-100", "text-emerald-700"],
+                          Done: ["bg-emerald-100", "text-emerald-700"],
+                          done: ["bg-emerald-100", "text-emerald-700"],
+                          Active: ["bg-emerald-100", "text-emerald-700"],
+                          Approved: ["bg-emerald-100", "text-emerald-700"],
+                          Won: ["bg-emerald-100", "text-emerald-700"],
+                          Valid: ["bg-emerald-100", "text-emerald-700"],
+                          Paid: ["bg-emerald-100", "text-emerald-700"],
+                          Accepted: ["bg-emerald-100", "text-emerald-700"],
+                          Resolved: ["bg-emerald-100", "text-emerald-700"],
+                          Success: ["bg-emerald-100", "text-emerald-700"],
+                          Closed: ["bg-emerald-100", "text-emerald-700"],
+                          Present: ["bg-emerald-100", "text-emerald-700"],
+                          // ── Teal (live / working / clocked-in) ──
+                          Working: ["bg-teal-100", "text-teal-700"],
+                          "Clocked Out": ["bg-teal-100", "text-teal-700"],                          // ── Blue (new / info / open / replied / untouched / talk) ──
+                          New: ["bg-blue-100", "text-blue-700"],
+                          new: ["bg-blue-100", "text-blue-700"],
+                          Cold: ["bg-blue-100", "text-blue-700"],
+                          Open: ["bg-blue-100", "text-blue-700"],
+                          Opened: ["bg-blue-100", "text-blue-700"],
+                          Replied: ["bg-blue-100", "text-blue-700"],
+                          Untouched: ["bg-blue-100", "text-blue-700"],
+                          UNTOUCHED: ["bg-blue-100", "text-blue-700"],
+                          Talk: ["bg-blue-100", "text-blue-700"],
+                          Contacted: ["bg-blue-100", "text-blue-700"],
+                          // ── Purple (prospect / qualified / interested) ──
+                          Prospect: ["bg-purple-100", "text-purple-700"],
+                          Qualified: ["bg-purple-100", "text-purple-700"],
+                          Interested: ["bg-purple-100", "text-purple-700"],
+                          // ── Amber (pending / in-progress / paused / warm / follow-up / late) ──
+                          "In Progress": ["bg-amber-100", "text-amber-700"],
+                          Pending: ["bg-amber-100", "text-amber-700"],
+                          pending: ["bg-amber-100", "text-amber-700"],
+                          "Follow-up": ["bg-amber-100", "text-amber-700"],
+                          Warm: ["bg-amber-100", "text-amber-700"],
+                          Proposal: ["bg-amber-100", "text-amber-700"],
+                          Paused: ["bg-amber-100", "text-amber-700"],
+                          "Not Working": ["bg-amber-100", "text-amber-700"],
+                          Hot: ["bg-amber-100", "text-amber-700"],
+                          Late: ["bg-amber-100", "text-amber-700"],
+                          // ── Slate (neutral / no-response / leave / holiday / not-clocked-in) ──
+                          "Not Respond": ["bg-slate-200", "text-slate-600"],
+                          Unassigned: ["bg-slate-200", "text-slate-600"],
+                          Leave: ["bg-slate-200", "text-slate-600"],
+                          Holiday: ["bg-slate-200", "text-slate-600"],
+                          Weekend: ["bg-slate-200", "text-slate-600"],
+                          "Not Clocked In": ["bg-slate-200", "text-slate-600"],
+                          "Not Talk": ["bg-slate-200", "text-slate-600"],
+                          "Not Talk (Untouched)": ["bg-slate-200", "text-slate-600"],
+                          // ── Orange (expired / delayed / overdue / warning) ──
+                          Expired: ["bg-orange-100", "text-orange-700"],
+                          Warning: ["bg-orange-100", "text-orange-700"],
+                          Delayed: ["bg-orange-100", "text-orange-700"],
+                          Overdue: ["bg-orange-100", "text-orange-700"],
+                          overdue: ["bg-orange-100", "text-orange-700"],
+                          // ── Rose (failed / rejected / escalated / inactive / absent / dump / not-interested) ──
+                          Failed: ["bg-rose-100", "text-rose-700"],
+                          Cancelled: ["bg-rose-100", "text-rose-700"],
+                          Canceled: ["bg-rose-100", "text-rose-700"],
+                          Dump: ["bg-rose-100", "text-rose-700"],
+                          Dumped: ["bg-rose-100", "text-rose-700"],
+                          Lost: ["bg-rose-100", "text-rose-700"],
+                          Rejected: ["bg-rose-100", "text-rose-700"],
+                          Inactive: ["bg-rose-100", "text-rose-700"],
+                          Invalid: ["bg-rose-100", "text-rose-700"],
+                          Unpaid: ["bg-rose-100", "text-rose-700"],
+                          Absent: ["bg-rose-100", "text-rose-700"],
+                          Escalated: ["bg-rose-100", "text-rose-700"],
+                          "Not Interested": ["bg-rose-100", "text-rose-700"],
                         };
                         const [statusBg, statusText] = STATUS_MAP[val] ?? ["bg-slate-100", "text-slate-600"];
                         return (
@@ -4008,29 +4042,29 @@ export const EnhancedDataTable = ({
                   if (col.key === "status") {
                     const val = row[col.key];
                     let statusBg = "bg-slate-100 text-slate-600";
-                    // Emerald — positive / done / active / success
-                    if (["Completed","Approved","Active","Won","Resolved","Accepted","Done","done","Valid","Paid","Success"].includes(val))
+                    // Emerald — positive / done / approved / won / present
+                    if (["Completed", "Approved", "Active", "Won", "Resolved", "Accepted", "Done", "done", "Valid", "Paid", "Success", "Closed", "Present"].includes(val))
                       statusBg = "bg-emerald-100 text-emerald-800";
-                    // Teal — live / working
-                    else if (val === "Working")
+                    // Teal — live / working / clocked-in
+                    else if (["Working", "Clocked Out"].includes(val))
                       statusBg = "bg-teal-100 text-teal-800";
-                    // Blue — new / open / info / replied
-                    else if (["New","new","Open","Cold","Replied"].includes(val))
+                    // Blue — new / open / info / replied / untouched / talk / contacted
+                    else if (["New", "new", "Open", "Opened", "Cold", "Replied", "Untouched", "UNTOUCHED", "Talk", "Contacted"].includes(val))
                       statusBg = "bg-blue-100 text-blue-800";
-                    // Purple — prospect / qualified
-                    else if (["Prospect","Qualified"].includes(val))
+                    // Purple — prospect / qualified / interested
+                    else if (["Prospect", "Qualified", "Interested"].includes(val))
                       statusBg = "bg-purple-100 text-purple-800";
-                    // Amber — pending / in-progress / paused / warm / follow-up
-                    else if (["Pending","pending","In Progress","Follow-up","Warm","Proposal","Interested","Paused","Not Working","Hot"].includes(val))
+                    // Amber — pending / in-progress / paused / warm / follow-up / late / hot
+                    else if (["Pending", "pending", "In Progress", "Follow-up", "Warm", "Proposal", "Paused", "Not Working", "Hot", "Late"].includes(val))
                       statusBg = "bg-amber-100 text-amber-800";
-                    // Slate — neutral / no response
-                    else if (["Not Respond","Unassigned"].includes(val))
+                    // Slate — neutral / no-response / leave / holiday / not-clocked-in
+                    else if (["Not Respond", "Unassigned", "Leave", "Holiday", "Weekend", "Not Clocked In", "Not Talk", "Not Talk (Untouched)"].includes(val))
                       statusBg = "bg-slate-200 text-slate-700";
-                    // Orange — expired / warning
-                    else if (["Expired","Warning"].includes(val))
+                    // Orange — expired / delayed / overdue / warning
+                    else if (["Expired", "Warning", "Delayed", "Overdue", "overdue"].includes(val))
                       statusBg = "bg-orange-100 text-orange-800";
-                    // Rose — failed / rejected / escalated / overdue / inactive
-                    else if (["Failed","Cancelled","Inactive","Lost","Rejected","Escalated","Dump","Invalid","Unpaid","Absent","overdue","Overdue"].includes(val))
+                    // Rose — failed / rejected / escalated / inactive / absent / dump / not-interested
+                    else if (["Failed", "Cancelled", "Canceled", "Inactive", "Lost", "Rejected", "Escalated", "Dump", "Dumped", "Invalid", "Unpaid", "Absent", "Not Interested"].includes(val))
                       statusBg = "bg-rose-100 text-rose-800";
                     return <td key={col.key} className="py-3.5 px-5 whitespace-nowrap"><span className={`px-3 py-1 rounded-full text-xs font-bold ${statusBg}`}>{val ?? "—"}</span></td>;
                   }
@@ -4341,16 +4375,16 @@ export const PanelModal = ({ id, title, children, isVisible, onClose }) => {
 */
 
 export const UserChat = ({
-  messages      = [],
+  messages = [],
   onSend,
-  currentUser   = "Me",
-  placeholder   = "Type a message… (Enter to send)",
-  maxHeight     = "max-h-80",
-  showAttach    = true,
+  currentUser = "Me",
+  placeholder = "Type a message… (Enter to send)",
+  maxHeight = "max-h-80",
+  showAttach = true,
 }) => {
-  const [text,       setText]      = React.useState("");
-  const chatEndRef                 = React.useRef(null);
-  const imgInputRef                = React.useRef(null);
+  const [text, setText] = React.useState("");
+  const chatEndRef = React.useRef(null);
+  const imgInputRef = React.useRef(null);
 
   // ── Auto-scroll to bottom on every new message ──
   React.useEffect(() => {
@@ -4360,7 +4394,7 @@ export const UserChat = ({
   // ── Build a timestamped message object ──
   const makeMsg = (payload) => ({
     sender: currentUser,
-    time:   new Date().toISOString().slice(0, 16).replace("T", " "),
+    time: new Date().toISOString().slice(0, 16).replace("T", " "),
     ...payload,
   });
 
@@ -4394,7 +4428,7 @@ export const UserChat = ({
           </div>
         ) : (
           messages.map((msg, i) => {
-            const isMe    = msg.sender === currentUser;
+            const isMe = msg.sender === currentUser;
             // Generate 2-letter initials from sender name
             const initials = msg.sender.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -4402,9 +4436,8 @@ export const UserChat = ({
               <div key={i} className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
 
                 {/* ── Avatar ── */}
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 shadow-sm ${
-                  isMe ? "bg-[#2a465a] text-white" : "bg-slate-200 text-slate-600"
-                }`}>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 shadow-sm ${isMe ? "bg-[#2a465a] text-white" : "bg-slate-200 text-slate-600"
+                  }`}>
                   {initials}
                 </div>
 
@@ -4417,9 +4450,8 @@ export const UserChat = ({
 
                   {msg.imageUrl ? (
                     /* Image bubble — click to open full-size */
-                    <div className={`rounded-2xl overflow-hidden shadow-sm border ${
-                      isMe ? "border-[#2a465a]/20 rounded-br-sm" : "border-slate-200 rounded-bl-sm"
-                    }`}>
+                    <div className={`rounded-2xl overflow-hidden shadow-sm border ${isMe ? "border-[#2a465a]/20 rounded-br-sm" : "border-slate-200 rounded-bl-sm"
+                      }`}>
                       <img
                         src={msg.imageUrl}
                         alt={msg.imageName || "attachment"}
@@ -4427,20 +4459,18 @@ export const UserChat = ({
                         onClick={() => window.open(msg.imageUrl, "_blank")}
                       />
                       {msg.imageName && (
-                        <div className={`px-2 py-1 text-[10px] font-medium truncate max-w-[180px] ${
-                          isMe ? "bg-[#2a465a] text-white/70" : "bg-slate-50 text-slate-400"
-                        }`}>
+                        <div className={`px-2 py-1 text-[10px] font-medium truncate max-w-[180px] ${isMe ? "bg-[#2a465a] text-white/70" : "bg-slate-50 text-slate-400"
+                          }`}>
                           {msg.imageName}
                         </div>
                       )}
                     </div>
                   ) : (
                     /* Text bubble */
-                    <div className={`px-3.5 py-2 rounded-2xl text-xs font-medium leading-relaxed shadow-sm ${
-                      isMe
+                    <div className={`px-3.5 py-2 rounded-2xl text-xs font-medium leading-relaxed shadow-sm ${isMe
                         ? "bg-[#2a465a] text-white rounded-br-sm"
                         : "bg-white border border-slate-200 text-[#2a465a] rounded-bl-sm"
-                    }`}>
+                      }`}>
                       {msg.text}
                     </div>
                   )}

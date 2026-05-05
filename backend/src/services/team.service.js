@@ -55,7 +55,20 @@ exports.createTeam = async (teamData, performedBy) => {
     });
   }
 
-  // 4. Create team
+  // 4. Prevent initial members from being part of other teams
+  if (initialMembers.length > 0) {
+    const memberIds = initialMembers.map((m) => m.user);
+    const conflict = await Team.findOne({
+      admin,
+      isDeleted: false,
+      'members.user': { $in: memberIds },
+    });
+    if (conflict) {
+      throw new AppError('One or more selected users are already members of another team', 409);
+    }
+  }
+
+  // 5. Create team
   const team = await Team.create({
     admin,
     department,
@@ -195,6 +208,17 @@ exports.updateTeam = async (teamId, admin, updateData, performedBy) => {
       // Add new leader to members if not already there
       const isMember = team.members.some((m) => m.user.toString() === leader);
       if (!isMember) {
+        // Prevent leader from being a member of a different team
+        const existing = await Team.findOne({
+          admin,
+          isDeleted: false,
+          'members.user': leader,
+          _id: { $ne: teamId },
+        });
+        if (existing) {
+          throw new AppError('Selected leader is already a member of another team', 409);
+        }
+
         team.members.push({
           user: leader,
           joinedAt: new Date(),
@@ -258,6 +282,17 @@ exports.addTeamMember = async (teamId, userId, admin, performedBy) => {
   });
   if (!user) {
     throw new AppError('User not found in this team\'s department', 400);
+  }
+
+  // 2b. Prevent user being a member of another active/non-deleted team
+  const existingTeam = await Team.findOne({
+    admin,
+    isDeleted: false,
+    'members.user': userId,
+    _id: { $ne: teamId },
+  });
+  if (existingTeam) {
+    throw new AppError('User is already assigned to another team', 409);
   }
 
   // 3. Check if already a member

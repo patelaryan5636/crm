@@ -1,10 +1,15 @@
-const DumpDataPage = () => {
+import { DumpedLeadsTable } from "./components/DumpedLeadsTable";
+import { useDumpData } from "./hooks/useDumpData";
+
+export default function DumpDataPage() {
+  const { tableRows, reasonOptions } = useDumpData();
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Dump Data</h1>
-      <p>Dump data management page placeholder.</p>
+    <div className="space-y-6">
+      <DumpedLeadsTable
+        rows={tableRows}
+        reasonOptions={reasonOptions}
+      />
     </div>
   );
-};
-
-export default DumpDataPage;
+}

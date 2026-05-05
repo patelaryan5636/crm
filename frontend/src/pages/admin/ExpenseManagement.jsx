@@ -15,8 +15,6 @@ export default function ExpenseManagement({ isEmbedded }) {
   ]);
 
   const [newExpense, setNewExpense] = useState({ title: '', category: '', amount: '' });
-  const [filterCategory, setFilterCategory] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
 
   const handleApprove = (id) => {
     setExpenses(prev => prev.map(exp => exp.id === id ? { ...exp, status: 'Approved' } : exp));
@@ -82,14 +80,6 @@ export default function ExpenseManagement({ isEmbedded }) {
     status: exp.status === 'Approved' ? 'Completed' : exp.status.includes('Pending') ? 'Pending' : 'Failed'
   }));
 
-  const filteredExpenses = formattedExpenses.filter(exp => {
-    let matchesCategory = true;
-    let matchesStatus = true;
-    if (filterCategory) matchesCategory = exp.category === filterCategory;
-    if (filterStatus) matchesStatus = exp.status === filterStatus;
-    return matchesCategory && matchesStatus;
-  });
-
   return (
     <div className={`w-full ${isEmbedded ? '' : 'min-h-screen bg-white p-4 md:p-8'}`}>
       <style>{`
@@ -121,45 +111,7 @@ export default function ExpenseManagement({ isEmbedded }) {
       `}</style>
 
       <div className="flex flex-col gap-4 mb-6 w-full">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-4 bg-white border border-slate-200 p-3 rounded-xl shadow-sm">
-            <div className="flex flex-col">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 ml-1">Filter by Category</label>
-              <select
-                value={filterCategory}
-                onChange={e => setFilterCategory(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 w-full sm:w-auto min-w-[150px]"
-              >
-                <option value="">All Categories</option>
-                <option value="Operations">Operations</option>
-                <option value="IT">IT</option>
-                <option value="HR">HR</option>
-                <option value="Hardware">Hardware</option>
-                <option value="Marketing">Marketing</option>
-              </select>
-            </div>
-            <div className="flex flex-col">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 ml-1">Filter by Status</label>
-              <select
-                value={filterStatus}
-                onChange={e => setFilterStatus(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 w-full sm:w-auto min-w-[150px]"
-              >
-                <option value="">All Statuses</option>
-                <option value="Completed">Completed</option>
-                <option value="Pending">Pending</option>
-                <option value="Failed">Failed</option>
-              </select>
-            </div>
-            {(filterCategory || filterStatus) && (
-              <button
-                onClick={() => { setFilterCategory(''); setFilterStatus(''); }}
-                className="mt-4 text-xs text-rose-500 hover:text-rose-600 transition-colors font-semibold px-2"
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
+        <div className="flex justify-end gap-4">
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
             <Button variant="ghost" text="Limits & Rules" onClick={() => openModal('settings-modal')} />
             <Button variant="secondary" text="Export Report" onClick={handleExportReport} />
@@ -173,7 +125,7 @@ export default function ExpenseManagement({ isEmbedded }) {
           <DataTable
             title="Recent Expenses"
             columns={columns}
-            rows={filteredExpenses}
+            rows={formattedExpenses}
             actions={[
               { icon: <Check size={16} />, tooltip: "Approve", variant: "primary", onClick: (row) => handleApprove(row.id) },
               { icon: <X size={16} />, tooltip: "Reject", variant: "danger", onClick: (row) => handleReject(row.id) }
@@ -183,6 +135,10 @@ export default function ExpenseManagement({ isEmbedded }) {
             hideTopBar={false}
             hidePagination={true}
             searchable={true}
+            filters={[
+              { title: "Category", key: "category", type: "select", options: ["Operations", "IT", "HR", "Hardware", "Marketing"] },
+              { title: "Status", key: "status", type: "select", options: ["Completed", "Pending", "Failed"] }
+            ]}
           />
         </div>
       </DashGrid>

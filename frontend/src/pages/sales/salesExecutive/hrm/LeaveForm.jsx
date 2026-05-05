@@ -1,7 +1,8 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { FileText, Send, Loader2, AlertCircle, CalendarDays } from "lucide-react";
-import { DataTable } from "../../../../components/shared/Common_Components";
+import { DataTable, SelectField, Option, DataField, DashGrid } from "../../../../components/shared/Common_Components";
+import DatePicker from "../../../../components/shared/DatePicker";
 import { hrmService } from "../../../../services/hrmService";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -101,39 +102,30 @@ export default function LeaveForm({ leaves, setLeaves }) {
           <h3 className="text-sm font-bold text-[#1a2e3f]">Apply for Leave</h3>
         </div>
         <form onSubmit={handleSubmit} className="p-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
-                Leave Type <span className="text-rose-500">*</span>
-              </label>
-              <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} className={inputCls("type")}>
-                <option value="Sick">🤒 Sick Leave</option>
-                <option value="Casual">🏖️ Casual Leave</option>
-                <option value="Paid">💼 Paid Leave</option>
-              </select>
+          <DashGrid cols={12} gap={4}>
+            <div className="col-span-12 sm:col-span-6">
+              <SelectField label="Leave Type *" id="type" value={form.type}
+                onChange={e => setForm(p => ({ ...p, type: e.target.value }))} size={12}>
+                <Option value="Sick" label="🤒 Sick Leave" />
+                <Option value="Casual" label="🏖️ Casual Leave" />
+                <Option value="Paid" label="💼 Paid Leave" />
+                <Option value="Other" label="📝 Other" />
+              </SelectField>
               {errors.type && <p className="text-xs text-rose-500 mt-1">{errors.type}</p>}
             </div>
-            <div className="hidden sm:block" />
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
-                From Date <span className="text-rose-500">*</span>
-              </label>
-              <input type="date" value={form.from}
-                onChange={e => setForm(p => ({ ...p, from: e.target.value }))}
-                className={inputCls("from")} />
+            <div className="col-span-12 sm:col-span-6 hidden sm:block" />
+            <div className="col-span-12 sm:col-span-6">
+              <DatePicker label="From Date *" id="from" value={form.from}
+                onChange={val => setForm(p => ({ ...p, from: val }))} />
               {errors.from && <p className="text-xs text-rose-500 mt-1">{errors.from}</p>}
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
-                To Date <span className="text-rose-500">*</span>
-              </label>
-              <input type="date" value={form.to} min={form.from || undefined}
-                onChange={e => setForm(p => ({ ...p, to: e.target.value }))}
-                className={inputCls("to")} />
+            <div className="col-span-12 sm:col-span-6">
+              <DatePicker label="To Date *" id="to" value={form.to} minDate={form.from || undefined}
+                onChange={val => setForm(p => ({ ...p, to: val }))} />
               {errors.to && <p className="text-xs text-rose-500 mt-1">{errors.to}</p>}
             </div>
             {form.from && form.to && form.to >= form.from && (
-              <div className="sm:col-span-2">
+              <div className="col-span-12">
                 <div className="flex items-center gap-2 px-3 py-2 bg-sky-50 border border-sky-200 rounded-xl text-xs font-semibold text-sky-700">
                   <CalendarDays size={13} />
                   Duration: <span className="font-black">{diffDays(form.from, form.to)} day{diffDays(form.from, form.to) > 1 ? "s" : ""}</span>
@@ -141,17 +133,13 @@ export default function LeaveForm({ leaves, setLeaves }) {
                 </div>
               </div>
             )}
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
-                Reason <span className="text-rose-500">*</span>
-              </label>
-              <textarea rows={3} value={form.reason}
-                onChange={e => setForm(p => ({ ...p, reason: e.target.value }))}
-                placeholder="Briefly describe the reason for your leave…"
-                className={`${inputCls("reason")} resize-none`} />
+            <div className="col-span-12">
+              <DataField label="Reason *" id="reason" type="textarea" rows={3}
+                value={form.reason} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))}
+                placeholder="Briefly describe the reason for your leave…" size={12} />
               {errors.reason && <p className="text-xs text-rose-500 mt-1">{errors.reason}</p>}
             </div>
-          </div>
+          </DashGrid>
           <div className="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-slate-100">
             <button type="button" onClick={() => { setForm(EMPTY); setErrors({}); }}
               className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50 transition-colors">
@@ -177,7 +165,7 @@ export default function LeaveForm({ leaves, setLeaves }) {
         size={12}
         filters={[
           { title: "Status", type: "toggle", key: "status", options: ["Approved", "Rejected", "Pending"] },
-          { title: "Type",   type: "select", key: "type",   options: ["Sick", "Casual", "Paid"] },
+          { title: "Type",   type: "select", key: "type",   options: ["Sick", "Casual", "Paid", "Other"] },
         ]}
       />
 

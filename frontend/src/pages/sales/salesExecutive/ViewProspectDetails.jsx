@@ -243,7 +243,7 @@ const ViewProspectDetails = ({ prospectId, onClose }) => {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
                 <p className="text-xs text-slate-500 flex items-center gap-1"><IndianRupee size={12}/> Deal Value</p>
-                <p className="text-sm font-black text-[#2a465a] mt-1">{MOCK_PROSPECT.dealValue}</p>
+                <p className="text-sm font-black text-[#2a465a] mt-1">{MOCK_PROSPECT.dealValue && MOCK_PROSPECT.dealValue !== "0" ? `₹ ${MOCK_PROSPECT.dealValue}` : "-"}</p>
               </div>
               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
                 <p className="text-xs text-slate-500 flex items-center gap-1"><AlertCircle size={12}/> Priority</p>

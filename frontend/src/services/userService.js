@@ -5,8 +5,8 @@ export const userService = {
     const response = await apiClient.get('/users/meta/role-department-map');
     return response.data;
   },
-  getUsers: async () => {
-    const response = await apiClient.get('/users');
+  getUsers: async (params = {}) => {
+    const response = await apiClient.get('/users', { params });
     return response.data;
   },
   getDepartments: async () => {
@@ -35,6 +35,10 @@ export const userService = {
       { confirm: true, importMode },
       { timeout: 60000 },
     );
+    return response.data;
+  },
+  getUserStats: async (params = {}) => {
+    const response = await apiClient.get('/users/stats', { params });
     return response.data;
   },
 };

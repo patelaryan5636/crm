@@ -197,7 +197,7 @@ export default function AllUsers() {
   const totalUsers = usersList.length;
   const activeUsers = usersList.filter((u) => u.status === "Active").length;
   const inactiveUsers = usersList.filter((u) => u.status === "Inactive").length;
-  const salesTeam = usersList.filter((u) => u.department === "Sales").length;
+  const salesTeam = usersList.filter((u) => u.department.toUpperCase() === "SALES").length;
 
   // ── Filter Logic ──
   const filteredUsers = useMemo(() => {

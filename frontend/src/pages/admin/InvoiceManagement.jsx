@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Button, DashGrid, DataTable, Modal, openModal, closeModal, P, InputField } from '../../components/shared/Common_Components';
+import { Button, DashGrid, DataTable, Modal, openModal, closeModal, P, InputField, ModalGrid, ModalData } from '../../components/shared/Common_Components';
 import { Eye, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function InvoiceManagement({ isEmbedded }) {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [newInvoice, setNewInvoice] = useState({ client: '', amount: '' });
+
   const rawInvoices = [
     { idText: 'INV-2023-001', client: 'Acme Corp', date: 'Oct 24, 2023', amount: '1,200.00', status: 'Paid' },
     { idText: 'INV-2023-002', client: 'Global Tech', date: 'Oct 25, 2023', amount: '3,450.00', status: 'Pending' },
@@ -23,7 +26,7 @@ export default function InvoiceManagement({ isEmbedded }) {
 
   const invoices = rawInvoices.map(inv => ({
     ...inv,
-    status: inv.status === 'Paid' ? 'Completed' : inv.status === 'Pending' ? 'Pending' : 'Failed'
+    status: inv.status === 'Paid' ? 'Paid' : inv.status === 'Pending' ? 'Pending' : 'Unpaid'
   }));
 
   const handleViewInvoice = (invoice) => {
@@ -37,18 +40,20 @@ export default function InvoiceManagement({ isEmbedded }) {
   };
 
   const handleDownloadInvoice = (invoice) => {
-    const headers = ['Invoice ID', 'Client', 'Date', 'Amount', 'Status'];
-    const row = `"${invoice.idText}","${invoice.client}","${invoice.date}","${invoice.amount}","${invoice.status}"`;
-    const csvContent = headers.join(',') + '\\n' + row;
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `${invoice.idText}_report.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const doc = new jsPDF();
+      doc.text(`Invoice Report - ${invoice.idText}`, 14, 20);
+      autoTable(doc, {
+        startY: 30,
+        head: [['Invoice ID', 'Client', 'Date', 'Amount', 'Status']],
+        body: [
+          [invoice.idText, invoice.client, invoice.date, invoice.amount, invoice.status]
+        ],
+      });
+      doc.save(`${invoice.idText}_report.pdf`);
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+    }
   };
 
   return (
@@ -81,8 +86,10 @@ export default function InvoiceManagement({ isEmbedded }) {
       `}</style>
 
       <div className="flex flex-col gap-4 mb-6 w-full">
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <Button variant="primary" text="Create Invoice" onClick={() => openModal('create-invoice-modal')} />
+        <div className="flex justify-end gap-4">
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <Button variant="primary" text="Create Invoice" onClick={() => openModal('create-invoice-modal')} />
+          </div>
         </div>
       </div>
 
@@ -98,43 +105,37 @@ export default function InvoiceManagement({ isEmbedded }) {
             ]}
             size={12}
             pageSize={10}
-            hideTopBar={true}
+            hideTopBar={false}
             hidePagination={true}
+            searchable={true}
+            filters={[
+              { title: "Client", key: "client", type: "text" },
+              { title: "Status", key: "status", type: "select", options: ["Paid", "Pending", "Unpaid"] }
+            ]}
           />
         </div>
       </DashGrid>
 
       <Modal id="view-invoice-modal" title="Invoice Details" size="md">
         {selectedInvoice && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <P text="Invoice ID" size="xs" className="text-slate-500" />
-                <P text={selectedInvoice.idText} className="font-medium" />
-              </div>
-              <div>
-                <P text="Client" size="xs" className="text-slate-500" />
-                <P text={selectedInvoice.client} className="font-medium" />
-              </div>
-              <div>
-                <P text="Date" size="xs" className="text-slate-500" />
-                <P text={selectedInvoice.date} className="font-medium" />
-              </div>
-              <div>
-                <P text="Amount" size="xs" className="text-slate-500" />
-                <P text={`$${selectedInvoice.amount}`} className="font-medium" />
-              </div>
-              <div>
-                <P text="Status" size="xs" className="text-slate-500" />
-                <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${selectedInvoice.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                    selectedInvoice.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                      'bg-red-100 text-red-700'
-                  }`}>
-                  {selectedInvoice.status}
-                </span>
-              </div>
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl p-5 border border-slate-200">
+              <ModalGrid title="Invoice Information" cols={2}>
+                <ModalData label="Invoice ID" value={selectedInvoice.idText} />
+                <ModalData label="Client" value={selectedInvoice.client} />
+                <ModalData label="Date" value={selectedInvoice.date} />
+                <ModalData label="Amount" value={`$${selectedInvoice.amount}`} />
+                <ModalData label="Status" value={
+                  <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${selectedInvoice.status === 'Paid' ? 'bg-green-100 text-green-700' :
+                      selectedInvoice.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
+                        'bg-red-100 text-red-700'
+                    }`}>
+                    {selectedInvoice.status}
+                  </span>
+                } />
+              </ModalGrid>
             </div>
-            <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-slate-100">
+            <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
               <div onClick={() => closeModal('view-invoice-modal')}>
                 <Button variant="ghost" text="Close" />
               </div>

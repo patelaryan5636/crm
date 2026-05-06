@@ -9,6 +9,7 @@ import SuperAdminLogin from "../pages/auth/SuperAdminLogin";
 import DepartmentWorkspace from "../pages/department/DepartmentWorkspace";
 import SalesTeamLeaderRoutes from "./Sales/salesTeamLeaderRoutes";
 import SalesExecutiveRoutes from "./Sales/salesExecutiveRoutes";
+import FinanceRoutes from "./financeRoutes";
 
 function AppRoutes() {
   return (
@@ -20,15 +21,18 @@ function AppRoutes() {
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/admin-register" element={<AdminRegister />} />
         <Route path="/login" element={<DepartmentLogin />} />
+        <Route path="/department/*" element={<DepartmentWorkspace />} />
         {/* Admin Routes */}
         <Route path="/admin/*" element={<AdminRoutes />} />
-        <Route path="*" element={<Navigate to="/admin" replace />} />
         {/* Super_Admin Routes */}
         <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
         {/* Sales Routes */}
         <Route path="/sales-manager/*" element={<SalesManagerRoutes />} />
         <Route path="/sales-team-leader/*" element={<SalesTeamLeaderRoutes />} />
         <Route path="/sales-executive/*" element={<SalesExecutiveRoutes />} />
+        {/* Finance Routes */}
+        <Route path="/finance/*" element={<FinanceRoutes />} />
+        <Route path="*" element={<Navigate to="/admin" replace />} />
       </Routes>
     </BrowserRouter>
   );

@@ -59,15 +59,7 @@ exports.getRoleDepartmentMap = catchAsync(async (req, res, next) => {
 });
 
 exports.createUser = catchAsync(async (req, res, next) => {
-  // If auth middleware sets req.user
-  let adminId = req.user?.id;
-
-  // Fallback for missing auth middleware
-  if (!adminId) {
-    const defaultAdmin = await Admin.findOne();
-    if (defaultAdmin) adminId = defaultAdmin._id;
-  }
-
+  const adminId = req.admin?._id;
   if (!adminId) return next(new AppError('Admin authentication required', 401));
 
   const { name, email, phone, departmentId, role, teamId, leadDataLimit } = req.body;
@@ -142,16 +134,29 @@ exports.createUser = catchAsync(async (req, res, next) => {
 });
 
 exports.getUsers = catchAsync(async (req, res, next) => {
-  let adminId = req.user?.id;
-
-  if (!adminId) {
-    const defaultAdmin = await Admin.findOne();
-    if (defaultAdmin) adminId = defaultAdmin._id;
-  }
-
+  const adminId = req.admin?._id;
   if (!adminId) return next(new AppError('Admin authentication required', 401));
 
-  const users = await User.find({ admin: adminId }).populate('department', 'name');
+  const { departmentId, roles } = req.query;
+
+  // Use explicit casting for robustness
+  const filter = {
+    admin: new mongoose.Types.ObjectId(adminId),
+    isDeleted: false
+  };
+
+  if (departmentId) {
+    filter.department = new mongoose.Types.ObjectId(departmentId);
+  }
+
+  if (roles) {
+    const roleArray = roles.split(',').map(r => r.trim());
+    filter.role = { $in: roleArray };
+  }
+
+  console.log('Fetching users with filter:', JSON.stringify(filter));
+  const users = await User.find(filter).populate('department', 'name');
+  console.log(`Found ${users.length} users`);
 
   res.status(200).json(
     new ApiResponse(200, { users }, 'Users retrieved successfully')
@@ -159,16 +164,10 @@ exports.getUsers = catchAsync(async (req, res, next) => {
 });
 
 exports.getDepartments = catchAsync(async (req, res, next) => {
-  let adminId = req.user?.id;
-
-  if (!adminId) {
-    const defaultAdmin = await Admin.findOne();
-    if (defaultAdmin) adminId = defaultAdmin._id;
-  }
-
+  const adminId = req.admin?._id;
   if (!adminId) return next(new AppError('Admin authentication required', 401));
 
-  const departments = await Department.find({ admin: adminId, isActive: true });
+  const departments = await Department.find({ admin: adminId, isActive: true, isDeleted: false });
 
   res.status(200).json(
     new ApiResponse(200, { departments }, 'Departments retrieved successfully')
@@ -342,5 +341,68 @@ exports.loginUser = catchAsync(async (req, res, next) => {
       },
       'Login successful'
     )
+  );
+});
+
+const mongoose = require('mongoose');
+
+/**
+ * Get dynamic user statistics based on roles
+ * Scoped to the current Admin (Tenant)
+ */
+exports.getUserStats = catchAsync(async (req, res, next) => {
+  const adminId = req.admin?._id;
+  if (!adminId) return next(new AppError('Admin authentication required', 401));
+
+  const { departmentId, roles } = req.query;
+
+  // Create match filter with proper ObjectId casting for aggregation
+  const matchFilter = {
+    admin: new mongoose.Types.ObjectId(adminId),
+    isDeleted: false
+  };
+
+  if (departmentId) {
+    matchFilter.department = new mongoose.Types.ObjectId(departmentId);
+  }
+
+  // Support role filtering in stats just like the main user list
+  if (roles) {
+    const roleArray = roles.split(',').map(r => r.trim());
+    matchFilter.role = { $in: roleArray };
+  }
+
+  // Aggregate stats dynamically by role
+  const roleStats = await User.aggregate([
+    { $match: matchFilter },
+    { $group: { _id: "$role", count: { $sum: 1 } } }
+  ]);
+
+  const [activeCount, totalEmployees] = await Promise.all([
+    User.countDocuments({ ...matchFilter, isActive: true }),
+    User.countDocuments(matchFilter)
+  ]);
+
+  const roleCounts = {};
+  roleStats.forEach(rs => {
+    roleCounts[rs._id] = rs.count;
+  });
+
+  const teamLeaders = Object.keys(roleCounts)
+    .filter(role => role.endsWith('_TL'))
+    .reduce((sum, role) => sum + roleCounts[role], 0);
+
+  const executives = Object.keys(roleCounts)
+    .filter(role => role.endsWith('_EXECUTIVE'))
+    .reduce((sum, role) => sum + roleCounts[role], 0);
+
+  res.status(200).json(
+    new ApiResponse(200, {
+      totalEmployees,
+      active: activeCount,
+      teamLeaders,
+      executives,
+      roleCounts
+    }, 'User stats retrieved successfully')
   );
 });

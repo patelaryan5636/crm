@@ -62,23 +62,3 @@ export const initialTargets = [
   { id: "TGT-005", assignedTo: "Vikram Tiwari", role: "Executive", teamLeader: "Sonal Gupta", type: "Daily",   leads: 20,  target: 4,  achieved: 2,  remaining: 2,  deadline: "2025-06-01", status: "In Progress" },
   { id: "TGT-006", assignedTo: "Ankit Verma",   role: "Team Leader", teamLeader: "Self",      type: "Monthly", leads: 400, target: 80, achieved: 48, remaining: 32, deadline: "2025-06-30", status: "In Progress" },
 ];
-
-// ── Reports ───────────────────────────────────────────────────────────────────
-export const kpiReports = [
-  { title: "Total Calls",       value: "11,340", accent: "#3b82f6" },
-  { title: "Total Leads",       value: "4,280",  accent: "#14b8a6" },
-  { title: "Total Prospects",   value: "1,840",  accent: "#8b5cf6" },
-  { title: "Total Sales",       value: "787",    accent: "#22c55e" },
-  { title: "Revenue",           value: "₹68.2L", accent: "#f59e0b" },
-  { title: "Dump Leads",        value: "415",    accent: "#f43f5e" },
-  { title: "Untouched Leads",   value: "312",    accent: "#64748b" },
-];
-
-export const reportRows = [
-  { name: "Rahul Sharma",  teamLeader: "Ankit Verma", calls: 310, leads: 200, prospects: 62, sales: 48, revenue: "₹4.8L", dump: 18, untouched: 12, date: "2025-06-01" },
-  { name: "Priya Mehta",   teamLeader: "Sonal Gupta", calls: 290, leads: 180, prospects: 57, sales: 44, revenue: "₹4.4L", dump: 14, untouched: 8,  date: "2025-06-01" },
-  { name: "Arjun Kapoor",  teamLeader: "Ankit Verma", calls: 265, leads: 170, prospects: 49, sales: 39, revenue: "₹3.9L", dump: 19, untouched: 15, date: "2025-06-01" },
-  { name: "Sneha Rajput",  teamLeader: "Nisha Patel", calls: 240, leads: 160, prospects: 46, sales: 37, revenue: "₹3.7L", dump: 12, untouched: 11, date: "2025-06-01" },
-  { name: "Vikram Tiwari", teamLeader: "Sonal Gupta", calls: 220, leads: 145, prospects: 40, sales: 33, revenue: "₹3.3L", dump: 16, untouched: 9,  date: "2025-06-01" },
-  { name: "Kavya Patel",   teamLeader: "Nisha Patel", calls: 198, leads: 130, prospects: 35, sales: 29, revenue: "₹2.9L", dump: 11, untouched: 7,  date: "2025-06-01" },
-];

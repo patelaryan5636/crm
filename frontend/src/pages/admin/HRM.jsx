@@ -29,6 +29,14 @@ const departmentData = [
   { name: 'Support', attendance: 88 },
 ];
 
+const employeeCompositionData = [
+  { name: 'Sales', value: 45 },
+  { name: 'Finance', value: 20 },
+  { name: 'Management', value: 10 },
+  { name: 'Engineering', value: 35 },
+  { name: 'Support', value: 25 },
+];
+
 const leaveStatusData = [
   { name: 'Approved', value: 45 },
   { name: 'Pending', value: 15 },
@@ -111,14 +119,6 @@ export default function HRM() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [approvalsData, setApprovalsData] = useState(approvalsRows);
 
-  // Attendance filter states
-  const [filterDate, setFilterDate] = useState('');
-  const [filterDept, setFilterDept] = useState('');
-
-  // Employees filter states
-  const [empFilterDate, setEmpFilterDate] = useState('');
-  const [empFilterDept, setEmpFilterDept] = useState('');
-
   // Handle Approvals actions
   const handleRejectApproval = (id) => {
     setApprovalsData(prev => prev.map(row => row.id === id ? { ...row, status: 'Rejected' } : row));
@@ -159,23 +159,7 @@ export default function HRM() {
     document.body.removeChild(link);
   };
 
-  // Pre-filter attendance data based on custom UI controls
-  const filteredAttendanceRows = attendanceRows.filter(row => {
-    let matchesDate = true;
-    let matchesDept = true;
-    if (filterDate) matchesDate = row.date === filterDate;
-    if (filterDept) matchesDept = row.department === filterDept;
-    return matchesDate && matchesDept;
-  });
-
-  // Pre-filter employees data based on custom UI controls
-  const filteredEmployeesRows = employeesRows.filter(row => {
-    let matchesDate = true;
-    let matchesDept = true;
-    if (empFilterDate) matchesDate = row.date === empFilterDate;
-    if (empFilterDept) matchesDept = row.department === empFilterDept;
-    return matchesDate && matchesDept;
-  }).map(row => ({
+  const styledEmployeesRows = employeesRows.map(row => ({
     ...row,
     empStatus: (
       <span 
@@ -198,7 +182,7 @@ export default function HRM() {
     }
   };
 
-  const styledFilteredAttendanceRows = filteredAttendanceRows.map(row => ({
+  const styledFilteredAttendanceRows = attendanceRows.map(row => ({
     ...row,
     attStatus: (
       <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getAttendanceStatusStyle(row.status)}`}>
@@ -353,9 +337,9 @@ export default function HRM() {
               subtitle="Weekly breakdown"
               data={attendanceTrendData}
               lines={[
-                { key: "present", label: "Present", color: "#355872" },
-                { key: "absent", label: "Absent", color: "#7AAACE" },
-                { key: "leave", label: "Leave", color: "#9CD5FF" },
+                { key: "present", label: "Present", color: "#3b82f6" },
+                { key: "absent", label: "Absent", color: "#f59e0b" },
+                { key: "leave", label: "Leave", color: "#f43f5e" },
               ]}
               size={7}
               height={320}
@@ -364,7 +348,7 @@ export default function HRM() {
               title="Leave Status"
               subtitle="Distribution of leave requests"
               data={leaveStatusData}
-              colors={["#355872", "#9CD5FF", "#7AAACE"]}
+              colors={["#8b5cf6", "#14b8a6", "#f43f5e"]}
               size={5}
               height={320}
               innerRadius={80}
@@ -373,9 +357,18 @@ export default function HRM() {
               title="Department Attendance"
               subtitle="Attendance % by department"
               data={departmentData}
-              bars={[{ key: "attendance", label: "Attendance %", color: "#7AAACE" }]}
-              size={12}
+              bars={[{ key: "attendance", label: "Attendance %", color: "#3b82f6" }]}
+              size={6}
               height={320}
+            />
+            <GDoughnutChart
+              title="Employee Composition"
+              subtitle="Distribution by department"
+              data={employeeCompositionData}
+              colors={["#8b5cf6", "#14b8a6", "#f43f5e", "#22c55e", "#f59e0b"]}
+              size={6}
+              height={320}
+              innerRadius={70}
             />
           </DashGrid>
         </div>
@@ -384,43 +377,9 @@ export default function HRM() {
       {/* ── Employees Tab ── */}
       {activeTab === 'Employees' && (
         <div className="bg-white rounded-xl p-3 flex-col gap-3 w-full hrm-employees-table">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-2 p-2">
-            <div className="flex flex-wrap items-end gap-4">
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 ml-1">Filter by Date</label>
-                <input
-                  type="date"
-                  value={empFilterDate}
-                  onChange={e => setEmpFilterDate(e.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 w-full sm:w-auto"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 ml-1">Filter by Dept</label>
-                <select
-                  value={empFilterDept}
-                  onChange={e => setEmpFilterDept(e.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 w-full sm:w-auto min-w-[150px]"
-                >
-                  <option value="">All Departments</option>
-                  <option value="Sales">Sales</option>
-                  <option value="Engineering">Engineering</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Support">Support</option>
-                  <option value="Marketing">Marketing</option>
-                </select>
-              </div>
-              {(empFilterDate || empFilterDept) && (
-                <button
-                  onClick={() => { setEmpFilterDate(''); setEmpFilterDept(''); }}
-                  className="mb-1 text-xs text-rose-500 hover:text-rose-600 transition-colors font-semibold"
-                >
-                  Clear Filters
-                </button>
-              )}
-            </div>
+          <div className="flex justify-end mb-2 p-2">
             <button
-              onClick={() => handleExportCSV(employeesColumns, filteredEmployeesRows, 'employees_export.csv')}
+              onClick={() => handleExportCSV(employeesColumns, styledEmployeesRows, 'employees_export.csv')}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#355872] rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm w-full sm:w-auto justify-center"
             >
                <Download size={16} /> Export CSV
@@ -428,10 +387,14 @@ export default function HRM() {
           </div>
           <DataTable
             columns={employeesColumns}
-            rows={filteredEmployeesRows}
+            rows={styledEmployeesRows}
             size={12}
             pageSize={5}
             searchable={true}
+            filters={[
+              { title: "Date", key: "date", type: "date" },
+              { title: "Department", key: "department", type: "select", options: ["Sales", "Engineering", "Finance", "Support", "Marketing"] }
+            ]}
           />
         </div>
       )}
@@ -439,44 +402,9 @@ export default function HRM() {
       {/* ── Attendance Tab ── */}
       {activeTab === 'Attendance' && (
         <div className="bg-white rounded-xl p-3 flex-col gap-3 w-full hrm-attendance-table">
-          {/* Custom Filter Controls for Attendance */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-2 p-2">
-            <div className="flex flex-wrap items-end gap-4">
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 ml-1">Filter by Date</label>
-                <input
-                  type="date"
-                  value={filterDate}
-                  onChange={e => setFilterDate(e.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 w-full sm:w-auto"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 ml-1">Filter by Dept</label>
-                <select
-                  value={filterDept}
-                  onChange={e => setFilterDept(e.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-sm text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 w-full sm:w-auto min-w-[150px]"
-                >
-                  <option value="">All Departments</option>
-                  <option value="Sales">Sales</option>
-                  <option value="Engineering">Engineering</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Support">Support</option>
-                  <option value="Marketing">Marketing</option>
-                </select>
-              </div>
-              {(filterDate || filterDept) && (
-                <button
-                  onClick={() => { setFilterDate(''); setFilterDept(''); }}
-                  className="mb-1 text-xs text-rose-500 hover:text-rose-600 transition-colors font-semibold"
-                >
-                  Clear Filters
-                </button>
-              )}
-            </div>
+          <div className="flex justify-end mb-2 p-2">
             <button
-              onClick={() => handleExportCSV(attendanceColumns, filteredAttendanceRows, 'attendance_export.csv')}
+              onClick={() => handleExportCSV(attendanceColumns, styledFilteredAttendanceRows, 'attendance_export.csv')}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#355872] rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm w-full sm:w-auto justify-center"
             >
                <Download size={16} /> Export CSV
@@ -490,6 +418,10 @@ export default function HRM() {
             pageSize={5}
             searchable={true}
             hideTopBar={false}
+            filters={[
+              { title: "Date", key: "date", type: "date" },
+              { title: "Department", key: "department", type: "select", options: ["Sales", "Engineering", "Finance", "Support", "Marketing"] }
+            ]}
           />
         </div>
       )}

@@ -1,29 +1,25 @@
 /**
- * AUTH MIDDLEWARE — Admin JWT verification
- * 1. Reads Bearer token from Authorization header
- * 2. Verifies JWT signature and expiry
- * 3. Checks TokenBlacklist (handles logout / forced invalidation)
- * 4. Loads Admin document and confirms account is active
- * 5. Attaches req.admin for downstream controllers
+ * AUTH MIDDLEWARE — Flexible JWT verification
+ * Supports both ADMIN and USER tokens.
  */
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 const { verifyAccessToken } = require('../services/auth.service');
-const { Admin, TokenBlacklist } = require('../models');
+const { Admin, User, TokenBlacklist } = require('../models');
 
 /**
- * Middleware: require a valid Admin JWT
- * Use on any route that is Admin-only.
+ * Middleware: require a valid JWT (Admin or User)
+ * Use on routes that both Admins and Managers can access.
  */
-exports.requireAdmin = catchAsync(async (req, _res, next) => {
-  // ── 1. Extract token ──────────────────────────────────────
+exports.requireAuth = catchAsync(async (req, res, next) => {
+  // 1. Extract token
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return next(new AppError('Authentication required. Please provide a Bearer token.', 401));
   }
   const token = authHeader.split(' ')[1];
 
-  // ── 2. Verify JWT signature / expiry ──────────────────────
+  // 2. Verify JWT signature / expiry
   let decoded;
   try {
     decoded = verifyAccessToken(token);
@@ -31,27 +27,55 @@ exports.requireAdmin = catchAsync(async (req, _res, next) => {
     return next(new AppError('Invalid or expired token. Please log in again.', 401));
   }
 
-  // Only Admin tokens are accepted on this middleware
-  if (decoded.type !== 'ADMIN') {
-    return next(new AppError('This resource requires an Admin account.', 403));
-  }
-
-  // ── 3. Check TokenBlacklist ───────────────────────────────
+  // 3. Check TokenBlacklist
   const blacklisted = await TokenBlacklist.findOne({ token });
   if (blacklisted) {
     return next(new AppError('Token has been invalidated. Please log in again.', 401));
   }
 
-  // ── 4. Load Admin from DB ─────────────────────────────────
-  const admin = await Admin.findOne({ _id: decoded.id, isDeleted: false, isActive: true });
-  if (!admin) {
-    return next(new AppError('Admin account not found or has been deactivated.', 401));
+  // 4. Load Admin or User from DB
+  if (decoded.type === 'ADMIN') {
+    const admin = await Admin.findOne({ _id: decoded.id, isDeleted: false, isActive: true });
+    if (!admin) return next(new AppError('Admin account not found or deactivated.', 401));
+    req.admin = admin;
+    req.userType = 'ADMIN';
+  } else if (decoded.type === 'USER') {
+    const user = await User.findOne({ _id: decoded.id, isDeleted: false, isActive: true }).populate('admin');
+    if (!user) return next(new AppError('User account not found or deactivated.', 401));
+    if (!user.admin?.isActive) return next(new AppError('Organization account is inactive.', 403));
+    
+    req.user = user;
+    req.admin = user.admin; // Critical: Attach the tenant-admin to the request
+    req.userType = 'USER';
+  } else {
+    return next(new AppError('Invalid token type.', 403));
   }
 
-  // ── 5. Attach to request ──────────────────────────────────
-  req.admin = admin;
   next();
 });
 
-// Backward-compatible alias (old routes that imported requireAuth still work)
-exports.requireAuth = exports.requireAdmin;
+/**
+ * Middleware: require a valid Admin JWT specifically
+ */
+exports.requireAdmin = catchAsync(async (req, res, next) => {
+  await exports.requireAuth(req, res, (err) => {
+    if (err) return next(err);
+    if (req.userType !== 'ADMIN') {
+      return next(new AppError('This resource requires an Admin account.', 403));
+    }
+    next();
+  });
+});
+
+/**
+ * Middleware: require a valid User JWT specifically
+ */
+exports.requireUser = catchAsync(async (req, res, next) => {
+  await exports.requireAuth(req, res, (err) => {
+    if (err) return next(err);
+    if (req.userType !== 'USER') {
+      return next(new AppError('This resource requires a User account.', 403));
+    }
+    next();
+  });
+});

@@ -1,24 +1,20 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Heading, DashGrid, DashCard, DataTable, Grid, DataField,
-  Button, Select, Option, openModal, closeModal, Modal, ModalData,
+  Button, SelectField, Option, openModal, closeModal,
+  Modal, ModalData, ModalGrid, ModalProfile,
 } from "../../../../components/shared/Common_Components";
 import { kpiTargets, initialTargets } from "./PerfomanceStore";
-import { Target, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { Target, CheckCircle, Clock, AlertTriangle, Eye, Pencil, TrendingUp, Trash2, Plus } from "lucide-react";
 
-const kpiIcons = [
-  <Target size={22} />, <CheckCircle size={22} />,
-  <Clock size={22} />, <AlertTriangle size={22} />,
-];
-const kpiAccents = ["#3b82f6", "#22c55e", "#f59e0b", "#f43f5e"];
+const KPI_ICONS   = [<Target size={22} />, <CheckCircle size={22} />, <Clock size={22} />, <AlertTriangle size={22} />];
+const KPI_ACCENTS = ["#3b82f6", "#22c55e", "#f59e0b", "#f43f5e"];
 
-const targetCols = [
-  { key: "id",         label: "Target ID" },
+// Only key columns — full details in View modal
+const TARGET_COLS = [
+  { key: "id",         label: "ID" },
   { key: "assignedTo", label: "Assigned To" },
-  { key: "role",       label: "Role" },
-  { key: "teamLeader", label: "Team Leader" },
-  { key: "type",       label: "Target Type" },
-  { key: "leads",      label: "Assigned Leads" },
+  { key: "type",       label: "Type" },
   { key: "target",     label: "Target" },
   { key: "achieved",   label: "Achieved" },
   { key: "remaining",  label: "Remaining" },
@@ -26,95 +22,75 @@ const targetCols = [
   { key: "status",     label: "Status" },
 ];
 
-const blankForm = {
-  assignedTo: "", role: "", teamLeader: "",
-  type: "", leads: "", target: "", start: "", end: "",
-};
+const BLANK = { assignedTo: "", role: "", teamLeader: "", type: "", leads: "", target: "", start: "", end: "" };
 
 export default function Targets() {
-  const [targets, setTargets] = useState(initialTargets);
-  const [form, setForm] = useState(blankForm);
-  const [errors, setErrors] = useState({});
-  const [editId, setEditId] = useState(null);
-  const [selectedRow, setSelectedRow] = useState(null);
+  const [targets,     setTargets]     = useState(initialTargets);
+  const [form,        setForm]        = useState(BLANK);
+  const [errors,      setErrors]      = useState({});
+  const [editId,      setEditId]      = useState(null);
+  const [viewRow,     setViewRow]     = useState(null);
+  const [progressRow, setProgressRow] = useState(null);
   const [progressVal, setProgressVal] = useState("");
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const validate = () => {
     const e = {};
     if (!form.assignedTo.trim()) e.assignedTo = "Required";
-    if (!form.target) e.target = "Required";
+    if (!form.target)            e.target     = "Required";
     if (form.leads && form.target && Number(form.target) > Number(form.leads))
       e.target = "Target cannot exceed assigned leads";
     setErrors(e);
-    return Object.keys(e).length === 0;
+    return !Object.keys(e).length;
   };
 
   const handleSubmit = () => {
     if (!validate()) return;
-    const newEntry = {
-      id: editId ?? `TGT-${String(targets.length + 1).padStart(3, "0")}`,
+    const entry = {
+      id:         editId ?? `TGT-${String(targets.length + 1).padStart(3, "0")}`,
       assignedTo: form.assignedTo,
-      role: form.role || "Executive",
+      role:       form.role       || "Executive",
       teamLeader: form.teamLeader || "—",
-      type: form.type || "Monthly",
-      leads: Number(form.leads) || 0,
-      target: Number(form.target),
-      achieved: 0,
-      remaining: Number(form.target),
-      deadline: form.end || "—",
-      status: "Pending",
+      type:       form.type       || "Monthly",
+      leads:      Number(form.leads)  || 0,
+      target:     Number(form.target),
+      achieved:   0,
+      remaining:  Number(form.target),
+      deadline:   form.end || "—",
+      status:     "Pending",
     };
-    if (editId) {
-      setTargets((prev) => prev.map((t) => (t.id === editId ? { ...t, ...newEntry } : t)));
-    } else {
-      setTargets((prev) => [...prev, newEntry]);
-    }
-    setForm(blankForm);
-    setErrors({});
-    setEditId(null);
-    closeModal("target-form-modal");
+    setTargets((prev) => editId
+      ? prev.map((t) => t.id === editId ? { ...t, ...entry } : t)
+      : [...prev, entry]
+    );
+    setForm(BLANK); setErrors({}); setEditId(null);
+    closeModal("tgt-form-modal");
   };
 
   const openEdit = (row) => {
     setEditId(row.id);
-    setForm({
-      assignedTo: row.assignedTo, role: row.role, teamLeader: row.teamLeader,
+    setForm({ assignedTo: row.assignedTo, role: row.role, teamLeader: row.teamLeader,
       type: row.type, leads: String(row.leads), target: String(row.target),
-      start: "", end: row.deadline !== "—" ? row.deadline : "",
-    });
-    openModal("target-form-modal");
+      start: "", end: row.deadline !== "—" ? row.deadline : "" });
+    openModal("tgt-form-modal");
   };
 
   const openProgress = (row) => {
-    setSelectedRow(row);
+    setProgressRow(row);
     setProgressVal(String(row.achieved));
-    openModal("target-progress-modal");
+    openModal("tgt-progress-modal");
   };
 
-  const handleProgressSave = () => {
+  const saveProgress = () => {
     const val = Number(progressVal);
-    setTargets((prev) =>
-      prev.map((t) =>
-        t.id === selectedRow.id
-          ? { ...t, achieved: val, remaining: Math.max(0, t.target - val),
-              status: val >= t.target ? "Completed" : "In Progress" }
-          : t
-      )
-    );
-    closeModal("target-progress-modal");
+    setTargets((prev) => prev.map((t) => t.id === progressRow.id
+      ? { ...t, achieved: val, remaining: Math.max(0, t.target - val),
+          status: val >= t.target ? "Completed" : "In Progress" }
+      : t
+    ));
+    closeModal("tgt-progress-modal");
   };
-
-  const handleDelete = (row) =>
-    setTargets((prev) => prev.filter((t) => t.id !== row.id));
-
-  const actions = [
-    { label: "View",            variant: "ghost",   onClick: (row) => { setSelectedRow(row); openModal("target-view-modal"); } },
-    { label: "Edit",            variant: "primary", onClick: openEdit },
-    { label: "Update Progress", variant: "ghost",   onClick: openProgress },
-    { label: "Delete",          variant: "danger",  onClick: handleDelete },
-  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -122,55 +98,102 @@ export default function Targets() {
         <Heading primaryText="Sales" secondaryText="Targets" size={12} />
         {kpiTargets.map((k, i) => (
           <DashCard key={k.title} title={k.title} value={k.value}
-            icon={kpiIcons[i]} accentColor={kpiAccents[i]} size={3} />
+            icon={KPI_ICONS[i]} accentColor={KPI_ACCENTS[i]} size={3} />
         ))}
       </DashGrid>
 
       <div className="flex justify-end">
-        <button
-          onClick={() => { setEditId(null); setForm(blankForm); setErrors({}); openModal("target-form-modal"); }}
-          className="px-5 py-2.5 rounded-xl bg-[#2a465a] text-white text-sm font-bold shadow"
-        >
-          + Create Target
-        </button>
+        <Button text="+ &nbsp; Create Target" variant="primary" size={3}
+          onClick={() => { setEditId(null); setForm(BLANK); setErrors({}); openModal("tgt-form-modal"); }}
+        />
       </div>
 
+      {/* Table — key columns only */}
       <DataTable
         title="Target List"
-        columns={targetCols}
+        columns={TARGET_COLS}
         rows={targets}
-        actions={actions}
+        actions={[
+          {
+            icon: <Eye size={15} />,
+            tooltip: "View Details",
+            variant: "ghost",
+            onClick: (row) => { setViewRow(targets.find((t) => t.id === row.id)); openModal("tgt-view-modal"); },
+          },
+          {
+            icon: <Pencil size={15} />,
+            tooltip: "Edit",
+            variant: "ghost",
+            onClick: (row) => openEdit(targets.find((t) => t.id === row.id)),
+          },
+          {
+            icon: <TrendingUp size={15} />,
+            tooltip: "Update Progress",
+            variant: "primary",
+            onClick: (row) => openProgress(targets.find((t) => t.id === row.id)),
+          },
+          {
+            icon: <Trash2 size={15} />,
+            tooltip: "Delete",
+            variant: "danger",
+            onClick: (row) => setTargets((prev) => prev.filter((t) => t.id !== row.id)),
+          },
+        ]}
         size={12}
-        pageSize={8}
+        pageSize={10}
         searchable
+        exportable
+        exportFileName="targets"
         filters={[
-          { title: "Type",   type: "toggle", key: "type",   options: ["Daily", "Weekly", "Monthly"] },
-          { title: "Status", type: "toggle", key: "status", options: ["Pending", "In Progress", "Completed"] },
+          { title: "Type",        type: "toggle", key: "type",       options: ["Daily", "Weekly", "Monthly"] },
+          { title: "Status",      type: "toggle", key: "status",     options: ["Pending", "In Progress", "Completed"] },
+          { title: "Role",        type: "toggle", key: "role",       options: ["Executive", "Team Leader"] },
+          { title: "Team Leader", type: "select", key: "teamLeader", options: [...new Set(initialTargets.map((t) => t.teamLeader).filter((t) => t !== "Self"))] },
         ]}
       />
 
-      {/* Create / Edit Modal */}
-      <Modal id="target-form-modal" title={editId ? "Edit Target" : "Create Target"} size="md">
+      {/* ── View Modal ──────────────────────────────────────────────────────── */}
+      <Modal id="tgt-view-modal" title="Target Details" size="md">
+        {viewRow && (
+          <div className="flex flex-col gap-4">
+            <ModalProfile
+              name={viewRow.assignedTo}
+              subtitle={`${viewRow.role} · ${viewRow.teamLeader}`}
+              meta={`ID: ${viewRow.id} · Deadline: ${viewRow.deadline}`}
+            />
+            <ModalGrid title="Target Info" cols={2}>
+              <ModalData label="Type"           value={viewRow.type} />
+              <ModalData label="Assigned Leads" value={viewRow.leads} />
+              <ModalData label="Target"         value={viewRow.target} />
+              <ModalData label="Achieved"       value={viewRow.achieved} />
+              <ModalData label="Remaining"      value={viewRow.remaining} />
+              <ModalData label="Status"         value={viewRow.status} />
+            </ModalGrid>
+            <div className="flex justify-end pt-2">
+              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("tgt-view-modal")} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ── Create / Edit Modal ─────────────────────────────────────────────── */}
+      <Modal id="tgt-form-modal" title={editId ? "Edit Target" : "Create Target"} size="md">
         <Grid cols={12} gap={4}>
           <DataField label="Assign To *" id="assignedTo" size={6}
             value={form.assignedTo} onChange={(e) => set("assignedTo", e.target.value)} />
-          <div className="col-span-12 sm:col-span-6 flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Role</label>
-            <Select value={form.role} onChange={(e) => set("role", e.target.value)} placeholder="Select Role" size={12}>
-              <Option value="Executive"   label="Executive" />
-              <Option value="Team Leader" label="Team Leader" />
-            </Select>
-          </div>
+          <SelectField label="Role" id="role" size={6} value={form.role}
+            onChange={(e) => set("role", e.target.value)} placeholder="Select Role" searchable={false}>
+            <Option value="Executive"   label="Executive" />
+            <Option value="Team Leader" label="Team Leader" />
+          </SelectField>
           <DataField label="Team Leader" id="tl" size={6}
             value={form.teamLeader} onChange={(e) => set("teamLeader", e.target.value)} />
-          <div className="col-span-12 sm:col-span-6 flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Target Type</label>
-            <Select value={form.type} onChange={(e) => set("type", e.target.value)} placeholder="Daily/Weekly/Monthly" size={12}>
-              <Option value="Daily"   label="Daily" />
-              <Option value="Weekly"  label="Weekly" />
-              <Option value="Monthly" label="Monthly" />
-            </Select>
-          </div>
+          <SelectField label="Target Type" id="type" size={6} value={form.type}
+            onChange={(e) => set("type", e.target.value)} placeholder="Daily / Weekly / Monthly" searchable={false}>
+            <Option value="Daily"   label="Daily" />
+            <Option value="Weekly"  label="Weekly" />
+            <Option value="Monthly" label="Monthly" />
+          </SelectField>
           <DataField label="Assigned Leads" id="leads" type="number" size={6}
             value={form.leads} onChange={(e) => set("leads", e.target.value)} />
           <DataField label="Target Value *" id="target" type="number" size={6}
@@ -180,45 +203,25 @@ export default function Targets() {
             value={form.start} onChange={(e) => set("start", e.target.value)} />
           <DataField label="End Date" id="end" type="date" size={6}
             value={form.end} onChange={(e) => set("end", e.target.value)} />
-          <div className="col-span-6">
-            <Button text="Cancel" variant="secondary" onClick={() => closeModal("target-form-modal")} />
-          </div>
-          <div className="col-span-6">
-            <Button text={editId ? "Update Target" : "Create Target"} variant="primary" onClick={handleSubmit} />
-          </div>
+          <Button text="Cancel" variant="secondary" size={6} onClick={() => closeModal("tgt-form-modal")} />
+          <Button text={editId ? "Update Target" : "Create Target"} variant="primary" size={6} onClick={handleSubmit} />
         </Grid>
       </Modal>
 
-      {/* View Modal */}
-      <Modal id="target-view-modal" title="Target Details" size="md">
-        {selectedRow && (
-          <div className="grid grid-cols-2 gap-4">
-            <ModalData label="Target ID"     value={selectedRow.id} />
-            <ModalData label="Assigned To"   value={selectedRow.assignedTo} />
-            <ModalData label="Role"          value={selectedRow.role} />
-            <ModalData label="Team Leader"   value={selectedRow.teamLeader} />
-            <ModalData label="Type"          value={selectedRow.type} />
-            <ModalData label="Assigned Leads"value={selectedRow.leads} />
-            <ModalData label="Target"        value={selectedRow.target} />
-            <ModalData label="Achieved"      value={selectedRow.achieved} />
-            <ModalData label="Remaining"     value={selectedRow.remaining} />
-            <ModalData label="Deadline"      value={selectedRow.deadline} />
-            <ModalData label="Status"        value={selectedRow.status} />
-          </div>
-        )}
-      </Modal>
-
-      {/* Progress Modal */}
-      <Modal id="target-progress-modal" title="Update Progress" size="sm">
-        {selectedRow && (
+      {/* ── Progress Modal ──────────────────────────────────────────────────── */}
+      <Modal id="tgt-progress-modal" title="Update Progress" size="sm">
+        {progressRow && (
           <div className="flex flex-col gap-4">
-            <ModalData label="Target For"   value={selectedRow.assignedTo} />
-            <ModalData label="Target Value" value={selectedRow.target} />
+            <ModalGrid title="Target Info" cols={2}>
+              <ModalData label="Assigned To"  value={progressRow.assignedTo} />
+              <ModalData label="Target Value" value={progressRow.target} />
+              <ModalData label="Current"      value={progressRow.achieved} />
+            </ModalGrid>
             <DataField label="Achieved So Far" id="progress" type="number"
               value={progressVal} onChange={(e) => setProgressVal(e.target.value)} />
             <div className="flex gap-2 pt-2">
-              <Button text="Cancel" variant="secondary" size={6} onClick={() => closeModal("target-progress-modal")} />
-              <Button text="Save" variant="primary" size={6} onClick={handleProgressSave} />
+              <Button text="Cancel" variant="secondary" size={6} onClick={() => closeModal("tgt-progress-modal")} />
+              <Button text="Save"   variant="primary"   size={6} onClick={saveProgress} />
             </div>
           </div>
         )}

@@ -1,45 +1,62 @@
 /**
- * LineNumber Line
----------- ----
-        // Priyanshu's Components
-        93   ── HOW TO USE InputField ──────────────────────────────────────────────────
-       132   ── HOW TO USE Label ────────────────────────────────────────────────────────
-       190   ── HOW TO USE DataField ────────────────────────────────────────────────────
-       267   ── HOW TO USE Button ───────────────────────────────────────────────────────
-       433   ── HOW TO USE SelectField ──────────────────────────────────────────────────
-       461   ── HOW TO USE Select ───────────────────────────────────────────────────────
-       500   ── HOW TO USE Option ───────────────────────────────────────────────────────
-      1416   ── HOW TO USE DataTable ────────────────────────────────────────────────────
-      1568   ── HOW TO USE Heading ──────────────────────────────────────────────────────
-      1618   ── HOW TO USE HeadingForDataTable ──────────────────────────────────────────
-      1668   ── HOW TO USE Grid ─────────────────────────────────────────────────────────
-      2056   ── HOW TO USE DashCard ─────────────────────────────────────────────────────
-      2136   ── HOW TO USE GLineChart ─────────────────────────────────────────────────── 
-      2228   ── HOW TO USE GBarChart ────────────────────────────────────────────────────
-      2306   ── HOW TO USE GColumnChart ─────────────────────────────────────────────────
-      2409   ── HOW TO USE GAreaChart ───────────────────────────────────────────────────
-      2513   ── HOW TO USE GDoughnutChart ───────────────────────────────────────────────
-      2586   ── HOW TO USE GPieChart ────────────────────────────────────────────────────
-      2663   ── HOW TO USE GRadarChart (Spider / Radar) ─────────────────────────────────
-      2723   ── HOW TO USE DashGrid ─────────────────────────────────────────────────────
-      2911   ── HOW TO USE Modal ────────────────────────────────────────────────────────
-      2975   ── HOW TO USE ModalData ────────────────────────────────────────────────────
-      3028   ── HOW TO USE ModalProfile ─────────────────────────────────────────────────
-      3089   ── HOW TO USE ModalGrid ────────────────────────────────────────────────────
-      3134   ── HOW TO USE P ────────────────────────────────────────────────────────────
-      3210   ── HOW TO USE ToggleButton ──────────────────────────────────────────────────
-
-      // Kartik Yadav's Components
-      3347   ── HOW TO USE EnhancedDashCard ─────────────────────────────────────────────
-      3469   ── HOW TO USE EnhancedModal ────────────────────────────────────────────────
-      3680   ── HOW TO USE EnhancedDataTable ────────────────────────────────────────────
-      3774   ── HOW TO USE PanelModal ───────────────────────────────────────────────────
+ * Common_Components.jsx — Shared UI Component Library
+ * ─────────────────────────────────────────────────────────────────────────────
+ * All reusable components for the CRM project live here.
+ * Import only what you need:
+ *   import { Button, DataTable, Modal } from "../../components/shared/Common_Components";
+ *
+ * ── COMPONENT INDEX (Line Numbers) ───────────────────────────────────────────
+ *
+ *  // ── Priyanshu's Components ──────────────────────────────────────────────
+ *
+ *  Line  122  InputField          — Styled text input with label + icon support
+ *  Line  186  Label               — Standalone form label
+ *  Line  235  DataField           — Full input field (text/textarea/date/etc.) with label
+ *  Line  388  Button              — Action button (primary/secondary/danger/success/ghost)
+ *  Line  495  Select              — Styled native select dropdown
+ *  Line  654  SelectField         — Select with label wrapper
+ *  Line  760  Option              — Option item for Select/SelectField
+ *  Line  914  DataTable           — Full-featured sortable/filterable/exportable table
+ *  Line 1995  Heading             — Section heading with primary + secondary text
+ *  Line 2082  HeadingForDataTable — Compact heading for use inside DashGrid
+ *  Line 2120  Grid                — 12-column CSS grid layout wrapper
+ *  Line 2386  DashCard            — Animated KPI stat card
+ *  Line 2568  GLineChart          — Line chart (Recharts wrapper)
+ *  Line 2655  GBarChart           — Horizontal bar chart (Recharts wrapper)
+ *  Line 2744  GColumnChart        — Vertical column/bar chart (Recharts wrapper)
+ *  Line 2823  GAreaChart          — Area chart (Recharts wrapper)
+ *  Line 2954  GDoughnutChart      — Doughnut chart (Recharts wrapper)
+ *  Line 3029  GPieChart           — Pie chart (Recharts wrapper)
+ *  Line 3099  GRadarChart         — Spider/Radar chart (Recharts wrapper)
+ *  Line 3182  DashGrid            — 12-column grid for dashboard layouts
+ *  Line 3281  openModal           — Imperative: open a Modal by id
+ *  Line 3285  closeModal          — Imperative: close a Modal by id
+ *  Line 3289  Modal               — Animated overlay modal dialog
+ *  Line 3441  ModalData           — Label + value row inside a modal
+ *  Line 3469  ModalProfile        — Avatar + name/subtitle/meta header for modals
+ *  Line 3527  ModalGrid           — Titled grid section inside a modal
+ *  Line 3587  P                   — Paragraph text with size variants
+ *  Line 3620  ToggleButton        — Animated on/off toggle switch
+ *
+ *  // ── Kartik Yadav's Components ────────────────────────────────────────────
+ *
+ *  Line 3736  EnhancedDashCard    — Animated KPI card with wave background
+ *
+ *  // ── Shared Utilities ─────────────────────────────────────────────────────
+ *
+ *  Line 4380  UserChat            — Self-contained chat widget (messages + reply + image attach)
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * HOW TO USE comments are placed directly above each component's export.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
 
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import UserAvatar from "./UserAvatar";
+import DatePicker from "./DatePicker";
 import {
   Search,
   ChevronLeft,
@@ -381,6 +398,8 @@ export const Button = ({
       "bg-white text-[#2a465a] border border-slate-200 hover:bg-slate-50 hover:-translate-y-0.5",
     danger:
       "bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:bg-rose-600 hover:-translate-y-0.5",
+    success:
+      "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 hover:-translate-y-0.5",
     ghost: "bg-transparent text-[#2a465a] hover:bg-slate-100",
   };
 
@@ -837,6 +856,11 @@ function ActionButton({ action, row, isIconOnly, actionVariantCls }) {
   const [tipPos, setTipPos] = useState(null);
   const btnRef = useRef(null);
 
+  // Support per-row visibility: action.show can be a function (row) => bool
+  if (action.show && !action.show(row)) {
+    return <div className={isIconOnly ? "w-8 h-8 flex-shrink-0" : "px-3 py-1.5 flex-shrink-0"} />;
+  }
+
   const showTip = () => {
     if (!isIconOnly || !action.tooltip) return;
     const rect = btnRef.current?.getBoundingClientRect();
@@ -926,6 +950,16 @@ export const DataTable = ({
   // exportFileName — custom filename for the downloaded CSV (default: "export")
   exportable = false,
   exportFileName = "export",
+  // ellipse — optional word limit for cell text truncation (default: undefined = no truncation)
+  // When set to a number, every non-status cell value is truncated to that many words
+  // with "…" appended. Useful for long text columns like reason, description, notes.
+  // Example: ellipse={3} → "Vacation trip with…"
+  ellipse,
+  // userProfile — key name of the column that should show a user avatar before the text.
+  // The row must have a matching key for the name, and optionally a `photoUrl` field
+  // for the actual photo. Clicking the avatar opens the photo in a new tab.
+  // Example: userProfile="name"  → the "name" column gets an avatar prefix
+  userProfile,
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -1137,15 +1171,16 @@ export const DataTable = ({
   const actionVariantCls = {
     primary: "bg-[#2a465a] text-white hover:bg-[#1e3a52]",
     danger: "bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100",
+    success: "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100",
     ghost: "bg-slate-100 text-slate-600 hover:bg-slate-200",
   };
 
-  // ── CSV Export — exports ALL fields from every row (not just visible columns)
+  // ── CSV Export — exports only the currently filtered/visible rows
   const handleExport = () => {
-    if (!rows.length) return;
+    if (!filtered.length) return;
 
-    // Collect every unique key across all rows (preserves insertion order)
-    const allKeys = [...new Set(rows.flatMap((r) => Object.keys(r)))];
+    // Collect every unique key across filtered rows (preserves insertion order)
+    const allKeys = [...new Set(filtered.flatMap((r) => Object.keys(r)))];
 
     // Build header row using column labels where available, otherwise the raw key
     const keyToLabel = Object.fromEntries(columns.map((c) => [c.key, c.label]));
@@ -1161,7 +1196,7 @@ export const DataTable = ({
 
     const csvLines = [
       header.map(escape).join(","),
-      ...rows.map((row) => allKeys.map((k) => escape(row[k])).join(",")),
+      ...filtered.map((row) => allKeys.map((k) => escape(row[k])).join(",")),
     ];
 
     const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
@@ -1252,7 +1287,7 @@ export const DataTable = ({
             <button
               type="button"
               onClick={handleExport}
-              disabled={rows.length === 0}
+              disabled={filtered.length === 0}
               className="flex items-center gap-1.5 px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-[#2a465a] hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
               title="Export all data as CSV"
             >
@@ -1439,6 +1474,18 @@ export const DataTable = ({
                     </Select>
                   )}
 
+                  {/* ── DATE: input ── */}
+                  {f.type === "date" && (
+                    <input
+                      type="date"
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 transition-all text-slate-500"
+                      value={filterValues[f.title] ?? ""}
+                      onChange={(e) =>
+                        setFilterValues((prev) => ({ ...prev, [f.title]: e.target.value }))
+                      }
+                    />
+                  )}
+
                   {/* ── TEXT: plain input (default) ── */}
                   {(!f.type || f.type === "text") && (
                     <input
@@ -1616,44 +1663,89 @@ export const DataTable = ({
                     {columns.map((col) => {
                       if (col.key === "status") {
                         const val = row[col.key];
-                        // ── Status → colour map ──────────────────────────────
-                        // Green  — positive / done
-                        // Amber  — in-progress / warm / pending
-                        // Blue   — new / cold / info
-                        // Purple — prospect / interested
-                        // Rose   — failed / dump / hot (urgent)
-                        // Slate  — default / unknown
+                        // ── Status → colour map ──────────────────────────────────────────
+                        // Emerald — positive / completed / active / success
+                        // Teal    — working / in-session / live
+                        // Blue    — new / info / open / replied
+                        // Purple  — prospect / qualified / interested
+                        // Amber   — pending / in-progress / paused / warm / follow-up
+                        // Slate   — neutral / not-respond / unassigned
+                        // Rose    — failed / rejected / escalated / dump / overdue / inactive
                         const STATUS_MAP = {
-                          // ── Green ──
+                          // ── Emerald (positive / done / approved / won) ──
                           Completed: ["bg-emerald-100", "text-emerald-700"],
                           Converted: ["bg-emerald-100", "text-emerald-700"],
                           Done: ["bg-emerald-100", "text-emerald-700"],
+                          done: ["bg-emerald-100", "text-emerald-700"],
                           Active: ["bg-emerald-100", "text-emerald-700"],
                           Approved: ["bg-emerald-100", "text-emerald-700"],
                           Won: ["bg-emerald-100", "text-emerald-700"],
                           Valid: ["bg-emerald-100", "text-emerald-700"],
-                          // ── Amber ──
+                          Paid: ["bg-emerald-100", "text-emerald-700"],
+                          Accepted: ["bg-emerald-100", "text-emerald-700"],
+                          Resolved: ["bg-emerald-100", "text-emerald-700"],
+                          Success: ["bg-emerald-100", "text-emerald-700"],
+                          Successful: ["bg-emerald-100", "text-emerald-700"],
+                          Closed: ["bg-emerald-100", "text-emerald-700"],
+                          Present: ["bg-emerald-100", "text-emerald-700"],
+                          Finalized: ["bg-emerald-100", "text-emerald-700"],
+                          // ── Teal (live / working / clocked-in) ──
+                          Working: ["bg-teal-100", "text-teal-700"],
+                          "Clocked Out": ["bg-teal-100", "text-teal-700"],                          // ── Blue (new / info / open / replied / untouched / talk) ──
+                          New: ["bg-blue-100", "text-blue-700"],
+                          new: ["bg-blue-100", "text-blue-700"],
+                          Cold: ["bg-blue-100", "text-blue-700"],
+                          Open: ["bg-blue-100", "text-blue-700"],
+                          Opened: ["bg-blue-100", "text-blue-700"],
+                          Replied: ["bg-blue-100", "text-blue-700"],
+                          Untouched: ["bg-blue-100", "text-blue-700"],
+                          UNTOUCHED: ["bg-blue-100", "text-blue-700"],
+                          Talk: ["bg-blue-100", "text-blue-700"],
+                          Contacted: ["bg-blue-100", "text-blue-700"],
+                          // ── Purple (prospect / qualified / interested) ──
+                          Prospect: ["bg-purple-100", "text-purple-700"],
+                          Qualified: ["bg-purple-100", "text-purple-700"],
+                          Interested: ["bg-purple-100", "text-purple-700"],
+                          // ── Amber (pending / in-progress / paused / warm / follow-up / late) ──
                           "In Progress": ["bg-amber-100", "text-amber-700"],
                           Pending: ["bg-amber-100", "text-amber-700"],
+                          pending: ["bg-amber-100", "text-amber-700"],
                           "Follow-up": ["bg-amber-100", "text-amber-700"],
                           Warm: ["bg-amber-100", "text-amber-700"],
                           Proposal: ["bg-amber-100", "text-amber-700"],
-                          Interested: ["bg-amber-100", "text-amber-700"],
-                          // ── Blue ──
-                          New: ["bg-blue-100", "text-blue-700"],
-                          Cold: ["bg-blue-100", "text-blue-700"],
-                          // ── Purple ──
-                          Prospect: ["bg-purple-100", "text-purple-700"],
-                          Qualified: ["bg-purple-100", "text-purple-700"],
-                          // ── Rose ──
+                          Paused: ["bg-amber-100", "text-amber-700"],
+                          "Not Working": ["bg-amber-100", "text-amber-700"],
+                          Hot: ["bg-amber-100", "text-amber-700"],
+                          Late: ["bg-amber-100", "text-amber-700"],
+                          // ── Slate (neutral / no-response / leave / holiday / not-clocked-in) ──
+                          "Not Respond": ["bg-slate-200", "text-slate-600"],
+                          Unassigned: ["bg-slate-200", "text-slate-600"],
+                          Leave: ["bg-slate-200", "text-slate-600"],
+                          Holiday: ["bg-slate-200", "text-slate-600"],
+                          Weekend: ["bg-slate-200", "text-slate-600"],
+                          "Not Clocked In": ["bg-slate-200", "text-slate-600"],
+                          "Not Talk": ["bg-slate-200", "text-slate-600"],
+                          "Not Talk (Untouched)": ["bg-slate-200", "text-slate-600"],
+                          // ── Orange (expired / delayed / overdue / warning) ──
+                          Expired: ["bg-orange-100", "text-orange-700"],
+                          Warning: ["bg-orange-100", "text-orange-700"],
+                          Delayed: ["bg-orange-100", "text-orange-700"],
+                          Overdue: ["bg-orange-100", "text-orange-700"],
+                          overdue: ["bg-orange-100", "text-orange-700"],
+                          // ── Rose (failed / rejected / escalated / inactive / absent / dump / not-interested) ──
                           Failed: ["bg-rose-100", "text-rose-700"],
                           Cancelled: ["bg-rose-100", "text-rose-700"],
+                          Canceled: ["bg-rose-100", "text-rose-700"],
                           Dump: ["bg-rose-100", "text-rose-700"],
-                          Hot: ["bg-rose-100", "text-rose-700"],
+                          Dumped: ["bg-rose-100", "text-rose-700"],
                           Lost: ["bg-rose-100", "text-rose-700"],
                           Rejected: ["bg-rose-100", "text-rose-700"],
                           Inactive: ["bg-rose-100", "text-rose-700"],
                           Invalid: ["bg-rose-100", "text-rose-700"],
+                          Unpaid: ["bg-rose-100", "text-rose-700"],
+                          Absent: ["bg-rose-100", "text-rose-700"],
+                          Escalated: ["bg-rose-100", "text-rose-700"],
+                          "Not Interested": ["bg-rose-100", "text-rose-700"],
                         };
                         const [statusBg, statusText] = STATUS_MAP[val] ?? ["bg-slate-100", "text-slate-600"];
                         return (
@@ -1669,7 +1761,38 @@ export const DataTable = ({
                           key={col.key}
                           className="py-3.5 px-5 text-[#2a465a] font-medium whitespace-nowrap"
                         >
-                          {row[col.key] ?? "—"}
+                          {(() => {
+                            const raw = row[col.key] ?? "—";
+                            const text = (() => {
+                              if (!ellipse || typeof raw !== "string") return raw;
+                              const words = raw.trim().split(/\s+/);
+                              return words.length > ellipse
+                                ? words.slice(0, ellipse).join(" ") + "…"
+                                : raw;
+                            })();
+
+                            // ── userProfile avatar prefix ──
+                            if (userProfile && col.key === userProfile) {
+                              const photoUrl = row.photoUrl ?? null;
+                              return (
+                                <div className="flex items-center gap-2.5">
+                                  <UserAvatar
+                                    name={String(raw)}
+                                    src={photoUrl}
+                                    size={28}
+                                    rounded="rounded-lg"
+                                    onClick={photoUrl
+                                      ? (e) => { e.stopPropagation(); window.open(photoUrl, "_blank"); }
+                                      : undefined
+                                    }
+                                  />
+                                  <span>{text}</span>
+                                </div>
+                              );
+                            }
+
+                            return text;
+                          })()}
                         </td>
                       );
                     })}
@@ -1858,6 +1981,10 @@ export const DataTable = ({
                          including fields not shown as table columns (hidden data is included).
   • exportFileName   — filename for the downloaded CSV without extension  (default: "export")
                          Example: exportFileName="leads-report" → downloads "leads-report.csv"
+  • ellipse          — optional number. When set, every non-status cell value is word-truncated
+                         to this many words with "…" appended.
+                         Example: ellipse={3} → "Vacation trip with…"
+                         Tip: only string values are truncated; numbers and "—" are left as-is.
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3290,6 +3417,32 @@ export const Modal = ({ id, title, children, size = "xl" }) => {
     );
   }
 
+  ── EXAMPLE OF Modal ────────────────────────────────────────────────────────
+  
+  <Modal id="att-view-modal" title="Attendance Details" size="md">
+    {selected && (
+      <div className="flex flex-col gap-4">
+        <ModalProfile
+          name={selected.name}
+          subtitle={`${selected.role} · ${selected.teamLeader}`}
+          meta={`Date: ${selected.date}`}
+        />
+        <ModalGrid title="Attendance Info" cols={2}>
+          <ModalData label="Clock In" value={selected.clockIn} />
+          <ModalData label="Clock Out" value={selected.clockOut} />
+          <ModalData label="Working Hours" value={selected.hours} />
+          <ModalData label="Attendance %" value={selected.attendancePct} />
+          <ModalData label="Status" value={selected.status} />
+          <ModalData label="Team Leader" value={selected.teamLeader} />
+          <ModalData label="Role" value={selected.role} />
+        </ModalGrid>
+        <div className="flex justify-end pt-2">
+          <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("att-view-modal")} />
+        </div>
+      </div>
+    )}
+  </Modal>
+
   Props:
   • id       — unique string used to open/close this specific modal
   • title    — string shown in the modal header
@@ -3343,36 +3496,29 @@ export const ModalProfile = ({
   subtitle = "",
   meta = "",
   avatarColor = "#2a465a",
-}) => {
-  const initials = name
-    .split(" ")
-    .filter(Boolean)
-    .map((n) => n[0].toUpperCase())
-    .slice(0, 2)
-    .join("");
-
-  return (
-    <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-      {/* Avatar */}
-      <div
-        className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-black flex-shrink-0 select-none"
-        style={{ background: avatarColor }}
-      >
-        {initials}
-      </div>
-      {/* Info */}
-      <div className="min-w-0">
-        <p className="text-lg font-bold text-[#2a465a] leading-tight truncate">{name}</p>
-        {subtitle && (
-          <p className="text-sm text-slate-500 mt-0.5 truncate">{subtitle}</p>
-        )}
-        {meta && (
-          <p className="text-xs text-slate-400 mt-0.5 truncate">{meta}</p>
-        )}
-      </div>
+  photoUrl,           // optional photo URL — passed to UserAvatar
+}) => (
+  <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+    {/* Avatar — photo if available, else coloured initials */}
+    <UserAvatar
+      name={name}
+      src={photoUrl}
+      size={56}
+      rounded="rounded-2xl"
+      onClick={photoUrl ? () => window.open(photoUrl, "_blank") : undefined}
+    />
+    {/* Info */}
+    <div className="min-w-0">
+      <p className="text-lg font-bold text-[#2a465a] leading-tight truncate">{name}</p>
+      {subtitle && (
+        <p className="text-sm text-slate-500 mt-0.5 truncate">{subtitle}</p>
+      )}
+      {meta && (
+        <p className="text-xs text-slate-400 mt-0.5 truncate">{meta}</p>
+      )}
     </div>
-  );
-};
+  </div>
+);
 
 /*
   ── HOW TO USE ModalProfile ─────────────────────────────────────────────────
@@ -3924,9 +4070,30 @@ export const EnhancedDataTable = ({
                   if (col.key === "status") {
                     const val = row[col.key];
                     let statusBg = "bg-slate-100 text-slate-600";
-                    if (val === "Completed" || val === "Approved" || val === "Active" || val === "Won") statusBg = "bg-emerald-100 text-emerald-800";
-                    else if (val === "Pending" || val === "In Progress" || val === "Interested" || val === "Proposal") statusBg = "bg-amber-100 text-amber-800";
-                    else if (val === "Failed" || val === "Cancelled" || val === "Inactive" || val === "Lost" || val === "Rejected") statusBg = "bg-rose-100 text-rose-800";
+                    // Emerald — positive / done / approved / won / present
+                    if (["Completed", "Approved", "Active", "Won", "Resolved", "Accepted", "Done", "done", "Valid", "Paid", "Success", "Closed", "Present"].includes(val))
+                      statusBg = "bg-emerald-100 text-emerald-800";
+                    // Teal — live / working / clocked-in
+                    else if (["Working", "Clocked Out"].includes(val))
+                      statusBg = "bg-teal-100 text-teal-800";
+                    // Blue — new / open / info / replied / untouched / talk / contacted
+                    else if (["New", "new", "Open", "Opened", "Cold", "Replied", "Untouched", "UNTOUCHED", "Talk", "Contacted"].includes(val))
+                      statusBg = "bg-blue-100 text-blue-800";
+                    // Purple — prospect / qualified / interested
+                    else if (["Prospect", "Qualified", "Interested"].includes(val))
+                      statusBg = "bg-purple-100 text-purple-800";
+                    // Amber — pending / in-progress / paused / warm / follow-up / late / hot
+                    else if (["Pending", "pending", "In Progress", "Follow-up", "Warm", "Proposal", "Paused", "Not Working", "Hot", "Late"].includes(val))
+                      statusBg = "bg-amber-100 text-amber-800";
+                    // Slate — neutral / no-response / leave / holiday / not-clocked-in
+                    else if (["Not Respond", "Unassigned", "Leave", "Holiday", "Weekend", "Not Clocked In", "Not Talk", "Not Talk (Untouched)"].includes(val))
+                      statusBg = "bg-slate-200 text-slate-700";
+                    // Orange — expired / delayed / overdue / warning
+                    else if (["Expired", "Warning", "Delayed", "Overdue", "overdue"].includes(val))
+                      statusBg = "bg-orange-100 text-orange-800";
+                    // Rose — failed / rejected / escalated / inactive / absent / dump / not-interested
+                    else if (["Failed", "Cancelled", "Canceled", "Inactive", "Lost", "Rejected", "Escalated", "Dump", "Dumped", "Invalid", "Unpaid", "Absent", "Not Interested"].includes(val))
+                      statusBg = "bg-rose-100 text-rose-800";
                     return <td key={col.key} className="py-3.5 px-5 whitespace-nowrap"><span className={`px-3 py-1 rounded-full text-xs font-bold ${statusBg}`}>{val ?? "—"}</span></td>;
                   }
                   return <td key={col.key} className={`py-3.5 px-5 text-[#1e3445] font-semibold ${isExpanded ? "whitespace-normal text-xs min-w-[120px]" : "whitespace-nowrap"}`}>{row[col.key] ?? "—"}</td>;
@@ -4152,3 +4319,266 @@ export const PanelModal = ({ id, title, children, isVisible, onClose }) => {
   • isVisible — boolean for prop-based control (optional; overrides event system)
   • onClose   — callback fired when the modal closes (optional)
 */
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UserChat
+// ─────────────────────────────────────────────────────────────────────────────
+/*
+  ── HOW TO USE UserChat ──────────────────────────────────────────────────────
+
+  A fully self-contained chat widget with:
+    • Scrollable message thread (text + image bubbles)
+    • Initials avatars for each participant
+    • Paperclip button to attach & send an image inline
+    • Send button (icon-only) with tooltip
+    • Enter to send, Shift+Enter for newline
+    • Auto-smooth-scroll to the latest message on every update
+
+  ── MINIMAL USAGE ────────────────────────────────────────────────────────────
+
+    import { UserChat } from "./Common_Components";
+
+    // 1. Keep messages in parent state:
+    const [messages, setMessages] = useState([
+      { sender: "Support", time: "2026-05-03 10:00", text: "How can I help you?" },
+    ]);
+
+    // 2. Render:
+    <UserChat
+      messages={messages}
+      onSend={(msg) => setMessages((prev) => [...prev, msg])}
+      currentUser="Sales Manager"
+    />
+
+  ── ALL PROPS ─────────────────────────────────────────────────────────────────
+
+    messages      Message[]   Required. Array of message objects to display.
+                              Each message must have:
+                                sender    string  — display name of the sender
+                                time      string  — timestamp string (any format)
+                              And one of:
+                                text      string  — plain text message
+                                imageUrl  string  — URL of an image to display
+                                imageName string  — (optional) filename caption
+
+    onSend        function    Required. Called with a new message object when
+                              the user sends a text or image:
+                                { sender, time, text }        — for text
+                                { sender, time, imageUrl, imageName } — for image
+
+    currentUser   string      Required. The sender name that identifies "me"
+                              (right-aligned navy bubbles). All other senders
+                              appear on the left in grey.
+
+    placeholder   string      Optional. Textarea placeholder text.
+                              Default: "Type a message… (Enter to send)"
+
+    maxHeight     string      Optional. Tailwind max-height class for the
+                              scrollable message area.
+                              Default: "max-h-80"
+
+    showAttach    boolean     Optional. Show the paperclip attach-image button.
+                              Default: true
+
+  ── EXAMPLES ─────────────────────────────────────────────────────────────────
+
+    // Basic ticket chat
+    <UserChat
+      messages={ticket.conversation}
+      onSend={(msg) => updateTicket(ticket.id, msg)}
+      currentUser="Sales Manager"
+    />
+
+    // Custom height, no attachment button
+    <UserChat
+      messages={chatLog}
+      onSend={handleSend}
+      currentUser="Admin"
+      maxHeight="max-h-48"
+      showAttach={false}
+      placeholder="Reply to customer…"
+    />
+
+*/
+
+export const UserChat = ({
+  messages = [],
+  onSend,
+  currentUser = "Me",
+  placeholder = "Type a message… (Enter to send)",
+  maxHeight = "max-h-80",
+  showAttach = true,
+}) => {
+  const [text, setText] = React.useState("");
+  const chatEndRef = React.useRef(null);
+  const imgInputRef = React.useRef(null);
+
+  // ── Auto-scroll to bottom on every new message ──
+  React.useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length]);
+
+  // ── Build a timestamped message object ──
+  const makeMsg = (payload) => ({
+    sender: currentUser,
+    time: new Date().toISOString().slice(0, 16).replace("T", " "),
+    ...payload,
+  });
+
+  // ── Send text message ──
+  const handleSendText = () => {
+    if (!text.trim() || !onSend) return;
+    onSend(makeMsg({ text }));
+    setText("");
+  };
+
+  // ── Send image message from file picker ──
+  const handleImageFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !onSend) return;
+    onSend(makeMsg({ imageUrl: URL.createObjectURL(file), imageName: file.name }));
+    e.target.value = "";
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+
+      {/* ── Message thread ── */}
+      <div className={`flex flex-col gap-3 ${maxHeight} overflow-y-auto px-2 py-2 custom-scrollbar rounded-2xl bg-slate-50 border border-slate-100`}>
+        {messages.length === 0 ? (
+          /* Empty state */
+          <div className="flex flex-col items-center justify-center py-10 gap-2">
+            <svg className="w-7 h-7 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <p className="text-xs text-slate-400 font-medium">No messages yet.</p>
+          </div>
+        ) : (
+          messages.map((msg, i) => {
+            const isMe = msg.sender === currentUser;
+            // Generate 2-letter initials from sender name
+            const initials = msg.sender.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+
+            return (
+              <div key={i} className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+
+                {/* ── Avatar ── */}
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 shadow-sm ${isMe ? "bg-[#2a465a] text-white" : "bg-slate-200 text-slate-600"
+                  }`}>
+                  {initials}
+                </div>
+
+                {/* ── Bubble ── */}
+                <div className={`flex flex-col gap-0.5 max-w-[72%] ${isMe ? "items-end" : "items-start"}`}>
+                  {/* Sender + timestamp */}
+                  <span className="text-[10px] font-semibold text-slate-400 px-1">
+                    {msg.sender} · {msg.time}
+                  </span>
+
+                  {msg.imageUrl ? (
+                    /* Image bubble — click to open full-size */
+                    <div className={`rounded-2xl overflow-hidden shadow-sm border ${isMe ? "border-[#2a465a]/20 rounded-br-sm" : "border-slate-200 rounded-bl-sm"
+                      }`}>
+                      <img
+                        src={msg.imageUrl}
+                        alt={msg.imageName || "attachment"}
+                        className="max-w-[180px] max-h-[180px] object-cover cursor-pointer hover:opacity-90 transition"
+                        onClick={() => window.open(msg.imageUrl, "_blank")}
+                      />
+                      {msg.imageName && (
+                        <div className={`px-2 py-1 text-[10px] font-medium truncate max-w-[180px] ${isMe ? "bg-[#2a465a] text-white/70" : "bg-slate-50 text-slate-400"
+                          }`}>
+                          {msg.imageName}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Text bubble */
+                    <div className={`px-3.5 py-2 rounded-2xl text-xs font-medium leading-relaxed shadow-sm ${isMe
+                      ? "bg-[#2a465a] text-white rounded-br-sm"
+                      : "bg-white border border-slate-200 text-[#2a465a] rounded-bl-sm"
+                      }`}>
+                      {msg.text}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+        {/* Invisible sentinel — scrolled into view on new message */}
+        <div ref={chatEndRef} />
+      </div>
+
+      {/* ── Reply input row ── */}
+      <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 focus-within:ring-2 focus-within:ring-[#2a465a]/20 focus-within:border-[#2a465a]/40 transition">
+
+        {/* Attach image button (hidden file input + paperclip icon) */}
+        {showAttach && (
+          <>
+            <input
+              ref={imgInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageFile}
+            />
+            <div className="relative group shrink-0">
+              <button
+                type="button"
+                onClick={() => imgInputRef.current?.click()}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-200 hover:text-[#2a465a] transition"
+              >
+                {/* Paperclip SVG */}
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              </button>
+              {/* Tooltip */}
+              <div className="pointer-events-none absolute bottom-full left-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <div className="bg-[#1e293b] text-white text-[10px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
+                  Attach Image
+                </div>
+                <div className="absolute top-full left-3 border-4 border-transparent border-t-[#1e293b]" />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Textarea */}
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendText(); } }}
+          placeholder={placeholder}
+          rows={1}
+          className="flex-1 bg-transparent text-sm text-[#2a465a] placeholder:text-slate-400 focus:outline-none resize-none leading-5 py-0.5"
+        />
+
+        {/* Send button */}
+        <div className="relative group shrink-0">
+          <button
+            type="button"
+            onClick={handleSendText}
+            disabled={!text.trim()}
+            className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#2a465a] text-white hover:bg-[#1e3a52] transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-[#2a465a]/20"
+          >
+            {/* Send icon */}
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+          </button>
+          {/* Tooltip */}
+          <div className="pointer-events-none absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            <div className="bg-[#1e293b] text-white text-[10px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
+              Send Reply
+            </div>
+            <div className="absolute top-full right-3 border-4 border-transparent border-t-[#1e293b]" />
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};

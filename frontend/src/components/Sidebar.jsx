@@ -120,9 +120,9 @@ const MENUS = {
       {
         label: "Sales",
         items: [
-          { name: "Leads",        path: "/sales-manager/leads",       icon: Target },
-          { name: "Team Leaders", path: "/sales-manager/team-leader", icon: UserCheck },
-          { name: "Teams",        path: "/sales-manager/teams",       icon: Users },
+          { name: "Leads",     path: "/sales-manager/leads",     icon: Target },
+          { name: "Teams",     path: "/sales-manager/teams",     icon: Users  },
+          { name: "Employees", path: "/sales-manager/employees", icon: UserCheck },
         ],
       },
       {
@@ -136,7 +136,7 @@ const MENUS = {
         items: [
           { name: "HRM",           path: "/sales-manager/hrm",           icon: ClipboardList },
           { name: "Support",       path: "/sales-manager/support",       icon: LifeBuoy },
-          { name: "Communication", path: "/sales-manager/communication", icon: MessageSquare },
+          { name: "Announcements", path: "/sales-manager/announcements", icon: MessageSquare },
           { name: "Logs",          path: "/sales-manager/logs",          icon: History },
           { name: "Reports",       path: "/sales-manager/reports",       icon: BarChart2 },
         ],
@@ -187,19 +187,25 @@ const MENUS = {
         ],
       },
       {
-        label: "Sales",
+        label: "Leads",
         items: [
-          { name: "My Leads", path: "/sales-executive/leads", icon: Target },
-          { name: "Pipeline", path: "/sales-executive/pipeline", icon: GitBranch },
-          { name: "Call Panel", path: "/sales-executive/calls", icon: PhoneCall },
-          { name: "Tickets", path: "/sales-executive/tickets", icon: Ticket },
+          { name: "Leads",         path: "/sales-executive/leads",         icon: Target },
+          { name: "Prospects", path: "/sales-executive/prospects", icon: ClipboardList },
+          { name: "Dump Data",     path: "/sales-executive/dump",          icon: Database },
         ],
       },
       {
-        label: "Performance",
+        label: "Personal",
         items: [
-          { name: "Targets", path: "/sales-executive/targets", icon: TrendingUp },
-          { name: "Reports", path: "/sales-executive/reports", icon: BarChart2 },
+          { name: "My Login Logs", path: "/sales-executive/login-logs", icon: History },
+          { name: "Payments",      path: "/sales-executive/payments",   icon: CreditCard },
+        ],
+      },
+      {
+        label: "Management",
+        items: [
+          { name: "HRM",     path: "/sales-executive/hrm",     icon: UserCheck },
+          { name: "Support", path: "/sales-executive/support", icon: LifeBuoy },
         ],
       },
     ],
@@ -217,11 +223,20 @@ const MENUS = {
       {
         label: "Finance",
         items: [
-          { name: "Invoices", path: "/finance/invoices", icon: FileText },
-          { name: "Payments", path: "/finance/payments", icon: CreditCard },
-          { name: "Expenses", path: "/finance/expenses", icon: Receipt },
-          { name: "Billing", path: "/finance/billing", icon: DollarSign },
-          { name: "Reports", path: "/finance/reports", icon: BarChart2 },
+          { name: "Deals",          path: "/finance/deals",          icon: Briefcase   },
+          { name: "Payments",       path: "/finance/payments",       icon: CreditCard  },
+          { name: "Work Orders",    path: "/finance/work-orders",    icon: ClipboardList },
+          { name: "Invoices",       path: "/finance/invoices",       icon: FileText    },
+          { name: "Expenses",       path: "/finance/expenses",       icon: Receipt     },
+          { name: "Global Payment", path: "/finance/global-payment", icon: Globe       },
+        ],
+      },
+      {
+        label: "Management",
+        items: [
+          { name: "Notifications",  path: "/finance/notifications",  icon: MessageSquare },
+          { name: "Login Logs",     path: "/finance/logs",           icon: History     },
+          { name: "HRM",            path: "/finance/hrm",            icon: UserCheck   },
         ],
       },
     ],

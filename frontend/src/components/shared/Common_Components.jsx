@@ -1685,8 +1685,10 @@ export const DataTable = ({
                           Accepted: ["bg-emerald-100", "text-emerald-700"],
                           Resolved: ["bg-emerald-100", "text-emerald-700"],
                           Success: ["bg-emerald-100", "text-emerald-700"],
+                          Successful: ["bg-emerald-100", "text-emerald-700"],
                           Closed: ["bg-emerald-100", "text-emerald-700"],
                           Present: ["bg-emerald-100", "text-emerald-700"],
+                          Finalized: ["bg-emerald-100", "text-emerald-700"],
                           // ── Teal (live / working / clocked-in) ──
                           Working: ["bg-teal-100", "text-teal-700"],
                           "Clocked Out": ["bg-teal-100", "text-teal-700"],                          // ── Blue (new / info / open / replied / untouched / talk) ──
@@ -3415,6 +3417,32 @@ export const Modal = ({ id, title, children, size = "xl" }) => {
     );
   }
 
+  ── EXAMPLE OF Modal ────────────────────────────────────────────────────────
+  
+  <Modal id="att-view-modal" title="Attendance Details" size="md">
+    {selected && (
+      <div className="flex flex-col gap-4">
+        <ModalProfile
+          name={selected.name}
+          subtitle={`${selected.role} · ${selected.teamLeader}`}
+          meta={`Date: ${selected.date}`}
+        />
+        <ModalGrid title="Attendance Info" cols={2}>
+          <ModalData label="Clock In" value={selected.clockIn} />
+          <ModalData label="Clock Out" value={selected.clockOut} />
+          <ModalData label="Working Hours" value={selected.hours} />
+          <ModalData label="Attendance %" value={selected.attendancePct} />
+          <ModalData label="Status" value={selected.status} />
+          <ModalData label="Team Leader" value={selected.teamLeader} />
+          <ModalData label="Role" value={selected.role} />
+        </ModalGrid>
+        <div className="flex justify-end pt-2">
+          <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("att-view-modal")} />
+        </div>
+      </div>
+    )}
+  </Modal>
+
   Props:
   • id       — unique string used to open/close this specific modal
   • title    — string shown in the modal header
@@ -4468,8 +4496,8 @@ export const UserChat = ({
                   ) : (
                     /* Text bubble */
                     <div className={`px-3.5 py-2 rounded-2xl text-xs font-medium leading-relaxed shadow-sm ${isMe
-                        ? "bg-[#2a465a] text-white rounded-br-sm"
-                        : "bg-white border border-slate-200 text-[#2a465a] rounded-bl-sm"
+                      ? "bg-[#2a465a] text-white rounded-br-sm"
+                      : "bg-white border border-slate-200 text-[#2a465a] rounded-bl-sm"
                       }`}>
                       {msg.text}
                     </div>

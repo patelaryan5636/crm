@@ -223,11 +223,20 @@ const MENUS = {
       {
         label: "Finance",
         items: [
-          { name: "Invoices", path: "/finance/invoices", icon: FileText },
-          { name: "Payments", path: "/finance/payments", icon: CreditCard },
-          { name: "Expenses", path: "/finance/expenses", icon: Receipt },
-          { name: "Billing", path: "/finance/billing", icon: DollarSign },
-          { name: "Reports", path: "/finance/reports", icon: BarChart2 },
+          { name: "Deals",          path: "/finance/deals",          icon: Briefcase   },
+          { name: "Payments",       path: "/finance/payments",       icon: CreditCard  },
+          { name: "Work Orders",    path: "/finance/work-orders",    icon: ClipboardList },
+          { name: "Invoices",       path: "/finance/invoices",       icon: FileText    },
+          { name: "Expenses",       path: "/finance/expenses",       icon: Receipt     },
+          { name: "Global Payment", path: "/finance/global-payment", icon: Globe       },
+        ],
+      },
+      {
+        label: "Management",
+        items: [
+          { name: "Notifications",  path: "/finance/notifications",  icon: MessageSquare },
+          { name: "Login Logs",     path: "/finance/logs",           icon: History     },
+          { name: "HRM",            path: "/finance/hrm",            icon: UserCheck   },
         ],
       },
     ],

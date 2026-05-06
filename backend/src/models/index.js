@@ -122,6 +122,8 @@ const BankDetailsSchema = new Schema({
   ifscCode: { type: String, trim: true, uppercase: true },
   upiId: { type: String, trim: true },
   branch: { type: String, trim: true },
+  beneficiaryName: { type: String, trim: true },
+  verified: { type: Boolean, default: false },
 }, { _id: false });
 
 
@@ -479,6 +481,10 @@ const UserSchema = new Schema({
   mustChangePassword: { type: Boolean, default: true },  // force on first login
   isFirstLogin: { type: Boolean, default: true },
   tempPassword: { type: String, default: null }, // Store raw auto-generated password
+  // ── Onboarding / Prerequisite flags ──
+  prereqCompleted: { type: Boolean, default: false },
+  prereqStep: { type: String, enum: ['password','bank-details','completed'], default: 'password' },
+  onboardingAudit: [{ event: String, by: { type: Schema.Types.ObjectId, ref: 'User' }, ip: String, ts: { type: Date, default: Date.now }, meta: Schema.Types.Mixed, _id: false }],
   approvalStatus: { type: String, enum: APPROVAL_ST, default: 'APPROVED' },
 
   // ── Tracking ──

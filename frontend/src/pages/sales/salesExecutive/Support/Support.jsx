@@ -36,22 +36,31 @@ export default function Support() {
     { name: "Integration", value: 15 },
   ];
 
+  // Match status colors from Sales Manager panel
+  const statusColors = {
+    Opened: "bg-amber-100 text-amber-700",
+    "In Progress": "bg-purple-100 text-purple-700",
+    Replied: "bg-blue-100 text-blue-700",
+    Resolved: "bg-emerald-100 text-emerald-700",
+    Escalated: "bg-rose-100 text-rose-700",
+    Closed: "bg-slate-100 text-slate-700",
+  };
+
   const columns = [
     { key: "ticketId", label: "TICKET ID" },
-    { key: "name", label: "NAME" },
+    { key: "name", label: "TITLE" },
     { key: "company", label: "COMPANY NAME" },
     {
       key: "priority",
       label: "PRIORITY",
       render: (row) => (
         <span
-          className={`px-3 py-1 rounded-md text-[10px] font-bold ${
-            row.priority === "High"
-              ? "bg-rose-100 text-rose-600"
-              : row.priority === "Medium"
+          className={`px-3 py-1 rounded-md text-[10px] font-bold ${row.priority === "High"
+            ? "bg-rose-100 text-rose-600"
+            : row.priority === "Medium"
               ? "bg-amber-100 text-amber-600"
               : "bg-blue-100 text-blue-600"
-          }`}
+            }`}
         >
           {row.priority}
         </span>
@@ -62,11 +71,8 @@ export default function Support() {
       label: "STATUS",
       render: (row) => (
         <span
-          className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-            row.status === "Closed"
-              ? "bg-slate-100 text-slate-600"
-              : "bg-emerald-100 text-emerald-600"
-          }`}
+          className={`px-3 py-1 rounded-full text-[10px] font-bold ${statusColors[row.status] || "bg-slate-100 text-slate-600"
+            }`}
         >
           {row.status}
         </span>
@@ -161,40 +167,38 @@ export default function Support() {
         ))}
       </DashGrid>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8">
-          <GBarChart
-            title="Ticket Volume"
-            subtitle="Tickets opened vs resolved this week"
-            data={ticketVolumeData}
-            bars={[
-              { key: "opened", label: "Opened", color: "#f59e0b" },
-              { key: "resolved", label: "Resolved", color: "#10b981" },
-            ]}
-            height={320}
-          />
-        </div>
-        <div className="lg:col-span-4">
-          <GDoughnutChart
-            title="Tickets by Category"
-            subtitle="Current distribution"
-            data={categoryDistributionData}
-            colors={["#8b5cf6", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"]}
-            height={320}
-          />
-        </div>
-      </div>
+      <DataTable
+        title="My Support Tickets"
+        columns={columns}
+        rows={supportData}
+        actions={actions}
+        pageSize={5}
+        searchable={true}
+        size={12}
+        filters={[
+          { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High"] },
+          { title: "Status", type: "toggle", key: "status", options: ["Opened", "In Progress", "Replied", "Resolved", "Escalated", "Closed"] },
+        ]}
+      />
 
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-2">
-        <DataTable
-          title={<HeadingForDataTable primaryText="Support Tickets" secondaryText="Data table" />}
-          columns={columns}
-          rows={supportData}
-          actions={actions}
-          pageSize={5}
-          searchable={true}
-        />
-      </div>
+      <DataTable
+        title="All Support Tickets"
+        columns={[
+          ...columns.slice(0, 2),
+          { key: "raisedBy", label: "Raised By" },
+          { key: "role", label: "Role" },
+          ...columns.slice(2),
+        ]}
+        rows={supportData.map(t => ({ ...t, raisedBy: "Team Member", role: "Executive" }))}
+        actions={actions}
+        pageSize={10}
+        searchable={true}
+        size={12}
+        filters={[
+          { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High"] },
+          { title: "Status", type: "toggle", key: "status", options: ["Opened", "In Progress", "Replied", "Resolved", "Escalated", "Closed"] },
+        ]}
+      />
     </div>
   );
 }

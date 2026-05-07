@@ -8,7 +8,7 @@ import SalesTeamLeaderTickets       from "../../pages/sales/salesTeamLeader/Sale
 import SalesTeamLeaderAnnouncements from "../../pages/sales/salesTeamLeader/SalesTeamLeaderAnnouncements";
 
 // Packet 3 — My Team workspace (layout + sub-pages)
-import MyTeamLayout   from "../../pages/sales/salesTeamLeader/myTeam/MyTeamLayout";
+import SalesTeamLeaderMyTeam from "../../pages/sales/salesTeamLeader/SalesTeamLeaderMyTeam";
 import TeamMembers    from "../../pages/sales/salesTeamLeader/myTeam/TeamMembers";
 import Attendance     from "../../pages/sales/salesTeamLeader/myTeam/Attendance";
 import LeaveApprovals from "../../pages/sales/salesTeamLeader/myTeam/LeaveApprovals";
@@ -26,7 +26,7 @@ function SalesTeamLeaderRoutes() {
                 <Route path="leads"          element={<SalesTeamLeaderLeads />} />
 
                  {/* ── Packet 3 — My Team workspace ──*/}
-                 <Route path="my-team" element={<MyTeamLayout />}> 
+                <Route path="my-team" element={<SalesTeamLeaderMyTeam />}>
                      <Route index                     element={<TeamMembers />} />
                      <Route path="attendance"         element={<Attendance />} />
                      <Route path="leave-approvals"    element={<LeaveApprovals />} />

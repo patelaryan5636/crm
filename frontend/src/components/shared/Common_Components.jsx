@@ -1685,8 +1685,10 @@ export const DataTable = ({
                           Accepted: ["bg-emerald-100", "text-emerald-700"],
                           Resolved: ["bg-emerald-100", "text-emerald-700"],
                           Success: ["bg-emerald-100", "text-emerald-700"],
+                          Successful: ["bg-emerald-100", "text-emerald-700"],
                           Closed: ["bg-emerald-100", "text-emerald-700"],
                           Present: ["bg-emerald-100", "text-emerald-700"],
+                          Finalized: ["bg-emerald-100", "text-emerald-700"],
                           // ── Teal (live / working / clocked-in) ──
                           Working: ["bg-teal-100", "text-teal-700"],
                           "Clocked Out": ["bg-teal-100", "text-teal-700"],                          // ── Blue (new / info / open / replied / untouched / talk) ──
@@ -1896,12 +1898,12 @@ export const DataTable = ({
     { name: "Carol White",   email: "carol@acme.com", role: "Staff",   status: "Failed",      date: "2024-04-10" },
   ];
 
-  // Icon-only actions with tooltips
+  // Icon-only actions with tooltips (recommended — compact, clean)
   const actions = [
     {
       icon: <Pencil size={14} />,
       tooltip: "Edit",
-      variant: "ghost",                 // "primary" | "danger" | "ghost"
+      variant: "ghost",                 // "primary" | "success" | "danger" | "ghost"
       onClick: (row) => handleEdit(row),
     },
     {
@@ -1910,12 +1912,6 @@ export const DataTable = ({
       variant: "danger",
       onClick: (row) => handleDelete(row),
     },
-  ];
-
-  // Label + icon actions (no tooltip needed)
-  const actions = [
-    { label: "Edit",   icon: <Pencil size={14} />, variant: "primary", onClick: (row) => handleEdit(row) },
-    { label: "Delete",                              variant: "danger",  onClick: (row) => handleDelete(row) },
   ];
 
   // Full example with all filter types, date range, bulk actions, and toolbar date picker
@@ -1951,9 +1947,12 @@ export const DataTable = ({
   Props:
   • columns          — array of { key, label }; key "status" renders a colored badge
   • rows             — array of data objects (keys must match column keys)
-  • actions          — array of { label?, icon?, tooltip?, variant?, onClick }
-                         label + icon → labeled button; icon only → square icon button with tooltip
-                         variant: "primary" | "danger" | "ghost"  (default: "ghost")
+  • actions          — array of { icon, tooltip, variant?, onClick }
+                         icon:    React element (e.g. <Eye size={14} />) — required for icon-only buttons
+                         tooltip: string shown on hover — required when using icon-only
+                         variant: "primary" | "success" | "danger" | "ghost"  (default: "ghost")
+                         onClick: (row) => void
+                         show:    (row) => boolean — optional, hides the button for specific rows
   • title            — optional heading shown above the table
   • size             — 1–12 grid columns  (default: 12)
   • pageSize         — rows per page  (default: 5)
@@ -3415,6 +3414,32 @@ export const Modal = ({ id, title, children, size = "xl" }) => {
     );
   }
 
+  ── EXAMPLE OF Modal ────────────────────────────────────────────────────────
+  
+  <Modal id="att-view-modal" title="Attendance Details" size="md">
+    {selected && (
+      <div className="flex flex-col gap-4">
+        <ModalProfile
+          name={selected.name}
+          subtitle={`${selected.role} · ${selected.teamLeader}`}
+          meta={`Date: ${selected.date}`}
+        />
+        <ModalGrid title="Attendance Info" cols={2}>
+          <ModalData label="Clock In" value={selected.clockIn} />
+          <ModalData label="Clock Out" value={selected.clockOut} />
+          <ModalData label="Working Hours" value={selected.hours} />
+          <ModalData label="Attendance %" value={selected.attendancePct} />
+          <ModalData label="Status" value={selected.status} />
+          <ModalData label="Team Leader" value={selected.teamLeader} />
+          <ModalData label="Role" value={selected.role} />
+        </ModalGrid>
+        <div className="flex justify-end pt-2">
+          <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("att-view-modal")} />
+        </div>
+      </div>
+    )}
+  </Modal>
+
   Props:
   • id       — unique string used to open/close this specific modal
   • title    — string shown in the modal header
@@ -4468,8 +4493,8 @@ export const UserChat = ({
                   ) : (
                     /* Text bubble */
                     <div className={`px-3.5 py-2 rounded-2xl text-xs font-medium leading-relaxed shadow-sm ${isMe
-                        ? "bg-[#2a465a] text-white rounded-br-sm"
-                        : "bg-white border border-slate-200 text-[#2a465a] rounded-bl-sm"
+                      ? "bg-[#2a465a] text-white rounded-br-sm"
+                      : "bg-white border border-slate-200 text-[#2a465a] rounded-bl-sm"
                       }`}>
                       {msg.text}
                     </div>

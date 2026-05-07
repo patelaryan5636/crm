@@ -1,100 +1,3 @@
-<<<<<<< HEAD
-import { useState } from "react";
-import {
-    Grid,
-    Heading,
-    DashCard,
-    GAreaChart,
-    GPieChart,
-    DataTable,
-    Button,
-} from "../../../components/shared/Common_Components";
-import {
-    Users,
-    TrendingUp,
-    Target,
-    DollarSign,
-    CheckCircle2,
-    Clock,
-} from "lucide-react";
-
-const leadsTrendData = [
-    { name: "Jan", leads: 42 }, { name: "Feb", leads: 68 },
-    { name: "Mar", leads: 55 }, { name: "Apr", leads: 94 },
-];
-
-const funnelData = [
-    { name: "Contacted", value: 380 },
-    { name: "Interested", value: 220 },
-    { name: "Converted", value: 110 },
-    { name: "Dump", value: 130 },
-];
-
-const leadCols = [
-    { key: "lead", label: "Lead Name" },
-    { key: "contact", label: "Contact" },
-    { key: "status", label: "Status" },
-    { key: "date", label: "Date" },
-];
-
-const leadRows = [
-    { lead: "Nexus Retail", contact: "+91 98001 11234", status: "In Progress", date: "2026-04-22" },
-    { lead: "BlueWave Pvt Ltd", contact: "+91 98002 22345", status: "Completed", date: "2026-04-22" },
-];
-
-export default function SalesExecutiveDashboard() {
-    return (
-        <div className="w-full max-w-[1600px] mx-auto space-y-6">
-            <Grid cols={12} gap={4}>
-                <Heading
-                    primaryText="Sales Executive Dashboard"
-                    secondaryText="Your performance and leads overview"
-                    fontSize="2xl"
-                    size={12}
-                />
-            </Grid>
-
-            <Grid cols={12} gap={4}>
-                <DashCard title="My Leads" value="148" icon={<Users size={20} />} accentColor="#3b82f6" size={3} />
-                <DashCard title="Converted" value="42" icon={<CheckCircle2 size={20} />} accentColor="#22c55e" size={3} />
-                <DashCard title="Conv. Rate" value="28.4%" icon={<TrendingUp size={20} />} accentColor="#8b5cf6" size={3} />
-                <DashCard title="Revenue" value="₹1,86,000" icon={<DollarSign size={20} />} accentColor="#14b8a6" size={3} />
-                <DashCard title="Target Achieved" value="93%" icon={<Target size={20} />} accentColor="#f59e0b" size={3} />
-                <DashCard title="Pending Follow-ups" value="12" icon={<Clock size={20} />} accentColor="#38bdf8" size={3} />
-            </Grid>
-
-            <Grid cols={12} gap={4}>
-                <GAreaChart
-                    title="My Leads Trend"
-                    subtitle="Monthly leads assigned"
-                    data={leadsTrendData}
-                    areas={[{ key: "leads", label: "Leads", color: "#3b82f6" }]}
-                    size={8}
-                    height={300}
-                />
-                <GPieChart
-                    title="My Pipeline"
-                    subtitle="Lead status breakdown"
-                    data={funnelData}
-                    colors={["#8b5cf6", "#22c55e", "#14b8a6", "#f43f5e"]}
-                    size={4}
-                    height={300}
-                />
-            </Grid>
-
-            <Grid cols={12} gap={4}>
-                <DataTable
-                    title="My Recent Leads"
-                    columns={leadCols}
-                    rows={leadRows}
-                    size={12}
-                    pageSize={5}
-                />
-            </Grid>
-        </div>
-    );
-}
-=======
 import React, { useState, useMemo } from "react";
 import {
   Users,
@@ -126,7 +29,6 @@ import {
 } from "../../../components/shared/Common_Components";
 
 const SalesExecutiveDashboard = () => {
-
 
   // Dummy Data for Charts
   const weeklySalesData = [
@@ -195,41 +97,11 @@ const SalesExecutiveDashboard = () => {
 
   const columns = [
     { key: "leadName", label: "Lead Name" },
-    {
-      key: "status",
-      label: "Status",
-      render: (row) => (
-        <span
-          className={`px-2 py-1 rounded-full text-[10px] font-bold ${row.status === "Hot"
-            ? "bg-rose-100 text-rose-600"
-            : row.status === "Warm"
-              ? "bg-orange-100 text-orange-600"
-              : "bg-blue-100 text-blue-600"
-            }`}
-        >
-          {row.status}
-        </span>
-      ),
-    },
+    { key: "status", label: "Status" },
     { key: "executive", label: "Executive" },
     { key: "lastFollowUp", label: "Last Follow-up" },
     { key: "nextReminder", label: "Next Reminder" },
-    {
-      key: "priority",
-      label: "Priority",
-      render: (row) => (
-        <span
-          className={`font-bold ${row.priority === "High"
-            ? "text-rose-500"
-            : row.priority === "Medium"
-              ? "text-orange-500"
-              : "text-blue-500"
-            }`}
-        >
-          {row.priority}
-        </span>
-      ),
-    },
+    { key: "priority", label: "Priority" },
   ];
 
   return (
@@ -240,8 +112,6 @@ const SalesExecutiveDashboard = () => {
         secondaryText="Overview & Activity"
         showAnimations={true}
       />
-
-
 
       {/* TOP KPI CARDS */}
       <DashGrid cols={12} gap={4}>
@@ -381,7 +251,7 @@ const SalesExecutiveDashboard = () => {
         </div>
       </Grid>
 
-      {/* Recent Activity Table (Full Row) */}
+      {/* Recent Activity Table */}
       <DataTable
         title="Recent Pipeline Activity"
         columns={columns}
@@ -395,8 +265,8 @@ const SalesExecutiveDashboard = () => {
         ]}
       />
 
-      {/* Upcoming Reminders Widget (Full Row Fix) */}
-      <Grid cols={12} >
+      {/* Upcoming Reminders Widget */}
+      <Grid cols={12}>
         <div className="col-span-12">
           <div className="bg-[#2a465a] rounded-3xl p-6 shadow-xl shadow-[#2a465a]/20 text-white relative overflow-hidden h-full">
             <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -437,4 +307,3 @@ const SalesExecutiveDashboard = () => {
 };
 
 export default SalesExecutiveDashboard;
->>>>>>> 767b94be8a9438fb4c517252a04761df3f61804f

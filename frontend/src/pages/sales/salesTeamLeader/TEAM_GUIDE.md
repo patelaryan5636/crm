@@ -95,6 +95,15 @@ You never go directly to the Frontend Lead. You never edit shared files. You giv
 | **No backend yet** | Everything is dummy. Do not write `fetch`, `axios`, or API services. |
 | **No comments unless non-obvious** | The shared components are self-explanatory. Don't add prop descriptions. |
 
+### DataTable column gotchas
+
+A few things about `<DataTable columns={...} />` that aren't obvious from the prop list:
+
+- **No custom `render` callback support.** Column entries are `{ key, label }` only. If you write `{ key: "foo", render: (row) => <Badge>{row.foo}</Badge> }`, the `render` is silently ignored and the cell falls back to `row[col.key]`. Don't waste time on render functions — they look like they work in your editor but the table won't call them.
+- **`status` key auto-renders as a colored badge.** Whatever value sits in `row.status` gets matched against a built-in `STATUS_MAP` in `Common_Components.jsx` (Present/Active/Approved → emerald, Pending/Warm/Late → amber, Overdue → orange, Rejected/Failed/Absent → rose, etc.). Use Title-Case status values that match the map so colors apply automatically.
+- **If you want a colored badge on a field that isn't `status`** — copy the field into a `status` column, OR ask Pranjal to add the field to `STATUS_MAP`. Don't roll your own pill component inside the table.
+- **`userProfile="name"`** prop renders an avatar prefix on the column matching that key. Use it on tables where rows are people.
+
 ---
 
 ## 5. The 4 universal rules when copying from Sales Manager
@@ -344,6 +353,7 @@ Pranjal will add it to `salesTeamLeaderRoutes.jsx` and request the matching side
 - **Cross-team data.** `teamExecutives` lists 6 people. Do not add executives from outside the TL's team.
 - **Adding API calls.** Backend isn't ready. Keep everything in component state.
 - **Adding a new shared component on your own.** Either create it inside your packet folder, or request it via Pranjal — never modify `Common_Components.jsx`.
+- **Writing a `render` callback on a `<DataTable>` column.** Silently ignored — the table only reads `{ key, label }`. The `status` key auto-styles via the built-in `STATUS_MAP`; for everything else, render plain text or restructure the data. See Section 4 for details.
 
 ---
 

@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Heading, DashGrid, DashCard, DataTable,
   openModal, closeModal, Modal, ModalData, ModalGrid, ModalProfile, Button,
 } from "../../../../components/shared/Common_Components";
+import { userService } from "../../../../services/userService";
 import { employeeRows, employeeKPIs } from "./EmployeeStore";
 import { Users, UserCheck, Briefcase, Activity, Eye } from "lucide-react";
+import toast from "react-hot-toast";
 
 const kpiIcons   = [<Users size={22}/>, <UserCheck size={22}/>, <Briefcase size={22}/>, <Activity size={22}/>];
 const kpiAccents = ["#3b82f6", "#8b5cf6", "#14b8a6", "#22c55e"];
@@ -13,8 +15,6 @@ const kpiAccents = ["#3b82f6", "#8b5cf6", "#14b8a6", "#22c55e"];
 const COLS = [
   { key: "name",       label: "Name"         },
   { key: "role",       label: "Role"         },
-  { key: "teamName",   label: "Team"         },
-  { key: "teamLeader", label: "Team Leader"  },
   { key: "mobile",     label: "Mobile"       },
   { key: "joinDate",   label: "Joined"       },
   { key: "status",     label: "Status"       },
@@ -31,9 +31,78 @@ const AVATAR_COLORS = [
 export default function Employees() {
   const [selected, setSelected] = useState(null);
   const [view,     setView]     = useState("table"); // "table" | "grid"
+  const [kpis,     setKpis]     = useState([
+    { title: "Total Employees", value: "0", accent: "#3b82f6" },
+    { title: "Team Leads",       value: "0", accent: "#8b5cf6" },
+    { title: "Executives",      value: "0", accent: "#14b8a6" },
+    { title: "Active",          value: "0", accent: "#22c55e" },
+  ]);
+  const [rows,     setRows]     = useState([]);
+  const [loading,  setLoading]  = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const params = {
+          // Fetch only Sales TLs and Executives across the organization
+          roles: 'SALES_TL,SALES_EXECUTIVE'
+        };
+
+        const [statsRes, usersRes] = await Promise.all([
+          userService.getUserStats(params).catch(err => ({ success: false, error: err })),
+          userService.getUsers(params).catch(err => ({ success: false, error: err }))
+        ]);
+
+        if (statsRes.success) {
+          const s = statsRes.data;
+          setKpis([
+            { title: "Total Employees", value: String(s.totalEmployees), accent: "#3b82f6" },
+            { title: "Team Leads",       value: String(s.teamLeaders),    accent: "#8b5cf6" },
+            { title: "Executives",      value: String(s.executives),     accent: "#14b8a6" },
+            { title: "Active",          value: String(s.active),          accent: "#22c55e" },
+          ]);
+        }
+
+        if (usersRes.success) {
+          const rawUsers = usersRes.data.users || [];
+          const mappedRows = rawUsers.map(u => ({
+            id: u._id,
+            name: u.name || "Unknown",
+            role: u.role || "N/A",
+            teamName: u.team?.name || "No Team",
+            teamLeader: u.manager?.name || "Self",
+            email: u.email || "N/A",
+            mobile: u.phone || "N/A",
+            joinDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "N/A",
+            status: u.isActive ? "Active" : "Inactive",
+            avatar: (u.name || "??").split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+            totalLeads: 0,
+            totalCalls: 0,
+            totalSales: 0,
+            revenue: "₹0",
+            conversion: "0%",
+            address: u.address?.city || "N/A",
+            dob: "N/A",
+            gender: "N/A",
+            employeeType: "Full-time",
+          })).sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically by name
+          
+          setRows(mappedRows);
+        } else {
+          toast.error("Failed to load live employee data");
+        }
+      } catch (error) {
+        console.error("General error in loadData:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   const openView = (row) => {
-    setSelected(employeeRows.find((e) => e.id === row.id) ?? row);
+    setSelected(rows.find((e) => e.id === row.id) ?? row);
     openModal("emp-view-modal");
   };
 
@@ -51,7 +120,7 @@ export default function Employees() {
       {/* ── Heading + KPI Cards ── */}
       <DashGrid cols={12} gap={4}>
         <Heading primaryText="Employee" secondaryText="Directory" size={12} />
-        {employeeKPIs.map((k, i) => (
+        {kpis.map((k, i) => (
           <DashCard key={k.title} title={k.title} value={k.value}
             icon={kpiIcons[i]} accentColor={kpiAccents[i]} size={3} />
         ))}
@@ -60,7 +129,7 @@ export default function Employees() {
       {/* ── View toggle ── */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500 font-medium">
-          {employeeRows.length} employees across 3 teams
+          {rows.length} employees across {new Set(rows.map(r => r.teamName)).size} teams
         </p>
         <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
           {[
@@ -87,7 +156,7 @@ export default function Employees() {
         <DataTable
           title="All Employees"
           columns={COLS}
-          rows={employeeRows}
+          rows={rows}
           actions={actions}
           size={12}
           pageSize={10}
@@ -96,8 +165,7 @@ export default function Employees() {
           exportFileName="employees"
           userProfile="name"
           filters={[
-            { title: "Role",   type: "toggle", key: "role",     options: ["Executive", "Team Leader"] },
-            { title: "Team",   type: "select", key: "teamName", options: ["Team Alpha", "Team Beta", "Team Gamma"] },
+            { title: "Role",   type: "toggle", key: "role",     options: ["SALES_TL", "SALES_EXECUTIVE"] },
             { title: "Status", type: "toggle", key: "status",   options: ["Active", "Inactive"] },
           ]}
         />
@@ -106,7 +174,7 @@ export default function Employees() {
       {/* ── Card / Grid View ── */}
       {view === "grid" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {employeeRows.map((emp, idx) => (
+          {rows.map((emp, idx) => (
             <div
               key={emp.id}
               onClick={() => openView(emp)}
@@ -163,7 +231,7 @@ export default function Employees() {
       {/* ── View Modal ── */}
       <Modal id="emp-view-modal" title="Employee Details" size="lg">
         {selected && (() => {
-          const colorIdx = employeeRows.findIndex((e) => e.id === selected.id);
+          const colorIdx = rows.findIndex((e) => e.id === selected.id);
           const avatarColor = AVATAR_COLORS[colorIdx % AVATAR_COLORS.length];
           return (
             <div className="flex flex-col gap-5">

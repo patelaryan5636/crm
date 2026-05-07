@@ -309,7 +309,6 @@ export default function Leaves() {
         ellipse={3}
         size={12}
         pageSize={10}
-        searchable
         exportable
         exportFileName="leave-history"
         filters={[

@@ -8,18 +8,19 @@ import { kpiAttendance, attendanceRows } from "./HrmStore";
 import { Users, UserCheck, UserX, Clock, Calendar, Eye } from "lucide-react";
 import { useAttendance } from "../../../../context/AttendanceContext";
 
-const KPI_ICONS   = [<Users size={22} />, <UserCheck size={22} />, <UserX size={22} />, <Calendar size={22} />, <Clock size={22} />];
+const KPI_ICONS = [<Users size={22} />, <UserCheck size={22} />, <UserX size={22} />, <Calendar size={22} />, <Clock size={22} />];
 const KPI_ACCENTS = ["#3b82f6", "#22c55e", "#f43f5e", "#f59e0b", "#8b5cf6"];
 
 const COLS = [
-  { key: "name",          label: "Employee"   },
-  { key: "role",          label: "Role"       },
-  { key: "date",          label: "Date"       },
-  { key: "clockIn",       label: "Clock In"   },
-  { key: "clockOut",      label: "Clock Out"  },
-  { key: "hours",         label: "Hours"      },
+  { key: "name", label: "Employee" },
+  { key: "role", label: "Role" },
+  { key: "teamLeader", label: "Team Leader" },
+  { key: "date", label: "Date" },
+  { key: "clockIn", label: "Clock In" },
+  { key: "clockOut", label: "Clock Out" },
+  { key: "hours", label: "Hours" },
   { key: "attendancePct", label: "Attendance" },
-  { key: "status",        label: "Status"     },
+  { key: "status", label: "Status" },
 ];
 
 const TEAM_LEADERS = [...new Set(attendanceRows.map((r) => r.teamLeader).filter((t) => t !== "Self"))];
@@ -87,8 +88,8 @@ export default function Attendance() {
         exportable
         exportFileName="attendance-report"
         filters={[
-          { title: "Status",      type: "toggle", key: "status",     options: ["Working", "Paused", "Not Working", "Completed"] },
-          { title: "Role",        type: "toggle", key: "role",       options: ["Executive", "Team Leader"] },
+          { title: "Status", type: "toggle", key: "status", options: ["Present", "Working", "Paused", "Absent"] },
+          { title: "Role", type: "toggle", key: "role", options: ["Executive", "Team Leader"] },
           { title: "Team Leader", type: "select", key: "teamLeader", options: TEAM_LEADERS },
         ]}
       />
@@ -103,13 +104,13 @@ export default function Attendance() {
               meta={`Date: ${selected.date}`}
             />
             <ModalGrid title="Attendance Info" cols={2}>
-              <ModalData label="Clock In"      value={selected.clockIn} />
-              <ModalData label="Clock Out"     value={selected.clockOut} />
+              <ModalData label="Clock In" value={selected.clockIn} />
+              <ModalData label="Clock Out" value={selected.clockOut} />
               <ModalData label="Working Hours" value={selected.hours} />
-              <ModalData label="Attendance %"  value={selected.attendancePct} />
-              <ModalData label="Status"        value={selected.status} />
-              <ModalData label="Team Leader"   value={selected.teamLeader} />
-              <ModalData label="Role"          value={selected.role} />
+              <ModalData label="Attendance %" value={selected.attendancePct} />
+              <ModalData label="Status" value={selected.status} />
+              <ModalData label="Team Leader" value={selected.teamLeader} />
+              <ModalData label="Role" value={selected.role} />
             </ModalGrid>
             <div className="flex justify-end pt-2">
               <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("att-view-modal")} />

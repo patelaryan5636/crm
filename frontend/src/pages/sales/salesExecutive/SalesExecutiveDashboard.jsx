@@ -29,7 +29,7 @@ import {
 } from "../../../components/shared/Common_Components";
 
 const SalesExecutiveDashboard = () => {
-  const [greeting] = useState("Good Morning, Alex!");
+
 
   // Dummy Data for Charts
   const weeklySalesData = [
@@ -137,29 +137,14 @@ const SalesExecutiveDashboard = () => {
 
   return (
     <div className="p-1 space-y-8 animate-in fade-in duration-700">
-      {/* GREETING & NOTIFICATION AREA */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-[#2a465a] tracking-tight">
-            {greeting}
-          </h1>
-          <p className="text-slate-500 font-medium">
-            Here's what's happening with your sales pipeline today.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
-          <div className="relative p-2 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-            <Bell size={20} className="text-[#2a465a]" />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
-          </div>
-          <div className="h-8 w-px bg-slate-100"></div>
-          <div className="flex items-center gap-2 pr-2">
-            <div className="w-9 h-9 bg-gradient-to-tr from-[#2a465a] to-[#4b7a9a] rounded-xl flex items-center justify-center text-white font-bold shadow-md">
-              AJ
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* DASHBOARD HEADING */}
+      <Heading
+        primaryText="Sales Executive Dashboard"
+        secondaryText="Overview & Activity"
+        showAnimations={true}
+      />
+
+
 
       {/* TOP KPI CARDS */}
       <DashGrid cols={12} gap={4}>
@@ -300,61 +285,28 @@ const SalesExecutiveDashboard = () => {
       </Grid>
 
       {/* Recent Activity Table (Full Row) */}
-      <div className="col-span-12">
-        <DataTable
-          title="Recent Pipeline Activity"
-          columns={columns}
-          rows={recentActivities}
-          pageSize={5}
-          searchable={true}
-        />
-      </div>
+      <DataTable
+        title="Recent Pipeline Activity"
+        columns={columns}
+        rows={recentActivities}
+        pageSize={5}
+        searchable={true}
+        size={12}
+        filters={[
+          { title: "Status", type: "toggle", key: "status", options: ["Hot", "Warm", "Cold", "Interested"] },
+          { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High"] },
+        ]}
+      />
 
-      {/* Quick Actions & Upcoming Reminders (Shared Row) */}
-      <Grid cols={12} gap={6}>
-        {/* Quick Actions */}
-        <div className="col-span-12 lg:col-span-6">
-          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm h-full">
-            <h3 className="text-lg font-bold text-[#2a465a] mb-5 flex items-center gap-2">
-              Quick Actions
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 text-[#2a465a] font-bold text-sm hover:bg-blue-50 hover:text-blue-600 transition-all border border-transparent hover:border-blue-100 group">
-                <div className="p-2 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform">
-                  <Plus size={18} />
-                </div>
-                Add Lead
-              </button>
-              <button className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 text-[#2a465a] font-bold text-sm hover:bg-purple-50 hover:text-purple-600 transition-all border border-transparent hover:border-purple-100 group">
-                <div className="p-2 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform">
-                  <Upload size={18} />
-                </div>
-                Upload CSV
-              </button>
-              <button className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 text-[#2a465a] font-bold text-sm hover:bg-rose-50 hover:text-rose-600 transition-all border border-transparent hover:border-rose-100 group">
-                <div className="p-2 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform">
-                  <Ticket size={18} />
-                </div>
-                Create Ticket
-              </button>
-              <button className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 text-[#2a465a] font-bold text-sm hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-transparent hover:border-emerald-100 group">
-                <div className="p-2 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform">
-                  <UserPlus size={18} />
-                </div>
-                Assign Leads
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Upcoming Reminders Widget */}
-        <div className="col-span-12 lg:col-span-6">
+      {/* Upcoming Reminders Widget (Full Row Fix) */}
+      <Grid cols={12} >
+        <div className="col-span-12">
           <div className="bg-[#2a465a] rounded-3xl p-6 shadow-xl shadow-[#2a465a]/20 text-white relative overflow-hidden h-full">
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Calendar size={80} />
             </div>
             <h3 className="text-lg font-bold mb-4 relative z-10">Upcoming Reminders</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 relative z-10">
               <div className="flex gap-3 items-start border-l-2 border-emerald-400 pl-3">
                 <div>
                   <p className="text-sm font-bold">Follow up with John</p>

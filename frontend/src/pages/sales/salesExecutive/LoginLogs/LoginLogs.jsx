@@ -34,23 +34,23 @@ export default function LoginLogs() {
     { name: "Firefox", value: 5 },
   ];
 
-  const columns = [
-    { key: "executiveName", label: "EXECUTIVE NAME" },
-    { key: "loginTime", label: "LOGIN TIME" },
-    { key: "ipAddress", label: "IP ADDRESS" },
+  const logCols = [
+    { key: "executiveName", label: "User Name"   },
+    { key: "ipAddress",     label: "IP Address"  },
     {
       key: "location",
-      label: "LOCATION (LAT, LNG)",
+      label: "Location",
       render: (row) => (
         <div className="flex items-center gap-1 text-slate-500 font-medium text-xs">
           <MapPin size={12} className="text-emerald-500" />
-          Lat: {row.latitude}, Lng: {row.longitude}
+          {row.latitude}, {row.longitude}
         </div>
       )
     },
+    { key: "loginTime",     label: "Login Time"  },
     {
       key: "status",
-      label: "STATUS",
+      label: "Status",
       render: (row) => (
         <span
           className={`px-3 py-1 rounded-full text-[10px] font-bold ${
@@ -147,39 +147,37 @@ export default function LoginLogs() {
         ))}
       </DashGrid>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8">
-          <GLineChart
-            title="Weekly Login Trends"
-            subtitle="Successful vs Failed attempts"
-            data={weeklyLoginData}
-            lines={[
-              { key: "successful", label: "Successful Logins", color: "#3b82f6" },
-            ]}
-            height={320}
-          />
-        </div>
-        <div className="lg:col-span-4">
-          <GDoughnutChart
-            title="Browser Distribution"
-            subtitle="Access by client"
-            data={browserDistributionData}
-            colors={["#3b82f6", "#10b981", "#f59e0b", "#ef4444"]}
-            height={320}
-          />
-        </div>
-      </div>
+      <DataTable
+        title="My Login Logs"
+        columns={logCols}
+        rows={loginLogsData}
+        actions={actions}
+        size={12}
+        pageSize={5}
+        searchable
+        date
+        exportable
+        exportFileName="my-login-logs"
+        filters={[
+          { title: "Status", type: "toggle", key: "status", options: ["Success", "Pending", "Failed"] },
+        ]}
+      />
 
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-2">
-        <DataTable
-          title={<HeadingForDataTable primaryText="Executive Records" secondaryText="Data table" />}
-          columns={columns}
-          rows={loginLogsData}
-          actions={actions}
-          pageSize={5}
-          searchable={true}
-        />
-      </div>
+      <DataTable
+        title="All Login Logs"
+        columns={logCols}
+        rows={loginLogsData}
+        actions={actions}
+        size={12}
+        pageSize={10}
+        searchable
+        date
+        exportable
+        exportFileName="all-login-logs"
+        filters={[
+          { title: "Status", type: "toggle", key: "status", options: ["Success", "Pending", "Failed"] },
+        ]}
+      />
     </div>
   );
 }

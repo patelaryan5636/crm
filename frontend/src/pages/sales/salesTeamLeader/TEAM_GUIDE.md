@@ -95,6 +95,15 @@ You never go directly to the Frontend Lead. You never edit shared files. You giv
 | **No backend yet** | Everything is dummy. Do not write `fetch`, `axios`, or API services. |
 | **No comments unless non-obvious** | The shared components are self-explanatory. Don't add prop descriptions. |
 
+### DataTable column gotchas
+
+A few things about `<DataTable columns={...} />` that aren't obvious from the prop list:
+
+- **No custom `render` callback support.** Column entries are `{ key, label }` only. If you write `{ key: "foo", render: (row) => <Badge>{row.foo}</Badge> }`, the `render` is silently ignored and the cell falls back to `row[col.key]`. Don't waste time on render functions — they look like they work in your editor but the table won't call them.
+- **`status` key auto-renders as a colored badge.** Whatever value sits in `row.status` gets matched against a built-in `STATUS_MAP` in `Common_Components.jsx` (Present/Active/Approved → emerald, Pending/Warm/Late → amber, Overdue → orange, Rejected/Failed/Absent → rose, etc.). Use Title-Case status values that match the map so colors apply automatically.
+- **If you want a colored badge on a field that isn't `status`** — copy the field into a `status` column, OR ask Pranjal to add the field to `STATUS_MAP`. Don't roll your own pill component inside the table.
+- **`userProfile="name"`** prop renders an avatar prefix on the column matching that key. Use it on tables where rows are people.
+
 ---
 
 ## 5. The 4 universal rules when copying from Sales Manager
@@ -159,9 +168,9 @@ src/pages/sales/salesTeamLeader/
 │
 │   ── Packet 5 — HRM + LoginLogs + PaymentAlerts ──
 ├── hrm/
-│   ├── HRMPage.jsx                       [TODO] self apply leave + clock in/out + attendance
-│   ├── LeaveForm.jsx                     [TODO]
-│   └── AttendanceTable.jsx               [TODO]
+│   ├── HRMPage.jsx                       [TODO] tab layout (Attendance | Leaves) — mirrors Manager's HrmLayout
+│   ├── Attendance.jsx                    [TODO] self KPIs + clock-in/out widget + attendance log + work summary + charts
+│   └── Leaves.jsx                        [TODO] My Leaves table + Apply Leave modal (no Pending/History — that's Packet 3)
 ├── loginLogs/
 │   └── LoginLogs.jsx                     [TODO] self + team executives
 └── payments/
@@ -189,7 +198,7 @@ For copy-paste sources (one level up in `salesManager/`):
 | Packet 3 (My Team) | `src/pages/sales/salesManager/Employees/Employees.jsx` + `salesManager/HRM/{Attendance,Leaves}.jsx` |
 | Packet 4 (Reports) | `src/pages/sales/salesManager/Reports/*` |
 | Packet 4 (Announcements) | `src/pages/sales/salesManager/Announcements/*` |
-| Packet 5 (HRM) | `src/pages/sales/salesExecutive/hrm/*` (NOT Manager — Executive is the right shape for self-HRM) |
+| Packet 5 (HRM) | `src/pages/sales/salesManager/HRM/{HrmLayout,Attendance,Leaves}.jsx` — use Manager's tabbed layout (Attendance \| Leaves), trim to self-only data and drop the "Pending Leaves" / "Leave History" tables (those Approve-others workflows live in Packet 3). |
 | Packet 5 (Login Logs) | `src/pages/sales/salesManager/LoginLogs/LoginLogs.jsx` |
 | Packet 5 (Payment Alerts) | `src/pages/sales/salesExecutive/payments/PaymentsPage.jsx` |
 
@@ -283,13 +292,13 @@ For copy-paste sources (one level up in `salesManager/`):
 
 **Pages to build:**
 
-- `hrm/HRMPage.jsx` — self apply leave + clock in/out + attendance
-- `hrm/LeaveForm.jsx`
-- `hrm/AttendanceTable.jsx`
+- `hrm/HRMPage.jsx` — top-level tab layout (Attendance | Leaves), matches Manager's `HrmLayout.jsx`
+- `hrm/Attendance.jsx` — self KPIs + clock-in/out widget + attendance log + work summary + charts
+- `hrm/Leaves.jsx` — My Leaves table + Apply Leave modal
 - `loginLogs/LoginLogs.jsx` — logs for self + team executives (username, date/time, IP, lat/long)
 - `payments/PaymentAlerts.jsx` — failed/successful payment feed for self + team
 
-**Spec source for self-HRM:** copy from `salesExecutive/hrm/*`, NOT from Manager. Manager's HRM is a control panel; the TL's *personal* HRM looks like the Executive's.
+**Spec source for self-HRM:** copy from `salesManager/HRM/{HrmLayout,Attendance,Leaves}.jsx`. Use Manager's tabbed structure but trim to self-only data — drop the Pending Leaves and Leave History tables (those Approve-others workflows live in Packet 3's `LeaveApprovals.jsx`). The clock-in/out widget shape comes from `services/hrmService.js`.
 
 **Routing — these are NEW routes that don't exist yet.** When your pages are ready, send Pranjal the following snippet (or your final version of it):
 
@@ -344,6 +353,7 @@ Pranjal will add it to `salesTeamLeaderRoutes.jsx` and request the matching side
 - **Cross-team data.** `teamExecutives` lists 6 people. Do not add executives from outside the TL's team.
 - **Adding API calls.** Backend isn't ready. Keep everything in component state.
 - **Adding a new shared component on your own.** Either create it inside your packet folder, or request it via Pranjal — never modify `Common_Components.jsx`.
+- **Writing a `render` callback on a `<DataTable>` column.** Silently ignored — the table only reads `{ key, label }`. The `status` key auto-styles via the built-in `STATUS_MAP`; for everything else, render plain text or restructure the data. See Section 4 for details.
 
 ---
 

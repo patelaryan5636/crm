@@ -8,10 +8,10 @@ import SalesTeamLeaderTickets       from "../../pages/sales/salesTeamLeader/Sale
 import SalesTeamLeaderAnnouncements from "../../pages/sales/salesTeamLeader/SalesTeamLeaderAnnouncements";
 
 // // Packet 3 — My Team workspace (layout + sub-pages)
-// import MyTeamLayout   from "../../pages/sales/salesTeamLeader/myTeam/MyTeamLayout";
-// import TeamMembers    from "../../pages/sales/salesTeamLeader/myTeam/TeamMembers";
-// import Attendance     from "../../pages/sales/salesTeamLeader/myTeam/Attendance";
-// import LeaveApprovals from "../../pages/sales/salesTeamLeader/myTeam/LeaveApprovals";
+import MyTeamLayout   from "../../pages/sales/salesTeamLeader/myTeam/MyTeamLayout";
+import TeamMembers    from "../../pages/sales/salesTeamLeader/myTeam/TeamMembers";
+import Attendance     from "../../pages/sales/salesTeamLeader/myTeam/Attendance";
+import LeaveApprovals from "../../pages/sales/salesTeamLeader/myTeam/LeaveApprovals";
 
 // Packet 5 — new pages
 import HRMPage      from "../../pages/sales/salesTeamLeader/hrm/HRMPage";
@@ -25,7 +25,7 @@ function SalesTeamLeaderRoutes() {
                 <Route index element={<SalesTeamLeaderDashboard />} />
                 <Route path="leads"          element={<SalesTeamLeaderLeads />} />
 
-                {/* ── Packet 3 — My Team workspace ──
+                ── Packet 3 — My Team workspace ──
                 <Route path="my-team" element={<MyTeamLayout />}>
                     <Route index                     element={<TeamMembers />} />
                     <Route path="attendance"         element={<Attendance />} />
@@ -35,7 +35,7 @@ function SalesTeamLeaderRoutes() {
                 <Route path="targets"        element={<SalesTeamLeaderTargets />} />
                 <Route path="reports"        element={<SalesTeamLeaderReports />} />
                 <Route path="tickets"        element={<SalesTeamLeaderTickets />} />
-                <Route path="communication"  element={<SalesTeamLeaderAnnouncements />} /> */}
+                <Route path="communication"  element={<SalesTeamLeaderAnnouncements />} /> 
 
                 {/* ── Packet 5 ── */}
                 <Route path="hrm"            element={<HRMPage />} />

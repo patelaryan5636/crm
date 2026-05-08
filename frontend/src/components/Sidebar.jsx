@@ -200,10 +200,10 @@ const MENUS = {
           {
             name: "Leads", path: "/sales-executive/leads", icon: Target,
             children: [
-              { name: "All Leads", path: "/admin/leads", icon: Target },
-              { name: "My Prospects", path: "/sales-executive/prospects", icon: ClipboardList },
-              { name: "Follow Ups", path: "/sales-executive/follow-ups", icon: PieChart },
-              { name: "Dump Data", path: "/sales-executive/dump", icon: Database },
+              { name: "All Leads", path: "/sales-executive/leads/all", icon: Target },
+              { name: "My Prospects", path: "/sales-executive/leads/prospects", icon: ClipboardList },
+              { name: "Follow Ups", path: "/sales-executive/leads/follow-ups", icon: PieChart },
+              { name: "Dump Data", path: "/sales-executive/leads/dump", icon: Database },
             ],
           },
         ],

@@ -116,53 +116,8 @@ const SalesExecutiveDashboard = () => {
         showAnimations={true}
       />
 
-<<<<<<< HEAD
-      {/* TOP KPI CARDS */}
-      <DashGrid cols={12} gap={4}>
-        <DashCard
-          title="Total Leads"
-          value="1,284"
-          icon={<Users />}
-          accentColor="#3b82f6"
-          size={4}
-        />
-        <DashCard
-          title="Today Calls"
-          value="42"
-          icon={<PhoneCall />}
-          accentColor="#8b5cf6"
-          size={4}
-        />
-        <DashCard
-          title="Conversion Rate"
-          value="18.5%"
-          icon={<TrendingUp />}
-          accentColor="#10b981"
-          size={4}
-        />
-        <DashCard
-          title="Revenue Generated"
-          value="$124,500"
-          icon={<DollarSign />}
-          accentColor="#f59e0b"
-          size={4}
-        />
-        <DashCard
-          title="Pending Follow-ups"
-          value="12"
-          icon={<Clock />}
-          accentColor="#ef4444"
-          size={4}
-        />
-        <DashCard
-          title="Dump Leads"
-          value="342"
-          icon={<Trash2 />}
-          accentColor="#64748b"
-          size={4}
-        />
-      </DashGrid>
-=======
+
+
       {/* ── FOLLOW-UPS SECTION ── */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 px-1">
@@ -200,7 +155,6 @@ const SalesExecutiveDashboard = () => {
           />
         </DashGrid>
       </div>
->>>>>>> 48e512a (Fixed the changes and added new followups)
 
       {/* CHARTS & WIDGETS SECTION */}
       <Grid cols={12} gap={6}>

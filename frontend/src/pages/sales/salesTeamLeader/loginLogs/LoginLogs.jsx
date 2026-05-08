@@ -51,6 +51,7 @@ export default function LoginLogs() {
         title="My Login Logs"
         columns={LOG_COLS}
         rows={myLogRows}
+        userProfile="name"
         actions={actions}
         size={12}
         pageSize={5}
@@ -68,6 +69,7 @@ export default function LoginLogs() {
         title="Team Login Logs"
         columns={LOG_COLS}
         rows={teamLogRows}
+        userProfile="name"
         actions={actions}
         size={12}
         pageSize={10}

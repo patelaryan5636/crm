@@ -29,6 +29,7 @@ export default function ExecutiveReport() {
         title="Executive Reports"
         columns={COLS}
         rows={execReportRows}
+        userProfile="execName"
         actions={[
           {
             icon: <Eye size={15} />,

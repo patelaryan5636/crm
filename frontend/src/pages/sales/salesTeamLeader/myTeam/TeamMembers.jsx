@@ -74,6 +74,7 @@ export default function TeamMembers() {
           title="My Team"
           columns={COLS}
           rows={teamExecutives}
+          userProfile="name"
           size={12}
           pageSize={10}
           searchable

@@ -218,6 +218,7 @@ export default function Leaves() {
         title={`Pending Leaves${pendingRows.length ? ` (${pendingRows.length})` : ""}`}
         columns={PENDING_COLS}
         rows={pendingRows}
+        userProfile="name"
         ellipse={3}
         size={12}
         pageSize={10}
@@ -248,6 +249,7 @@ export default function Leaves() {
         title="Leave History"
         columns={HISTORY_COLS}
         rows={historyRows}
+        userProfile="name"
         ellipse={3}
         size={12}
         pageSize={10}

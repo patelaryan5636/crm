@@ -152,12 +152,12 @@ src/pages/sales/salesTeamLeader/
 │   └── leadsStore.js                     [TODO]
 │
 │   ── Packet 3 — My Team workspace ──
-├── SalesTeamLeaderMyTeam.jsx             [TODO] becomes <Outlet/> layout w/ tabs
+├── SalesTeamLeaderMyTeam.jsx             [TODO] thin Outlet layout — only Team Members tab remains
 ├── myTeam/
-│   ├── TeamMembers.jsx                   [TODO]
-│   ├── Attendance.jsx                    [TODO]
-│   ├── LeaveApprovals.jsx                [TODO]
-│   └── teamStore.js                      [TODO]  imports teamExecutives from root store
+│   ├── TeamMembers.jsx                   [TODO]  the only live page in this packet
+│   ├── Attendance.jsx                    [DEPRECATED] redirects to /hrm — attendance moved to Packet 5
+│   ├── LeaveApprovals.jsx                [DEPRECATED] redirects to /hrm — leave approval moved to Packet 5
+│   └── teamStore.js                      [TODO]  shared with Packet 5 (HRM imports from here)
 │
 │   ── Packet 4 — Reports + Announcements ──
 ├── SalesTeamLeaderReports.jsx            [TODO] becomes <Outlet/> layout w/ tabs
@@ -172,7 +172,7 @@ src/pages/sales/salesTeamLeader/
 │   ── Packet 5 — HRM + LoginLogs + PaymentAlerts ──
 ├── hrm/
 │   ├── HRMPage.jsx                       [TODO] tab layout (Attendance | Leaves) — mirrors Manager's HrmLayout
-│   ├── Attendance.jsx                    [TODO] team-wide attendance log (TL + 6 execs) + self ClockWidget + KPIs
+│   ├── Attendance.jsx                    [TODO] KPIs + SessionTimer (My Attendance, shared with Navbar) + executives-only attendance table
 │   └── Leaves.jsx                        [TODO] My Leaves + Pending Leaves (Approve/Reject execs) + Leave History
 ├── loginLogs/
 │   └── LoginLogs.jsx                     [TODO] self + team executives
@@ -243,18 +243,20 @@ For copy-paste sources (one level up in `salesManager/`):
 
 **Pages to build:**
 
-- `SalesTeamLeaderMyTeam.jsx` — layout with tabs
-- `myTeam/TeamMembers.jsx` — list of executives, basic profile cards, contact info
-- `myTeam/Attendance.jsx` — team attendance grid (per-exec attendance status)
-- `myTeam/LeaveApprovals.jsx` — pending leave requests with Approve/Reject actions
-- `myTeam/teamStore.js`
+- `SalesTeamLeaderMyTeam.jsx` — thin Outlet layout (no tab nav anymore; only one child page)
+- `myTeam/TeamMembers.jsx` — list of executives, profile cards, contact info, performance summary
+- `myTeam/teamStore.js` — shared with Packet 5 (HRM imports `attendanceRecords`, `todayAttendance`, `leaveRequests` from here)
+
+**Deprecated (kept as redirect stubs only):**
+
+- `myTeam/Attendance.jsx` — was a per-exec attendance grid. **Moved to HRM (Packet 5)** because HRM is the canonical attendance home and having both was confusing. Now this file just `<Navigate to="/sales-team-leader/hrm" replace />`s. Once Pranjal removes the `/my-team/attendance` nested route, the file can be deleted.
+- `myTeam/LeaveApprovals.jsx` — was the Approve/Reject pending leaves page. **Moved to HRM → Leaves tab (Packet 5)**, sharing the same `leaveRequests` data. Same redirect-stub pattern; same eventual deletion.
 
 **Spec features (from Brief Section 7):**
 
 - View team members
-- Track attendance
-- View leave requests + approve team leaves
 - Performance per executive (link to Dashboard for full leaderboard — keep this page focused on team admin)
+- (Attendance + leave approval features are spec'd here but live in Packet 5 — see the duplication note in Packet 5 below)
 
 **What to drop / change from Manager copy:**
 
@@ -262,7 +264,7 @@ For copy-paste sources (one level up in `salesManager/`):
 - Drop "Add team member" / "Move between teams" actions (Manager-only)
 - Use `teamExecutives` from `teamLeaderStore.js` — do not redefine
 
-**Routing:** parent route `/sales-team-leader/my-team` exists. Send Pranjal the nested-route snippet for sub-pages.
+**Routing:** parent route `/sales-team-leader/my-team` exists. Once Attendance/LeaveApprovals are fully retired, send Pranjal a route diff to drop the `attendance` and `leave-approvals` child routes.
 
 ---
 
@@ -298,14 +300,18 @@ For copy-paste sources (one level up in `salesManager/`):
 **Pages to build:**
 
 - `hrm/HRMPage.jsx` — top-level tab layout (Attendance | Leaves), mirrors Manager's `HrmLayout.jsx`
-- `hrm/Attendance.jsx` — KPIs (Team Size, Present Today, Absent Today, On Leave) + self ClockWidget + **team-wide attendance log** (TL self + 6 executives, scoped to `currentTL.team` only) + Role / Status / Employee filters
+- `hrm/Attendance.jsx` — KPIs (Present Today, On Time, Absent Today, On Leave) + **`<SessionTimer>` from `components/shared` driven by `useAttendance()`** for self clock-in/out (matches Manager exactly, shares state with the Navbar timer) + **executives-only attendance table** (sourced from `myTeam/teamStore.js → attendanceRecords`, no TL self rows in the table — those live in the SessionTimer)
 - `hrm/Leaves.jsx` — KPIs + Apply Leave button + **three tables**: My Leaves (TL's own — from `MOCK_LEAVES_INIT`), Pending Leaves (executives' pending — from `teamStore.leaveRequests`, with Approve/Reject row actions), Leave History (executives' actioned)
 - `loginLogs/LoginLogs.jsx` — logs for self + team executives (username, date/time, IP, lat/long)
 - `payments/PaymentAlerts.jsx` — failed/successful payment feed for self + team
 
-**Spec source for HRM:** copy from `salesManager/HRM/{HrmLayout,Attendance,Leaves}.jsx`. **Keep Manager's full structure** including Pending Leaves + Leave History with Approve/Reject — don't trim. The only change is scope: TL's HRM shows the TL's own self plus the 6 executives in `currentTL.team` (no other teams, no other TLs). The clock-in/out widget shape comes from `services/hrmService.js`. Leave-request data is shared with Packet 3 via `myTeam/teamStore.js`.
+**Spec source for HRM:** copy from `salesManager/HRM/{HrmLayout,Attendance,Leaves}.jsx`. **Keep Manager's full structure** including Pending Leaves + Leave History with Approve/Reject — don't trim. Changes for TL:
+- **Scope:** TL's HRM shows only the TL + the 6 executives in `currentTL.team`. No other TLs, no other teams.
+- **Clock widget:** use `<SessionTimer>` from `components/shared/SessionTimer` driven by `useAttendance()` from `context/AttendanceContext` (the `AttendanceProvider` is already wired in `MainLayout`). Don't roll a custom clock.
+- **Attendance table:** executives only (the TL's own attendance is the SessionTimer above; putting the TL in the table makes other TLs' rows look reachable, which they're not).
+- **Leave data:** import `leaveRequests` from `myTeam/teamStore.js` — Packet 3's old `LeaveApprovals.jsx` and Packet 5's `Leaves.jsx` share that data source.
 
-> **Note on duplication with Packet 3:** Packet 3's `LeaveApprovals.jsx` and Packet 5's `Leaves.jsx` both let the TL approve executives' leaves. They share the same `leaveRequests` data source in `myTeam/teamStore.js`. This duplication is intentional — Packet 3 is the My Team admin entry point; Packet 5 is the HRM entry point. Both must stay in sync (when one is edited, update the other to match).
+> **Note on Packet 3 retirement:** the old `myTeam/Attendance.jsx` and `myTeam/LeaveApprovals.jsx` pages were retired — both attendance and leave-approval workflows now live in Packet 5's HRM. The deprecated files redirect to `/hrm`. Don't add new pages that reach for those URLs.
 
 **Routing — these are NEW routes that don't exist yet.** When your pages are ready, send Pranjal the following snippet (or your final version of it):
 

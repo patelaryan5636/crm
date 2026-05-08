@@ -8,7 +8,7 @@ import SalesTeamLeaderReports from "../../pages/sales/salesTeamLeader/SalesTeamL
 import SalesTeamLeaderTickets from "../../pages/sales/salesTeamLeader/SalesTeamLeaderTickets";
 import SalesTeamLeaderAnnouncements from "../../pages/sales/salesTeamLeader/SalesTeamLeaderAnnouncements";
 
-// My Team
+// Packet 3
 import SalesTeamLeaderMyTeam from "../../pages/sales/salesTeamLeader/SalesTeamLeaderMyTeam";
 import TeamMembers from "../../pages/sales/salesTeamLeader/myTeam/TeamMembers";
 import Attendance from "../../pages/sales/salesTeamLeader/myTeam/Attendance";
@@ -27,7 +27,7 @@ function SalesTeamLeaderRoutes() {
                 <Route index element={<SalesTeamLeaderDashboard />} />
                 <Route path="leads" element={<SalesTeamLeaderLeads />} />
 
-                {/* My Team */}
+                {/* Packet 3 */}
                 <Route path="my-team" element={<SalesTeamLeaderMyTeam />}>
                     <Route index element={<TeamMembers />} />
                     <Route path="attendance" element={<Attendance />} />

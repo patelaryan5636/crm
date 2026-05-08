@@ -1,24 +1,25 @@
 // hrmStore.js — dummy data for HRM pages
 
+// Personal attendance KPIs for the logged-in Sales Executive
 export const kpiAttendance = [
-  { title: "Total Employees", value: "48", accent: "#3b82f6" },
-  { title: "Present Today",   value: "38", accent: "#22c55e" },
-  { title: "Absent Today",    value: "5",  accent: "#f43f5e" },
-  { title: "On Leave",        value: "3",  accent: "#f59e0b" },
+  { title: "Total Working Days", value: "22",  accent: "#3b82f6" },
+  { title: "Present Days",       value: "18",  accent: "#22c55e" },
+  { title: "Absent Days",        value: "2",   accent: "#f43f5e" },
+  { title: "Leaves Taken",       value: "2",   accent: "#f59e0b" },
 ];
 
 export const attendanceRows = [
-  { name: "Rahul Sharma",  role: "Sales Executive",   teamLeader: "Ankit Verma", date: "2026-05-03", clockIn: "09:02", clockOut: "18:05", hours: "9h 03m", status: "Present",  attendancePct: "94%" },
-  { name: "Priya Mehta",   role: "Sales Executive",   teamLeader: "Sonal Gupta", date: "2026-05-03", clockIn: "09:15", clockOut: "18:00", hours: "8h 45m", status: "Present",  attendancePct: "88%" },
-  { name: "Arjun Kapoor",  role: "Sales Executive",   teamLeader: "Ankit Verma", date: "2026-05-03", clockIn: "09:45", clockOut: "—",     hours: "6h 30m", status: "Working",  attendancePct: "76%" },
-  { name: "Sneha Rajput",  role: "Sales Executive",   teamLeader: "Nisha Patel", date: "2026-05-03", clockIn: "—",     clockOut: "—",     hours: "—",      status: "Absent",   attendancePct: "62%" },
-  { name: "Vikram Tiwari", role: "Sales Executive",   teamLeader: "Sonal Gupta", date: "2026-05-03", clockIn: "09:10", clockOut: "18:10", hours: "9h 00m", status: "Present",  attendancePct: "91%" },
-  { name: "Ankit Verma",   role: "Senior Sales Executive", teamLeader: "Self",        date: "2026-05-03", clockIn: "08:55", clockOut: "—",     hours: "4h 45m", status: "Paused",   attendancePct: "97%" },
+  { name: "Rahul Sharma",  role: "Sales Executive",        teamLeader: "Ankit Verma", date: "2026-05-03", clockIn: "09:02", clockOut: "18:05", hours: "9h 03m", status: "Present",  attendancePct: "94%" },
+  { name: "Priya Mehta",   role: "Sales Executive",        teamLeader: "Sonal Gupta", date: "2026-05-03", clockIn: "09:15", clockOut: "18:00", hours: "8h 45m", status: "Present",  attendancePct: "88%" },
+  { name: "Arjun Kapoor",  role: "Sales Executive",        teamLeader: "Ankit Verma", date: "2026-05-03", clockIn: "09:45", clockOut: "—",     hours: "6h 30m", status: "Present",  attendancePct: "76%" },
+  { name: "Sneha Rajput",  role: "Sales Executive",        teamLeader: "Nisha Patel", date: "2026-05-03", clockIn: "—",     clockOut: "—",     hours: "—",      status: "Absent",   attendancePct: "62%" },
+  { name: "Vikram Tiwari", role: "Sales Executive",        teamLeader: "Sonal Gupta", date: "2026-05-03", clockIn: "09:10", clockOut: "18:10", hours: "9h 00m", status: "Present",  attendancePct: "91%" },
+  { name: "Ankit Verma",   role: "Senior Sales Executive", teamLeader: "Self",        date: "2026-05-03", clockIn: "08:55", clockOut: "—",     hours: "4h 45m", status: "Late",     attendancePct: "97%" },
   { name: "Sonal Gupta",   role: "Senior Sales Executive", teamLeader: "Self",        date: "2026-05-03", clockIn: "09:00", clockOut: "18:00", hours: "9h 00m", status: "Present",  attendancePct: "95%" },
-  { name: "Kavya Patel",   role: "Sales Executive",   teamLeader: "Nisha Patel", date: "2026-05-03", clockIn: "10:00", clockOut: "—",     hours: "3h 20m", status: "Paused",   attendancePct: "58%" },
-  { name: "Mohit Joshi",   role: "Sales Executive",   teamLeader: "Nisha Patel", date: "2026-05-03", clockIn: "09:30", clockOut: "18:30", hours: "9h 00m", status: "Present",  attendancePct: "90%" },
-  { name: "Divya Nair",    role: "Sales Executive",   teamLeader: "Ankit Verma", date: "2026-05-03", clockIn: "—",     clockOut: "—",     hours: "—",      status: "Absent",   attendancePct: "55%" },
-  { name: "Nisha Patel",   role: "Senior Sales Executive", teamLeader: "Self",        date: "2026-05-03", clockIn: "08:50", clockOut: "—",     hours: "5h 10m", status: "Working",  attendancePct: "93%" },
+  { name: "Kavya Patel",   role: "Sales Executive",        teamLeader: "Nisha Patel", date: "2026-05-03", clockIn: "10:00", clockOut: "—",     hours: "3h 20m", status: "Half Day", attendancePct: "58%" },
+  { name: "Mohit Joshi",   role: "Sales Executive",        teamLeader: "Nisha Patel", date: "2026-05-03", clockIn: "09:30", clockOut: "18:30", hours: "9h 00m", status: "Present",  attendancePct: "90%" },
+  { name: "Divya Nair",    role: "Sales Executive",        teamLeader: "Ankit Verma", date: "2026-05-03", clockIn: "—",     clockOut: "—",     hours: "—",      status: "Absent",   attendancePct: "55%" },
+  { name: "Nisha Patel",   role: "Senior Sales Executive", teamLeader: "Self",        date: "2026-05-03", clockIn: "08:50", clockOut: "—",     hours: "5h 10m", status: "Present",  attendancePct: "93%" },
 ];
 
 export const kpiLeaves = [

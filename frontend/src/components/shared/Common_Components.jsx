@@ -1702,6 +1702,7 @@ export const DataTable = ({
                           UNTOUCHED: ["bg-blue-100", "text-blue-700"],
                           Talk: ["bg-blue-100", "text-blue-700"],
                           Contacted: ["bg-blue-100", "text-blue-700"],
+                          "Half Day": ["bg-blue-100", "text-blue-700"],
                           // ── Purple (prospect / qualified / interested) ──
                           Prospect: ["bg-purple-100", "text-purple-700"],
                           Qualified: ["bg-purple-100", "text-purple-700"],

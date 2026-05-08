@@ -508,12 +508,8 @@ const ProspectList = () => {
 
               {/* Actions */}
               <div className="grid grid-cols-2 gap-3">
-                <a href={`tel:+91${selectedProspect.phone.replace(/\D/g,"")}`}
-                  className="flex items-center justify-center gap-2 bg-[#2a465a] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#1e3a52] transition-all active:scale-95 shadow-sm">
-                  <PhoneCall size={16} /> Call
-                </a>
                 <button onClick={() => window.open(`https://wa.me/91${selectedProspect.phone.replace(/\D/g,"")}`, "_blank")}
-                  className="flex items-center justify-center gap-2 bg-[#25D366] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#1DA851] transition-all active:scale-95 shadow-sm">
+                  className="col-span-2 flex items-center justify-center gap-2 bg-[#25D366] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#1DA851] transition-all active:scale-95 shadow-sm">
                   <MessageCircle size={16} /> WhatsApp
                 </button>
                 <button onClick={() => { closeModal("prospect-view"); navigate(`/sales-executive/edit-prospect/${selectedProspect.id}`); }}

@@ -14,7 +14,6 @@ export default function HRMPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Heading primaryText="HRM" secondaryText="Attendance & Leaves" size={12} />
 
       {/* ── Tab nav ──────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-1.5 bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm">

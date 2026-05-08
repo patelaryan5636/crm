@@ -11,8 +11,7 @@ import SalesTeamLeaderAnnouncements from "../../pages/sales/salesTeamLeader/Sale
 // Packet 3
 import SalesTeamLeaderMyTeam from "../../pages/sales/salesTeamLeader/SalesTeamLeaderMyTeam";
 import TeamMembers from "../../pages/sales/salesTeamLeader/myTeam/TeamMembers";
-import Attendance from "../../pages/sales/salesTeamLeader/myTeam/Attendance";
-import LeaveApprovals from "../../pages/sales/salesTeamLeader/myTeam/LeaveApprovals";
+
 
 // Packet 5
 import HRMPage from "../../pages/sales/salesTeamLeader/hrm/HRMPage";
@@ -30,8 +29,7 @@ function SalesTeamLeaderRoutes() {
                 {/* Packet 3 */}
                 <Route path="my-team" element={<SalesTeamLeaderMyTeam />}>
                     <Route index element={<TeamMembers />} />
-                    <Route path="attendance" element={<Attendance />} />
-                    <Route path="leave-approvals" element={<LeaveApprovals />} />
+                    
                 </Route>
 
                 <Route path="targets" element={<SalesTeamLeaderTargets />} />

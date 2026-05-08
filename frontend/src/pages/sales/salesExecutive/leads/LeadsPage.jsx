@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import {
-  DashCard,
   DashGrid,
+  EnhancedDashCard,
+  Heading,
 } from "../../../../components/shared/Common_Components";
 import { Archive, Flame, PhoneCall, Users } from "lucide-react";
 import { ClientLeadsTable } from "./components/ClientLeadsTable";
@@ -36,14 +37,9 @@ export default function LeadsPage() {
     saveStatus,
     moveToDump,
 
-    openCommentModal,
     saveComment,
-    openReminderModal,
     saveReminder,
-    openProspectForm,
     saveProspect,
-    handleCallLead,
-    handleWhatsAppLead,
 
     // Action modal
     actionLead,
@@ -86,12 +82,14 @@ export default function LeadsPage() {
   }, [clientLeads]);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <Heading primaryText="All Leads" />
+
       <DashGrid cols={12} gap={4}>
         {stats.map((item) => (
-          <DashCard
+          <EnhancedDashCard
             key={item.title}
-            title={item.title}
+            title={item.title.toUpperCase()}
             value={item.value}
             icon={item.icon}
             accentColor={item.accentColor}

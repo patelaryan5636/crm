@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Users,
   PhoneCall,
@@ -14,6 +15,7 @@ import {
   Calendar,
   CheckCircle2,
   ArrowRight,
+  AlertCircle,
 } from "lucide-react";
 import {
   DashCard,
@@ -29,7 +31,7 @@ import {
 } from "../../../components/shared/Common_Components";
 
 const SalesExecutiveDashboard = () => {
-
+  const navigate = useNavigate();
 
   // Dummy Data for Charts
   const weeklySalesData = [
@@ -98,111 +100,69 @@ const SalesExecutiveDashboard = () => {
 
   const columns = [
     { key: "leadName", label: "Lead Name" },
-    {
-      key: "status",
-      label: "Status",
-      render: (row) => (
-        <span
-          className={`px-2 py-1 rounded-full text-[10px] font-bold ${row.status === "Hot"
-            ? "bg-rose-100 text-rose-600"
-            : row.status === "Warm"
-              ? "bg-orange-100 text-orange-600"
-              : "bg-blue-100 text-blue-600"
-            }`}
-        >
-          {row.status}
-        </span>
-      ),
-    },
+    { key: "status", label: "Status" },
     { key: "executive", label: "Executive" },
-    { key: "lastFollowUp", label: "Last Follow-up" },
+    { key: "lastFollowUp", label: "Last Activity" },
     { key: "nextReminder", label: "Next Reminder" },
-    {
-      key: "priority",
-      label: "Priority",
-      render: (row) => (
-        <span
-          className={`font-bold ${row.priority === "High"
-            ? "text-rose-500"
-            : row.priority === "Medium"
-              ? "text-orange-500"
-              : "text-blue-500"
-            }`}
-        >
-          {row.priority}
-        </span>
-      ),
-    },
+    { key: "priority", label: "Priority" },
   ];
 
   return (
     <div className="p-1 space-y-8 animate-in fade-in duration-700">
       {/* DASHBOARD HEADING */}
       <Heading
-        primaryText="Sales Executive Dashboard"
-        secondaryText="Overview & Activity"
+        primaryText="Sales Executive "
+        secondaryText="Dashboard"
         showAnimations={true}
       />
 
 
 
-      {/* TOP KPI CARDS */}
-      <DashGrid cols={12} gap={4}>
-        <DashCard
-          title="Total Leads"
-          value="1,284"
-          icon={<Users />}
-          accentColor="#3b82f6"
-          size={4}
-        />
-        <DashCard
-          title="Today Calls"
-          value="42"
-          icon={<PhoneCall />}
-          accentColor="#8b5cf6"
-          size={4}
-        />
-        <DashCard
-          title="Conversion Rate"
-          value="18.5%"
-          icon={<TrendingUp />}
-          accentColor="#10b981"
-          size={4}
-        />
-        <DashCard
-          title="Revenue Generated"
-          value="$124,500"
-          icon={<DollarSign />}
-          accentColor="#f59e0b"
-          size={4}
-        />
-        <DashCard
-          title="Pending Follow-ups"
-          value="12"
-          icon={<Clock />}
-          accentColor="#ef4444"
-          size={4}
-        />
-        <DashCard
-          title="Dump Leads"
-          value="342"
-          icon={<Trash2 />}
-          accentColor="#64748b"
-          size={4}
-        />
-      </DashGrid>
+      {/* ── STATS SECTION ── */}
+      <div className="space-y-4">
+        <DashGrid cols={12} gap={4}>
+          <EnhancedDashCard
+            title="Today"
+            value="42"
+            icon={<PhoneCall size={22} />}
+            accentColor="#f43f5e"
+            size={3}
+          />
+          <EnhancedDashCard
+            title="Pending"
+            value="12"
+            icon={<Clock size={22} />}
+            accentColor="#ef4444"
+            size={3}
+          />
+          <EnhancedDashCard
+            title="Missed"
+            value="05"
+            icon={<AlertCircle size={22} />}
+            accentColor="#64748b"
+            size={3}
+          />
+          <EnhancedDashCard
+            title="Upcoming"
+            value="28"
+            icon={<Calendar size={22} />}
+            accentColor="#38bdf8"
+            size={3}
+          />
+        </DashGrid>
+      </div>
 
       {/* CHARTS & WIDGETS SECTION */}
       <Grid cols={12} gap={6}>
-        {/* Weekly Sales Trend */}
+        {/* Weekly Prospect Trend */}
         <div className="col-span-12 lg:col-span-8">
           <GLineChart
-            title="Weekly Sales Trend"
-            subtitle="Comparison of Leads vs Closed Deals"
+            title="Weekly Prospect Trend"
+            subtitle="Comparison of New Prospects vs Conversions"
             data={weeklySalesData}
             lines={[
-              { key: "leads", label: "New Leads", color: "#3b82f6" },
-              { key: "closed", label: "Closed Deals", color: "#10b981" },
+              { key: "leads", label: "New Prospects", color: "#3b82f6" },
+              { key: "closed", label: "Conversions", color: "#10b981" },
             ]}
             size={12}
             height={320}
@@ -232,7 +192,7 @@ const SalesExecutiveDashboard = () => {
                 </div>
                 <div>
                   <div className="flex justify-between text-sm font-bold text-slate-600 mb-2">
-                    <span>Leads Closed</span>
+                    <span>Prospects Converted</span>
                     <span>4/5</span>
                   </div>
                   <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
@@ -241,7 +201,7 @@ const SalesExecutiveDashboard = () => {
                 </div>
                 <div>
                   <div className="flex justify-between text-sm font-bold text-slate-600 mb-2">
-                    <span>Follow-ups</span>
+                    <span>Reminders</span>
                     <span>12/15</span>
                   </div>
                   <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
@@ -250,17 +210,19 @@ const SalesExecutiveDashboard = () => {
                 </div>
               </div>
             </div>
-            <button className="mt-8 w-full py-3 bg-[#2a465a] text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#1e3a52] transition-colors shadow-lg shadow-[#2a465a]/20">
+            <button
+              onClick={() => navigate("prospects")}
+              className="mt-8 w-full py-3 bg-[#2a465a] text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#1e3a52] transition-colors shadow-lg shadow-[#2a465a]/20">
               View Full Report <ArrowRight size={16} />
             </button>
           </div>
         </div>
 
-        {/* Lead Status Distribution */}
+        {/* Prospect Status Distribution */}
         <div className="col-span-12 lg:col-span-4">
           <GDoughnutChart
-            title="Lead Status Distribution"
-            subtitle="By Current Pipeline Stage"
+            title="Prospect Distribution"
+            subtitle="By Current Interest Level"
             data={leadStatusData}
             colors={["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981"]}
             size={12}
@@ -284,9 +246,9 @@ const SalesExecutiveDashboard = () => {
         </div>
       </Grid>
 
-      {/* Recent Activity Table (Full Row) */}
+      {/* Recent Activity Table */}
       <DataTable
-        title="Recent Pipeline Activity"
+        title="Recent Prospect Activity"
         columns={columns}
         rows={recentActivities}
         pageSize={5}
@@ -298,8 +260,8 @@ const SalesExecutiveDashboard = () => {
         ]}
       />
 
-      {/* Upcoming Reminders Widget (Full Row Fix) */}
-      <Grid cols={12} >
+      {/* Upcoming Reminders Widget */}
+      <Grid cols={12}>
         <div className="col-span-12">
           <div className="bg-[#2a465a] rounded-3xl p-6 shadow-xl shadow-[#2a465a]/20 text-white relative overflow-hidden h-full">
             <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -326,7 +288,9 @@ const SalesExecutiveDashboard = () => {
                 </div>
               </div>
               <div className="flex items-center justify-center">
-                <button className="w-full py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors">
+                <button
+                  onClick={() => navigate("leads")}
+                  className="w-full py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors">
                   View All Reminders
                 </button>
               </div>
@@ -334,7 +298,6 @@ const SalesExecutiveDashboard = () => {
           </div>
         </div>
       </Grid>
-
     </div>
   );
 };

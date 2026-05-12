@@ -66,23 +66,7 @@ const EMPTY_ACTION_FORM = {
   reschedTitle: "", reschedDate: "", reschedTime: "", reschedType: "", reschedNote: "",
 };
 
-// ── Action options ────────────────────────────────────────────────────────────
-const ACTION_OPTIONS = [
-  { value: "Interested",    label: "Interested",    icon: ThumbsUp,  color: "text-emerald-600" },
-  { value: "Not Interested",label: "Not Interested",icon: ThumbsDown,color: "text-rose-600"    },
-  { value: "Reschedule",    label: "Reschedule",    icon: RotateCcw, color: "text-blue-600"    },
-  { value: "Not Talk",      label: "Not Talk",      icon: PhoneOff,  color: "text-amber-600"   },
-];
 
-const EMPTY_ACTION_FORM = {
-  action: "",
-  // Prospect fields
-  prospectService: "", prospectBudget: "", prospectCity: "", prospectSource: "",
-  // Comment (Not Interested / Not Talk)
-  comment: "",
-  // Reschedule fields
-  reschedTitle: "", reschedDate: "", reschedTime: "", reschedType: "", reschedNote: "",
-};
 
 export default function FollowUps({
   initialFollowups = DUMMY_FOLLOWUPS,

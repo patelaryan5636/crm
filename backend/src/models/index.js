@@ -1258,13 +1258,12 @@ const AttendanceSchema = new Schema({
 }, { timestamps: true });
 
 // Pre-save: normalize date to start of day
-AttendanceSchema.pre('save', function (next) {
+AttendanceSchema.pre('save', function () {
   if (this.isModified('date') || this.isNew) {
     const d = new Date(this.date);
     d.setHours(0, 0, 0, 0);
     this.date = d;
   }
-  next();
 });
 
 // One record per user per day per admin
@@ -1344,7 +1343,8 @@ const AnnouncementSchema = new Schema({
   createdByAdmin: { type: Boolean, default: false },
   title: { type: String, required: true, trim: true },
   message: { type: String, required: true },
-  type: { type: String, enum: ['INFO', 'WARNING', 'APPRECIATION'], required: true },
+  type: { type: String, enum: ['INFO', 'ANNOUNCEMENT', 'WARNING', 'APPRECIATION'], required: true },
+  expiryDate: { type: Date, default: null },
   targetType: {
     type: String,
     enum: ['ALL', 'DEPARTMENT', 'TEAM', 'ROLE', 'USER'],

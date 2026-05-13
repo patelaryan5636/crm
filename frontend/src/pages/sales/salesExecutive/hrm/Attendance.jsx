@@ -31,13 +31,7 @@ function AttendanceWidget() {
     <SessionTimer
       label="Today's Attendance"
       targetSeconds={8 * 60 * 60}
-      status={ctx.status}
-      elapsed={ctx.elapsed}
-      pct={ctx.pct}
-      remaining={ctx.remaining}
-      checkInAt={ctx.checkInAt}
-      checkOutAt={ctx.checkOutAt}
-      targetReached={ctx.targetReached}
+      {...ctx}
       onCheckIn={ctx.checkIn}
       onPause={ctx.pause}
       onResume={ctx.resume}
@@ -45,6 +39,7 @@ function AttendanceWidget() {
     />
   );
 }
+
 
 // ── Main Attendance Page ──────────────────────────────────────────────────────
 export default function Attendance() {

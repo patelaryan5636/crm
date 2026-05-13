@@ -54,9 +54,12 @@ const resolveUserTeam = async (adminId, userId, role) => {
     return null;
   }
 
+  const adminIdObj = new mongoose.Types.ObjectId(adminId);
+  const userIdObj = new mongoose.Types.ObjectId(userId);
+
   const query = role === 'SALES_TL'
-    ? { admin: adminId, isDeleted: false, isActive: true, leader: userId }
-    : { admin: adminId, isDeleted: false, isActive: true, 'members.user': userId };
+    ? { admin: adminIdObj, isDeleted: false, isActive: true, leader: userIdObj }
+    : { admin: adminIdObj, isDeleted: false, isActive: true, 'members.user': userIdObj };
 
   const team = await Team.findOne(query).select('_id name leader members department').lean();
   if (!team) {
@@ -152,7 +155,7 @@ const buildTargetPreview = async ({ adminId, user, team }) => {
   const currentAssigned = await resolveCurrentAssignmentCount(adminId, user._id);
 
   return {
-    id: user._id,
+    _id: user._id,
     name: user.name,
     email: user.email,
     role: user.role,
@@ -666,7 +669,8 @@ exports.generateErrorCsv = (failedRows) => {
 exports.getAssignmentTargets = async (adminId, performer, targetRole = null) => {
   const performerRole = performer.role;
   const allowedRoles = resolveAllowedTargetRoles(performerRole);
-  const effectiveAdminId = String(adminId?._id || adminId);
+  const effectiveAdminId = adminId?._id || adminId;
+  const adminIdObj = new mongoose.Types.ObjectId(effectiveAdminId);
 
   if (allowedRoles.length === 0) {
     throw new AppError('You do not have permission to view assignment targets.', 403);
@@ -678,7 +682,7 @@ exports.getAssignmentTargets = async (adminId, performer, targetRole = null) => 
   }
 
   const query = {
-    admin: effectiveAdminId,
+    admin: adminIdObj,
     isDeleted: false,
     isActive: true,
     approvalStatus: 'APPROVED',
@@ -698,7 +702,7 @@ exports.getAssignmentTargets = async (adminId, performer, targetRole = null) => 
 
   const userIds = users.map((user) => user._id);
   const teams = await Team.find({
-    admin: effectiveAdminId,
+    admin: adminIdObj,
     isDeleted: false,
     isActive: true,
     $or: [{ leader: { $in: userIds } }, { 'members.user': { $in: userIds } }],

@@ -77,11 +77,14 @@ export default function SessionTimer({
   // State — all driven by parent/context
   status        = "idle",
   elapsed       = 0,
+  breakSeconds  = 0,
+  overtime      = 0,
   pct           = 0,
   remaining,
   checkInAt     = "",
   checkOutAt    = "",
   targetReached = false,
+  loading       = false,
 
   // Actions
   onCheckIn,
@@ -90,6 +93,32 @@ export default function SessionTimer({
   onCheckOut,
 }) {
   const rem = remaining ?? Math.max(targetSeconds - elapsed, 0);
+
+  if (loading) {
+    return (
+      <div className="rounded-3xl border border-slate-200/60 bg-white shadow-sm overflow-hidden animate-pulse">
+        <div className="h-1.5 w-full bg-slate-200" />
+        <div className="p-6 flex flex-col gap-5">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <div className="h-3 w-24 bg-slate-100 rounded-md" />
+              <div className="h-5 w-40 bg-slate-100 rounded-md" />
+            </div>
+            <div className="h-10 w-28 bg-slate-100 rounded-2xl" />
+          </div>
+          <div className="space-y-3">
+            <div className="h-3 w-full bg-slate-100 rounded-full" />
+            <div className="h-6 w-full bg-slate-50 rounded-2xl" />
+          </div>
+          <div className="flex gap-3">
+            <div className="h-12 flex-1 bg-slate-100 rounded-2xl" />
+            <div className="h-12 flex-1 bg-slate-100 rounded-2xl" />
+            <div className="h-12 w-32 bg-slate-100 rounded-2xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const MODAL_ID = `session-timer-confirm-${label.replace(/\s+/g, "-").toLowerCase()}`;
 
@@ -103,6 +132,7 @@ export default function SessionTimer({
     status === "paused" ? "bg-amber-500 text-white shadow-lg shadow-amber-500/20"  :
     status === "done"   ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" :
                           "bg-slate-100 text-slate-500";
+
 
   return (
     <>
@@ -159,6 +189,24 @@ export default function SessionTimer({
               )}
               <span className="text-[11px] text-slate-400">{Math.floor(targetSeconds / 3600)}h</span>
             </div>
+          </div>
+
+          {/* ── Detailed Stats ── */}
+          <div className="grid grid-cols-3 gap-3">
+             <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 flex flex-col items-center justify-center">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Net Work</p>
+                <p className="text-sm font-black text-[#2a465a] tabular-nums">{formatTimer(elapsed)}</p>
+             </div>
+             <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 flex flex-col items-center justify-center">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Breaks</p>
+                <p className="text-sm font-black text-amber-600 tabular-nums">{formatTimer(breakSeconds)}</p>
+             </div>
+             <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 flex flex-col items-center justify-center">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Overtime</p>
+                <p className={`text-sm font-black tabular-nums ${overtime > 0 ? "text-emerald-600" : "text-slate-400"}`}>
+                  {formatTimer(overtime)}
+                </p>
+             </div>
           </div>
 
           {/* ── Timestamps + action buttons ── */}

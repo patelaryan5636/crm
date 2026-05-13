@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Heading, DashGrid, DashCard, DataTable,
   Modal, ModalGrid, ModalData, ModalProfile, Button,
@@ -9,6 +9,8 @@ import { useAttendance } from "../../../../context/AttendanceContext";
 import {
   Users, UserCheck, UserX, Palmtree, Eye,
 } from "lucide-react";
+import { hrmService } from "../../../../services/hrmService";
+import { formatElapsed } from "../../../../context/AttendanceContext";
 import { currentTL, attendanceRecords, todayAttendance, ATTENDANCE_STATUS } from "../myTeam/teamStore";
 
 const KPI_ICONS   = [<Users size={22} />, <UserCheck size={22} />, <UserX size={22} />, <Palmtree size={22} />];
@@ -30,13 +32,7 @@ function MyAttendanceWidget() {
     <SessionTimer
       label="Today's Attendance"
       targetSeconds={8 * 60 * 60}
-      status={ctx.status}
-      elapsed={ctx.elapsed}
-      pct={ctx.pct}
-      remaining={ctx.remaining}
-      checkInAt={ctx.checkInAt}
-      checkOutAt={ctx.checkOutAt}
-      targetReached={ctx.targetReached}
+      {...ctx}
       onCheckIn={ctx.checkIn}
       onPause={ctx.pause}
       onResume={ctx.resume}
@@ -45,20 +41,82 @@ function MyAttendanceWidget() {
   );
 }
 
+
 export default function Attendance() {
   const [selected, setSelected] = useState(null);
+  const [teamAttendance, setTeamAttendance] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // ── Today's KPIs (team executives only — TL self-attendance lives in the SessionTimer above) ──
-  const present = todayAttendance.filter((r) => r.status === "Present").length;
-  const late    = todayAttendance.filter((r) => r.status === "Late").length;
-  const absent  = todayAttendance.filter((r) => r.status === "Absent").length;
-  const onLeave = todayAttendance.filter((r) => r.status === "Leave").length;
+  const fetchTeam = async () => {
+    setLoading(true);
+    try {
+      const res = await hrmService.getTeamAttendance();
+      if (res.success) {
+        const mapped = res.data.map(u => {
+          const att = u.attendance;
+          let status = "Absent";
+          if (att) {
+            if (att.clockIn) status = "Present";
+          }
+
+          const formatTime = (date) => {
+             if (!date) return "—";
+             const d = new Date(date);
+             return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          };
+
+          return {
+            id: u.id,
+            name: u.name,
+            role: u.role?.replace('SALES_', '').replace('_', ' '),
+            date: new Date().toLocaleDateString(),
+            clockIn: formatTime(att?.clockIn),
+            clockOut: formatTime(att?.clockOut),
+            hours: att?.hoursWorked ? `${att.hoursWorked}h` : "—",
+            status: status,
+            raw: u // Keep raw data for modal
+          };
+        });
+        setTeamAttendance(mapped);
+      }
+    } catch (err) {
+      console.error("Failed to fetch team attendance:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeam();
+    const interval = setInterval(fetchTeam, 60000); // Auto-refresh every 60s
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleClockOutMember = async (row) => {
+    if (!window.confirm(`Are you sure you want to clock out ${row.name}?`)) return;
+    try {
+      const res = await hrmService.clockOut(row.id);
+      if (res.success) {
+        fetchTeam(); // Refresh table
+      }
+    } catch (err) {
+      console.error("Failed to clock out member:", err);
+    }
+  };
+
+  // ── Today's KPIs ──
+  const presentCount = teamAttendance.filter((r) => r.status === "Present" || r.status === "Late").length;
+  const absentCount  = teamAttendance.filter((r) => r.status === "Absent").length;
+  const leaveCount   = teamAttendance.filter((r) => r.status === "Leave").length;
+  const onTimeCount  = teamAttendance.filter((r) => r.status === "Present").length;
+
   const kpis = [
-    { title: "Present Today", value: String(present + late) }, // execs who showed up (Present + Late)
-    { title: "On Time",       value: String(present)         },
-    { title: "Absent Today",  value: String(absent)          },
-    { title: "On Leave",      value: String(onLeave)         },
+    { title: "Present Today", value: String(presentCount) }, 
+    { title: "On Time",       value: String(onTimeCount)  },
+    { title: "Absent Today",  value: String(absentCount)  },
+    { title: "On Leave",      value: String(leaveCount)   },
   ];
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -78,23 +136,28 @@ export default function Attendance() {
       <DataTable
         title="Team Attendance"
         columns={COLS}
-        rows={attendanceRecords}
+        rows={teamAttendance}
         userProfile="name"
         size={12}
         pageSize={10}
         searchable
         date
         exportable
+        loading={loading}
         exportFileName="team_attendance"
         filters={[
-          { title: "Status",    type: "toggle", key: "status", options: ATTENDANCE_STATUS },
-          { title: "Executive", type: "select", key: "name",   options: [...new Set(attendanceRecords.map((r) => r.name))] },
+          { title: "Status",    type: "toggle", key: "status", options: ["Present", "Active", "Absent", "Leave"] },
+          { title: "Executive", type: "select", key: "name",   options: [...new Set(teamAttendance.map((r) => r.name))] },
         ]}
         actions={[
           {
             icon: <Eye size={15} />, tooltip: "View Details", variant: "ghost",
-            onClick: (row) => { setSelected(attendanceRecords.find((r) => r.id === row.id)); openModal("tl-hrm-att-view"); },
+            onClick: (row) => { setSelected(row); openModal("tl-hrm-att-view"); },
           },
+          {
+            icon: <UserX size={15} />, tooltip: "Force Clock Out", variant: "danger",
+            onClick: handleClockOutMember,
+          }
         ]}
       />
 

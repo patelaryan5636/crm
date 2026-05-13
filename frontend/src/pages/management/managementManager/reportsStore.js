@@ -1,80 +1,64 @@
-// Reports dummy data - Packet 3
+// reportsStore.js — computed from canonical store (TEAM_GUIDE Section 9)
+import { projects, teamLeaders } from "./managementManagerStore";
 
-export const projectReports = [
-  { date: "2026-05-01", delivered: 3, inProgress: 5, delayed: 1 },
-  { date: "2026-05-02", delivered: 2, inProgress: 6, delayed: 0 },
-  { date: "2026-05-03", delivered: 4, inProgress: 4, delayed: 2 },
-  { date: "2026-05-04", delivered: 1, inProgress: 7, delayed: 1 },
-  { date: "2026-05-05", delivered: 5, inProgress: 3, delayed: 0 },
-  { date: "2026-05-06", delivered: 3, inProgress: 5, delayed: 1 },
-  { date: "2026-05-07", delivered: 2, inProgress: 6, delayed: 2 },
-  { date: "2026-05-08", delivered: 4, inProgress: 4, delayed: 0 },
-  { date: "2026-05-09", delivered: 3, inProgress: 5, delayed: 1 },
-  { date: "2026-05-10", delivered: 6, inProgress: 2, delayed: 0 },
-];
+export const teamReports = teamLeaders.map((tl) => {
+  const tlProjects = projects.filter((p) => p.assignedTL === tl.id);
+  const delivered  = tlProjects.filter((p) => p.status === "Delivered").length;
+  const inProgress = tlProjects.filter((p) =>
+    ["In Progress", "Work Started", "Review Stage", "Finalization"].includes(p.status)
+  ).length;
+  const delayed = tlProjects.filter((p) => p.status === "Delayed").length;
 
-export const teamReports = [
-  {
-    id: "TL-101",
-    name: "Ravi Khanna",
-    totalProjects: 12,
-    completed: 8,
-    inProgress: 3,
-    delayed: 1,
-    avgCompletionDays: 14,
-    onTimePercentage: 87,
-  },
-  {
-    id: "TL-102",
-    name: "Priya Sharma",
-    totalProjects: 10,
-    completed: 7,
-    inProgress: 2,
-    delayed: 1,
-    avgCompletionDays: 12,
-    onTimePercentage: 90,
-  },
-  {
-    id: "TL-103",
-    name: "Amit Patel",
-    totalProjects: 9,
-    completed: 6,
-    inProgress: 2,
-    delayed: 1,
-    avgCompletionDays: 15,
-    onTimePercentage: 84,
-  },
-  {
-    id: "TL-104",
-    name: "Neha Singh",
-    totalProjects: 8,
-    completed: 6,
-    inProgress: 1,
-    delayed: 1,
-    avgCompletionDays: 13,
-    onTimePercentage: 88,
-  },
-];
-
-export const deliveryMetrics = {
-  totalDelivered: 27,
-  onTimeDelivered: 24,
-  delayedDelivered: 3,
-  onTimePercentage: 88.9,
-  avgDelayDays: 2.5,
-};
-
-export const monthlyDeliveryData = [
-  { month: "Mar", delivered: 12, delayed: 2 },
-  { month: "Apr", delivered: 15, delayed: 3 },
-  { month: "May", delivered: 8, delayed: 1 },
-];
+  return {
+    id:            tl.id,
+    name:          tl.name,
+    totalProjects: tlProjects.length,
+    completed:     delivered,
+    inProgress,
+    delayed,
+  };
+});
 
 export const tlReports = teamReports;
 
+export const deliveryMetrics = {
+  totalDelivered:   projects.filter((p) => p.status === "Delivered").length,
+  onTimeDelivered:  projects.filter((p) => p.status === "Delivered" && p.handoverLink).length,
+  delayedDelivered: projects.filter((p) => p.status === "Delivered" && !p.handoverLink).length,
+  onTimePercentage:
+    Math.round(
+      (projects.filter((p) => p.status === "Delivered" && p.handoverLink).length /
+        Math.max(projects.filter((p) => p.status === "Delivered").length, 1)) *
+        1000
+    ) / 10,
+  avgDelayDays: 2.5,
+};
+
+const monthMap = {};
+projects.forEach((p) => {
+  if (!p.deliveredDate) return;
+  const mon = new Date(p.deliveredDate).toLocaleString("en-IN", { month: "short" });
+  if (!monthMap[mon]) monthMap[mon] = { month: mon, delivered: 0, delayed: 0 };
+  monthMap[mon].delivered++;
+});
+export const monthlyDeliveryData = Object.values(monthMap);
+
 export const reportKPIs = {
-  totalProjects: 39,
-  completedProjects: 27,
-  onTimePercentage: 88.9,
+  totalProjects:     projects.length,
+  completedProjects: projects.filter((p) => p.status === "Delivered").length,
+  onTimePercentage:  deliveryMetrics.onTimePercentage,
   avgCompletionDays: 13.5,
 };
+
+const dailyMap = {};
+projects.forEach((p) => {
+  const d = p.lastUpdated;
+  if (!dailyMap[d]) dailyMap[d] = { date: d, delivered: 0, inProgress: 0, delayed: 0 };
+  if (p.status === "Delivered") dailyMap[d].delivered++;
+  if (["In Progress", "Work Started", "Review Stage", "Finalization"].includes(p.status))
+    dailyMap[d].inProgress++;
+  if (p.status === "Delayed") dailyMap[d].delayed++;
+});
+export const projectReports = Object.values(dailyMap).sort((a, b) =>
+  a.date.localeCompare(b.date)
+);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, Phone, Mail, Link as LinkIcon } from "lucide-react";
+import { Link as LinkIcon } from "lucide-react";
 import {
   Heading,
   Grid,
@@ -12,7 +12,8 @@ import {
   openModal,
   closeModal,
 } from "../../../components/shared/Common_Components";
-import { clients, clientKPIs } from "./clientsStore";
+import { clients } from "./clientsStore";
+import { projects } from "../store/managementManagerStore";
 
 export default function ManagementManagerClients() {
   const [selectedClient, setSelectedClient] = useState(null);
@@ -36,15 +37,15 @@ export default function ManagementManagerClients() {
         <DataTable
           title="All Clients"
           columns={[
-            { key: "id", label: "ID" },
-            { key: "name", label: "Client Name" },
-            { key: "mobile", label: "Mobile" },
-            { key: "email", label: "Email" },
-            { key: "projectIds", label: "Active Projects" },
+            { key: "id",           label: "ID"              },
+            { key: "name",         label: "Client Name"     },
+            { key: "mobile",       label: "Mobile"          },
+            { key: "email",        label: "Email"           },
+            { key: "projectCount", label: "Active Projects" },
           ]}
           rows={clients.map((c) => ({
             ...c,
-            projectIds: c.projectIds.length,
+            projectCount: projects.filter((p) => p.clientId === c.id).length,
           }))}
           size={12}
           pageSize={10}
@@ -53,7 +54,7 @@ export default function ManagementManagerClients() {
           exportFileName="clients_export"
           actions={[
             {
-              icon: <Eye size={15} />,
+              icon: <LinkIcon size={15} />,
               tooltip: "View Projects",
               variant: "ghost",
               onClick: (row) => handleViewClient(row),
@@ -62,7 +63,6 @@ export default function ManagementManagerClients() {
         />
       </Grid>
 
-      {/* View Client Modal */}
       <Modal id="mm-client-view" title="Client Details" size="lg">
         {selectedClient && (
           <>
@@ -73,7 +73,7 @@ export default function ManagementManagerClients() {
             />
             <ModalGrid title="Contact Information" cols={2}>
               <ModalData label="Mobile" value={selectedClient.mobile} />
-              <ModalData label="Email" value={selectedClient.email} />
+              <ModalData label="Email"  value={selectedClient.email}  />
               <ModalData
                 label="Drive Link"
                 value={
@@ -90,17 +90,65 @@ export default function ManagementManagerClients() {
             </ModalGrid>
 
             <ModalGrid title="Associated Projects" cols={1}>
-              <div className="bg-slate-50 rounded p-3 text-sm">
-                <div className="font-semibold mb-2">
-                  {selectedClient.projectIds.length} Project(s)
-                </div>
-                <div className="space-y-1">
-                  {selectedClient.projectIds.map((pid) => (
-                    <div key={pid} className="text-slate-600">
-                      • {pid}
-                    </div>
-                  ))}
-                </div>
+              <div className="space-y-3">
+                {projects.filter((p) => p.clientId === selectedClient.id).length === 0 ? (
+                  <p className="text-slate-500 text-sm">No projects found.</p>
+                ) : (
+                  projects
+                    .filter((p) => p.clientId === selectedClient.id)
+                    .map((proj) => (
+                      <div
+                        key={proj.id}
+                        className="bg-slate-50 rounded-lg border border-slate-200 p-3 text-sm"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-semibold text-slate-800">
+                            {proj.name}
+                          </span>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              proj.status === "Delivered"
+                                ? "bg-green-100 text-green-700"
+                                : proj.status === "Delayed"
+                                ? "bg-red-100 text-red-700"
+                                : proj.status === "In Progress"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-slate-100 text-slate-600"
+                            }`}
+                          >
+                            {proj.status}
+                          </span>
+                        </div>
+                        <div className="flex gap-4">
+                          {proj.driveLink && (
+                            <a
+                              href={proj.driveLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              📁 Drive
+                            </a>
+                          )}
+                          {proj.handoverLink && (
+                            <a
+                              href={proj.handoverLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-green-600 hover:underline"
+                            >
+                              ✅ Handover
+                            </a>
+                          )}
+                          {!proj.handoverLink && proj.status === "Delivered" && (
+                            <span className="text-amber-500">
+                              ⚠️ Handover link missing
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                )}
               </div>
             </ModalGrid>
 

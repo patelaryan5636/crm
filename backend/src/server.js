@@ -20,6 +20,7 @@ const bulkUserUploadRoutes = require('./routes/bulkUserUpload');
 const userRoutes = require('./routes/users');
 const superAdminRoutes = require('./routes/superadmin');
 const teamRoutes = require('./routes/teams');
+const announcementRoutes = require('./routes/announcements');
 const salesManagerLeadRoutes = require('./routes/salesManagerLeads');
 const salesTeamLeaderLeadRoutes = require('./routes/salesTeamLeaderLeads');
 const salesExecutiveLeadRoutes = require('./routes/salesExecutiveLeads');
@@ -76,6 +77,8 @@ try {
   console.log('✓ /api/superadmin routes registered');
   app.use('/api/teams', teamRoutes);
   console.log('✓ /api/teams routes registered');
+	app.use('/api/announcements', announcementRoutes);
+	console.log('✓ /api/announcements routes registered');
   app.use('/api/sales-manager/leads', salesManagerLeadRoutes);
   console.log('✓ /api/sales-manager/leads routes registered');
   app.use('/api/sales-team-leader/leads', salesTeamLeaderLeadRoutes);

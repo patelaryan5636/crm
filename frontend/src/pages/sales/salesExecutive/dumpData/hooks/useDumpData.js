@@ -23,7 +23,10 @@ export function useDumpData() {
     () =>
       dumpedLeads.map((lead) => ({
         ...lead,
+        mobile: lead.mobile || lead.phone,
         reason: lead.dump?.reason,
+        dumpReason: lead.dump?.reason,
+        dumpedBy: lead.dump?.dumpedBy,
         dumpDate: lead.dump?.dumpedAt,
         date: lead.dump?.dumpedAt,
       })),

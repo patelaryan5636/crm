@@ -1650,7 +1650,7 @@ export const DataTable = ({
                       </td>
                     )}
                     {columns.map((col) => {
-                      if (col.key === "status") {
+                      if (col.key === "status" || col.key === "priority" || col.key === "repeat" || col.key === "type") {
                         const val = row[col.key];
                         // ── Status → colour map ──────────────────────────────────────────
                         // Emerald — positive / completed / active / success
@@ -1732,6 +1732,20 @@ export const DataTable = ({
                           Absent: ["bg-rose-100", "text-rose-700"],
                           Escalated: ["bg-rose-100", "text-rose-700"],
                           "Not Interested": ["bg-rose-100", "text-rose-700"],
+                          // ── Priority levels ──
+                          High:   ["bg-rose-100",  "text-rose-700" ],
+                          Medium: ["bg-amber-100", "text-amber-700"],
+                          Low:    ["bg-blue-100",  "text-blue-700" ],
+                          // ── Read / Unread ──
+                          Unread: ["bg-blue-100",    "text-blue-700"    ],
+                          Read:   ["bg-emerald-100", "text-emerald-700" ],
+                          // ── Reminder frequency ──
+                          Daily:   ["bg-emerald-100", "text-emerald-700"],
+                          Weekly:  ["bg-blue-100",    "text-blue-700"   ],
+                          Monthly: ["bg-purple-100",  "text-purple-700" ],
+                          // ── Reminder type ──
+                          Automatic: ["bg-amber-100",  "text-amber-700" ],
+                          Scheduled: ["bg-indigo-100", "text-indigo-700"],
                         };
                         const [statusBg, statusText] = STATUS_MAP[val] ?? ["bg-slate-100", "text-slate-600"];
                         return (

@@ -12,7 +12,6 @@ const stripPhone = (m) => (m || "").replace(/\D/g, "");
 
 const COLS = [
   { key: "name",     label: "Name" },
-  { key: "id",       label: "Employee ID" },
   { key: "email",    label: "Email" },
   { key: "phone",    label: "Phone" },
   { key: "role",     label: "Role" },
@@ -104,7 +103,7 @@ export default function TeamMembers() {
             { title: "Region", type: "select", key: "region", options: [...new Set(executives.map((e) => e.region || "Default"))] },
           ]}
           actions={[
-            { icon: <Eye size={15} />,           tooltip: "View",     variant: "ghost",   onClick: (row) => { setViewRow(executives.find((e) => e.id === row.id)); openModal("tl-mem-view"); } },
+            { icon: <Eye size={15} />,           tooltip: "View",     variant: "ghost",   onClick: (row) => { setViewRow(executives.find((e) => e._id === row._id)); openModal("tl-mem-view"); } },
             { icon: <Phone size={15} />,         tooltip: "Call",     variant: "ghost",   onClick: callExec },
             { icon: <MessageCircle size={15} />, tooltip: "WhatsApp", variant: "ghost",   onClick: whatsappExec },
           ]}
@@ -120,7 +119,7 @@ export default function TeamMembers() {
             const avatarColor = "bg-emerald-500";
             return (
               <div
-                key={exec.id}
+                key={exec._id}
                 onClick={() => { setViewRow(exec); openModal("tl-mem-view"); }}
                 className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
               >
@@ -163,7 +162,6 @@ export default function TeamMembers() {
               <ModalProfile
                 name={viewRow.name}
                 subtitle={`Sales Executive · ${viewRow.region || "Default"}`}
-                meta={`ID: ${viewRow.id}`}
               />
               <ModalGrid title="Contact" cols={2}>
                 <ModalData label="Email"  value={viewRow.email} />

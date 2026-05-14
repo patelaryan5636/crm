@@ -36,7 +36,7 @@ const comparePassword = async (password, hash) => {
 const generateAccessToken = (payload) => {
   return jwt.sign(
     payload,
-    process.env.JWT_SECRET || 'your-super-secret-key',
+    process.env.JWT_ACCESS_SECRET || 'your-super-secret-key',
     { expiresIn: '2h' }
   );
 };
@@ -62,7 +62,7 @@ const generateRefreshToken = (payload) => {
  * @throws {Error} If token is invalid
  */
 const verifyAccessToken = (token) => {
-  return jwt.verify(token, process.env.JWT_SECRET || 'your-super-secret-key');
+  return jwt.verify(token, process.env.JWT_ACCESS_SECRET || 'your-super-secret-key');
 };
 
 /**

@@ -1258,13 +1258,12 @@ const AttendanceSchema = new Schema({
 }, { timestamps: true });
 
 // Pre-save: normalize date to start of day
-AttendanceSchema.pre('save', function (next) {
+AttendanceSchema.pre('save', function () {
   if (this.isModified('date') || this.isNew) {
     const d = new Date(this.date);
     d.setHours(0, 0, 0, 0);
     this.date = d;
   }
-  next();
 });
 
 // One record per user per day per admin

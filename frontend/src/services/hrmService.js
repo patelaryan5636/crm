@@ -1,6 +1,6 @@
-// hrmService.js — API layer for HRM module
-// Replace delay() + mock data with real fetch() calls when backend is ready.
+import apiClient from './apiClient';
 
+// --- Temporary Mock Data (used by some components for initial state) ---
 export const MOCK_ATTENDANCE = [
   { id: "AV", employee: "Ankit Verma", role: "Team Leader", teamLeader: "Self", date: "2026-05-03", day: "Sun", checkIn: "08:55", checkOut: "—", hours: "4h 45m", status: "Present", attendancePct: "97%" },
   { id: "AK", employee: "Arjun Kapoor", role: "Executive", teamLeader: "Ankit Verma", date: "2026-05-03", day: "Sun", checkIn: "09:45", checkOut: "—", hours: "6h 30m", status: "Late", attendancePct: "76%" },
@@ -21,59 +21,62 @@ export const MOCK_LEAVES_INIT = [
   { id: 4, type: "Sick",   from: "2026-06-02", to: "2026-06-02", days: 1, reason: "Doctor appointment.", status: "Pending"  },
 ];
 
-const delay = (ms = 400) => new Promise(r => setTimeout(r, ms));
-
 export const hrmService = {
   // GET /hrm/summary
   async getSummary() {
-    await delay();
-    return {
-      success: true,
-      data: {
-        totalWorkingDays: MOCK_ATTENDANCE.filter(r => !["Weekend","Holiday"].includes(r.status)).length,
-        presentDays:      MOCK_ATTENDANCE.filter(r => r.status === "Present").length,
-        absentDays:       MOCK_ATTENDANCE.filter(r => r.status === "Absent").length,
-        monthLabel:       "May 2026",
-      },
-    };
+    // This might still be mock or need a real endpoint if available
+    const response = await apiClient.get('/attendance/today');
+    return response.data;
   },
 
   // GET /hrm/attendance
   async getAttendance() {
-    await delay();
-    return { success: true, data: MOCK_ATTENDANCE };
+    const response = await apiClient.get('/attendance/today');
+    return response.data;
   },
 
   // GET /hrm/leaves
   async getLeaves() {
-    await delay();
-    return { success: true, data: MOCK_LEAVES_INIT };
+    // Assuming there's a leaves endpoint
+    const response = await apiClient.get('/leaves');
+    return response.data;
   },
 
   // POST /hrm/leaves
   async applyLeave(payload) {
-    await delay(900);
-    // Replace with: const res = await fetch("/api/leaves", { method: "POST", body: JSON.stringify(payload) });
-    return { success: true, data: { ...payload, id: Date.now(), status: "Pending" } };
+    const response = await apiClient.post('/leaves', payload);
+    return response.data;
   },
 
-  // POST /hrm/attendance/clock-in
+  // POST /attendance/clock-in
   async clockIn() {
-    await delay(600);
-    return { success: true, data: { time: new Date().toISOString() } };
+    const response = await apiClient.post('/attendance/clock-in');
+    return response.data;
   },
 
-  // POST /hrm/attendance/clock-out
-  async clockOut() {
-    await delay(600);
-    return { success: true, data: { time: new Date().toISOString() } };
+  // POST /attendance/clock-out
+  async clockOut(userId = null) {
+    const response = await apiClient.post('/attendance/clock-out', { userId });
+    return response.data;
   },
 
-  // POST /hrm/attendance/auto-mark  (called on login)
-  async autoMarkAttendance() {
-    await delay(200);
-    const today = new Date().toISOString().slice(0, 10);
-    const record = MOCK_ATTENDANCE.find(r => r.date === today);
-    return { success: true, data: { status: record?.status ?? null, record } };
+  // POST /attendance/break-toggle
+  async toggleBreak(action) {
+    const response = await apiClient.post('/attendance/break-toggle', { action });
+    return response.data;
+  },
+
+  // GET /attendance/today
+  async getTodayStatus() {
+    const response = await apiClient.get('/attendance/today');
+    return response.data;
+  },
+
+  // GET /attendance/team
+  async getTeamAttendance() {
+    const response = await apiClient.get('/attendance/team');
+    return response.data;
   },
 };
+
+

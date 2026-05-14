@@ -387,3 +387,475 @@ exports.getMyAssignedLeads = catchAsync(async (req, res, next) => {
     )
   );
 });
+
+// ────────────────────────────────────────────────────────────
+// SALES EXECUTIVE ACTIONS
+// ────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/sales-executive/leads/:leadId/status
+ * Change lead status (TALK, INTERESTED, NOT_TALK, DUMPED)
+ * Security: Role guard (SALES_EXECUTIVE), User scope (assignedTo), Admin scope
+ * Audit: Creates AuditLog, LeadActivity, and LeadAssignmentHistory entry
+ */
+exports.updateLeadStatus = catchAsync(async (req, res, next) => {
+  const { leadId } = req.params;
+  const { status } = req.body;
+  const { Lead, LeadActivity, LeadAssignmentHistory, AuditLog } = require('../models');
+
+  // Role guard
+  if (req.user?.role !== 'SALES_EXECUTIVE') {
+    return next(new AppError('Only Sales Executives can update lead status', 403));
+  }
+
+  // Validate status
+  const VALID_STATUSES = ['TALK', 'INTERESTED', 'NOT_TALK', 'DUMPED'];
+  if (!status || !VALID_STATUSES.includes(status)) {
+    return next(new AppError(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`, 400));
+  }
+
+  // Find lead with admin & user scoping
+  const lead = await Lead.findOne({
+    _id: leadId,
+    admin: req.admin._id,
+    assignedTo: req.user._id,
+    isDeleted: { $ne: true },
+  }).populate('client', 'name email mobile companyName');
+
+  if (!lead) {
+    return next(new AppError('Lead not found or not assigned to you', 404));
+  }
+
+  const clientId = lead.client?._id || lead.client;
+  if (!clientId) {
+    return next(new AppError('Lead client is missing', 400));
+  }
+
+  // Store old status for audit
+  const oldStatus = lead.status;
+  const statusChanged = oldStatus !== status;
+
+  // Update lead
+  lead.status = status;
+  lead.lastContactedAt = new Date();
+
+  // Auto-increment notTalkCount if status is NOT_TALK
+  if (status === 'NOT_TALK') {
+    lead.notTalkCount = (lead.notTalkCount || 0) + 1;
+    // Rule: >= 3 not-talks triggers auto-dump
+    if (lead.notTalkCount >= 3) {
+      lead.isDumped = true;
+      lead.dumpReason = 'Auto-dumped: Not talked 3+ times';
+      lead.dumpedAt = new Date();
+      lead.dumpedBy = req.user._id;
+    }
+  }
+
+  // Track converted leads
+  if (status === 'CONVERTED' && !lead.convertedAt) {
+    lead.convertedAt = new Date();
+    lead.convertedBy = req.user._id;
+  }
+
+  // Increment talkCount if status is TALK
+  if (status === 'TALK') {
+    lead.talkCount = (lead.talkCount || 0) + 1;
+  }
+
+  // Save lead
+  await lead.save();
+
+  // Create LeadActivity record (tracks every status change)
+  await LeadActivity.create({
+    admin: req.admin._id,
+    lead: lead._id,
+    user: req.user._id,
+    status: status,
+    comment: req.body.comment || null,
+    duration: req.body.duration || 0, // call duration in minutes
+  });
+
+  // Create LeadAssignmentHistory entry if status changed
+  if (statusChanged) {
+    await LeadAssignmentHistory.create({
+      admin: req.admin._id,
+      lead: lead._id,
+      assignedTo: req.user._id,
+      assignedBy: lead.assignedBy,
+      team: lead.team,
+      reason: `Status changed from ${oldStatus} to ${status}`,
+      assignedAt: new Date(),
+    });
+  }
+
+  // Create AuditLog for audit trail
+  await AuditLog.create({
+    admin: req.admin._id,
+    performedBy: req.user._id,
+    performerType: 'USER',
+    action: 'LEAD_STATUS_CHANGED',
+    targetModel: 'Lead',
+    targetId: lead._id,
+    before: { status: oldStatus },
+    after: { status: status },
+    ipAddress: getClientIp(req),
+    note: `Status changed from ${oldStatus} to ${status}`,
+  });
+
+  // Populate response
+  const updatedLead = await Lead.findById(lead._id)
+    .populate('client', 'name email mobile companyName')
+    .populate('assignedTo', 'name email role')
+    .populate('assignedBy', 'name email role')
+    .populate('team', 'name');
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        id: updatedLead._id,
+        name: updatedLead.client?.name,
+        email: updatedLead.client?.email,
+        mobile: updatedLead.client?.mobile,
+        status: updatedLead.status,
+        isDumped: updatedLead.isDumped,
+        talkCount: updatedLead.talkCount,
+        notTalkCount: updatedLead.notTalkCount,
+        convertedAt: updatedLead.convertedAt,
+      },
+      'Lead status updated successfully'
+    )
+  );
+});
+
+/**
+ * POST /api/sales-executive/leads/:leadId/prospect
+ * Create or update prospect form for an interested lead
+ */
+exports.saveLeadProspect = catchAsync(async (req, res, next) => {
+  const { leadId } = req.params;
+  const {
+    contactPerson,
+    company,
+    value,
+    probability,
+    expectedClose,
+    stage,
+    priority,
+    requirement,
+  } = req.body;
+  const { Lead, ProspectForm, LeadActivity, AuditLog } = require('../models');
+
+  if (req.user?.role !== 'SALES_EXECUTIVE') {
+    return next(new AppError('Only Sales Executives can save prospect forms', 403));
+  }
+
+  const lead = await Lead.findOne({
+    _id: leadId,
+    admin: req.admin._id,
+    assignedTo: req.user._id,
+    isDeleted: { $ne: true },
+  }).populate('client', 'name email mobile companyName');
+
+  if (!lead) {
+    return next(new AppError('Lead not found or not assigned to you', 404));
+  }
+
+  const parsedValue = value === '' || value === null || value === undefined ? 0 : Number(value);
+  if (Number.isNaN(parsedValue)) {
+    return next(new AppError('Prospect value must be a valid number', 400));
+  }
+
+  const parsedProbability = probability === '' || probability === null || probability === undefined
+    ? 60
+    : Number(probability);
+  if (Number.isNaN(parsedProbability) || parsedProbability < 0 || parsedProbability > 100) {
+    return next(new AppError('Probability must be between 0 and 100', 400));
+  }
+
+  const expectedCloseDate = expectedClose ? new Date(expectedClose) : null;
+  if (expectedClose && Number.isNaN(expectedCloseDate?.getTime?.())) {
+    return next(new AppError('Invalid expected close date', 400));
+  }
+
+  const prospectPayload = {
+    admin: req.admin._id,
+    lead: lead._id,
+    client: clientId,
+    filledBy: req.user._id,
+    updatedBy: req.user._id,
+    contactPerson: contactPerson?.trim() || lead.client?.name || '',
+    company: company?.trim() || lead.client?.companyName || '',
+    value: parsedValue,
+    probability: parsedProbability,
+    expectedClose: expectedCloseDate,
+    stage: stage?.trim() || 'Interested',
+    priority: priority?.trim() || 'Medium',
+    requirement: requirement?.trim() || '',
+    budget: parsedValue,
+    expectedClosing: expectedCloseDate,
+    notes: requirement?.trim() || '',
+    status: 'OPEN',
+  };
+
+  const prospect = await ProspectForm.findOneAndUpdate(
+    { admin: req.admin._id, lead: lead._id },
+    { $set: prospectPayload },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+
+  const previousProspectFormId = lead.prospectForm || null;
+  lead.status = 'INTERESTED';
+  lead.lastContactedAt = new Date();
+  lead.prospectForm = prospect._id;
+  lead.isDumped = false;
+  lead.dumpReason = null;
+  lead.dumpedAt = null;
+  lead.dumpedBy = null;
+  await lead.save();
+
+  await LeadActivity.create({
+    admin: req.admin._id,
+    lead: lead._id,
+    user: req.user._id,
+    status: 'INTERESTED',
+    comment: requirement?.trim() || null,
+    duration: 0,
+  });
+
+  await AuditLog.create({
+    admin: req.admin._id,
+    performedBy: req.user._id,
+    performerType: 'USER',
+    action: 'PROSPECT_CREATED',
+    targetModel: 'ProspectForm',
+    targetId: prospect._id,
+    before: { prospectForm: previousProspectFormId },
+    after: {
+      prospectForm: prospect._id,
+      leadStatus: lead.status,
+    },
+    ipAddress: getClientIp(req),
+    note: `Prospect created for ${lead.client?.name || 'lead'}`,
+  });
+
+  res.status(201).json(
+    new ApiResponse(
+      201,
+      {
+        leadId: lead._id,
+        status: lead.status,
+        isDumped: lead.isDumped,
+        prospect: {
+          id: prospect._id,
+          contactPerson: prospect.contactPerson,
+          company: prospect.company,
+          value: prospect.value,
+          probability: prospect.probability,
+          expectedClose: prospect.expectedClose,
+          stage: prospect.stage,
+          priority: prospect.priority,
+          requirement: prospect.requirement,
+        },
+      },
+      'Prospect form saved successfully'
+    )
+  );
+});
+
+/**
+ * POST /api/sales-executive/leads/:leadId/comment
+ * Add follow-up comment to a lead
+ * Security: Role guard, User scope, Admin scope
+ * Creates LeadActivity and audit log entry
+ */
+exports.addLeadComment = catchAsync(async (req, res, next) => {
+  const { leadId } = req.params;
+  const { comment, nextFollowUpDate } = req.body;
+  const { Lead, LeadActivity, AuditLog, Reminder } = require('../models');
+
+  // Role guard
+  if (req.user?.role !== 'SALES_EXECUTIVE') {
+    return next(new AppError('Only Sales Executives can add comments', 403));
+  }
+
+  // Validate comment
+  if (!comment || typeof comment !== 'string' || comment.trim().length === 0) {
+    return next(new AppError('Comment is required and must be non-empty', 400));
+  }
+
+  if (comment.trim().length > 1000) {
+    return next(new AppError('Comment must not exceed 1000 characters', 400));
+  }
+
+  // Find lead
+  const lead = await Lead.findOne({
+    _id: leadId,
+    admin: req.admin._id,
+    assignedTo: req.user._id,
+    isDeleted: { $ne: true },
+  });
+
+  if (!lead) {
+    return next(new AppError('Lead not found or not assigned to you', 404));
+  }
+
+  // Create LeadActivity record
+  const activity = await LeadActivity.create({
+    admin: req.admin._id,
+    lead: lead._id,
+    user: req.user._id,
+    status: lead.status,
+    comment: comment.trim(),
+    duration: 0,
+  });
+
+  // Optionally create reminder for follow-up date
+  if (nextFollowUpDate) {
+    const followUpDate = new Date(nextFollowUpDate);
+    if (isNaN(followUpDate.getTime())) {
+      return next(new AppError('Invalid follow-up date', 400));
+    }
+
+    await Reminder.create({
+      admin: req.admin._id,
+      user: req.user._id,
+      lead: lead._id,
+      title: `Follow-up: ${lead.client?.name || 'Client'}`,
+      note: comment.trim(),
+      remindAt: followUpDate,
+      isMissed: false,
+      isDone: false,
+    });
+
+    lead.followUpAt = followUpDate;
+    await lead.save();
+  }
+
+  // Audit log
+  await AuditLog.create({
+    admin: req.admin._id,
+    performedBy: req.user._id,
+    performerType: 'USER',
+    action: 'LEAD_COMMENT_ADDED',
+    targetModel: 'Lead',
+    targetId: lead._id,
+    ipAddress: getClientIp(req),
+    note: `Comment added: ${comment.substring(0, 50)}...`,
+  });
+
+  res.status(201).json(
+    new ApiResponse(
+      201,
+      {
+        activityId: activity._id,
+        leadId: lead._id,
+        comment: activity.comment,
+        status: activity.status,
+        createdAt: activity.createdAt,
+        followUpAt: lead.followUpAt,
+      },
+      'Comment added successfully'
+    )
+  );
+});
+
+/**
+ * POST /api/sales-executive/leads/:leadId/reminder
+ * Set or update reminder/follow-up date for a lead
+ * Security: Role guard, User scope, Admin scope
+ * Creates Reminder record
+ */
+exports.setLeadReminder = catchAsync(async (req, res, next) => {
+  const { leadId } = req.params;
+  const { reminderDate, description } = req.body;
+  const { Lead, Reminder, AuditLog } = require('../models');
+
+  // Role guard
+  if (req.user?.role !== 'SALES_EXECUTIVE') {
+    return next(new AppError('Only Sales Executives can set reminders', 403));
+  }
+
+  // Validate reminder date
+  if (!reminderDate) {
+    return next(new AppError('Reminder date is required', 400));
+  }
+
+  const reminderDateTime = new Date(reminderDate);
+  if (isNaN(reminderDateTime.getTime())) {
+    return next(new AppError('Invalid reminder date format', 400));
+  }
+
+  if (reminderDateTime <= new Date()) {
+    return next(new AppError('Reminder date must be in the future', 400));
+  }
+
+  if (description && description.length > 500) {
+    return next(new AppError('Description must not exceed 500 characters', 400));
+  }
+
+  // Find lead
+  const lead = await Lead.findOne({
+    _id: leadId,
+    admin: req.admin._id,
+    assignedTo: req.user._id,
+    isDeleted: { $ne: true },
+  }).populate('client', 'name email mobile');
+
+  if (!lead) {
+    return next(new AppError('Lead not found or not assigned to you', 404));
+  }
+
+  // Create reminder
+  const reminder = await Reminder.create({
+    admin: req.admin._id,
+    user: req.user._id,
+    lead: lead._id,
+    title: `Follow-up: ${lead.client?.name || 'Client'}`,
+    note: description || `Reminder for lead follow-up`,
+    remindAt: reminderDateTime,
+    isMissed: false,
+    isDone: false,
+  });
+
+  // Update lead with follow-up date
+  lead.followUpAt = reminderDateTime;
+  await lead.save();
+
+  // Audit log
+  await AuditLog.create({
+    admin: req.admin._id,
+    performedBy: req.user._id,
+    performerType: 'USER',
+    action: 'LEAD_REMINDER_SET',
+    targetModel: 'Lead',
+    targetId: lead._id,
+    ipAddress: getClientIp(req),
+    note: `Reminder set for ${reminderDateTime.toISOString()}`,
+  });
+
+  res.status(201).json(
+    new ApiResponse(
+      201,
+      {
+        reminderId: reminder._id,
+        leadId: lead._id,
+        reminderDate: reminder.remindAt,
+        description: reminder.note,
+        createdAt: reminder.createdAt,
+      },
+      'Reminder set successfully'
+    )
+  );
+});
+
+/**
+ * Helper: Get client IP address
+ */
+const getClientIp = (req) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.length > 0) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.ip || req.socket?.remoteAddress || 'unknown';
+};

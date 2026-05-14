@@ -131,9 +131,6 @@ export default function LeadsPage() {
 
       <ClientLeadDetailsModal
         selectedLead={selectedLead}
-        draftStatus={draftStatus}
-        setDraftStatus={setDraftStatus}
-        saveStatus={saveStatus}
       />
 
       <ActionModal

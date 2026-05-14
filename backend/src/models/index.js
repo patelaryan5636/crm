@@ -849,6 +849,14 @@ const ProspectFormSchema = new Schema({
   filledBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   updatedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
 
+  contactPerson: { type: String, trim: true, default: '' },
+  company: { type: String, trim: true, default: '' },
+  value: { type: Number, default: 0 },
+  probability: { type: Number, default: 60 },
+  expectedClose: { type: Date, default: null },
+  stage: { type: String, trim: true, default: 'Interested' },
+  priority: { type: String, enum: ['High', 'Medium', 'Low'], default: 'Medium' },
+
   requirement: { type: String, trim: true },
   budget: { type: Number, default: 0 },
   expectedClosing: Date,

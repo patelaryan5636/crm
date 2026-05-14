@@ -22,8 +22,8 @@ export function DumpLeadModal({
         <div className="space-y-5">
           <ModalProfile
             name={lead.name}
-            subtitle={lead.phone}
-            meta={lead.company}
+            subtitle={lead.mobile}
+            meta={lead.companyName}
           />
 
           <ModalGrid title={infoTitle} cols={2}>

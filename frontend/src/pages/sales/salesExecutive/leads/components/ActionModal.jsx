@@ -8,6 +8,7 @@ import {
 } from "../../../../../components/shared/Common_Components";
 
 const ACTION_OPTIONS = [
+  "Talk",
   "Interested",
   "Not Interested",
   "Follow Up",
@@ -50,7 +51,7 @@ export function ActionModal({
             <p className="mt-2 text-sm font-bold text-[#2a465a]">
               {selectedLead.name}{" "}
               <span className="text-slate-500 font-semibold">
-                • {selectedLead.company}
+                • {selectedLead.companyName || selectedLead.company || "-"}
               </span>
             </p>
           </div>
@@ -68,6 +69,21 @@ export function ActionModal({
             ))}
           </SelectField>
 
+          {/* Talk */}
+          {actionValue === "Talk" && (
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                Call Notes
+              </p>
+              <textarea
+                className="w-full min-h-[140px] resize-none rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#2a465a]/30"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Add the call outcome, objections, next steps, or anything important..."
+              />
+            </div>
+          )}
+
           {/* Interested */}
           {actionValue === "Interested" && (
             <div className="space-y-3">
@@ -81,9 +97,7 @@ export function ActionModal({
                   id="p-contact-person"
                   size={6}
                   value={prospectForm.contactPerson}
-                  onChange={(e) =>
-                    updateProspect("contactPerson", e.target.value)
-                  }
+                  onChange={(e) => updateProspect("contactPerson", e.target.value)}
                 />
                 <DataField
                   label="Company *"
@@ -92,53 +106,10 @@ export function ActionModal({
                   value={prospectForm.company}
                   onChange={(e) => updateProspect("company", e.target.value)}
                 />
-                <DataField
-                  label="Deal Value"
-                  id="p-value"
-                  size={4}
-                  placeholder="₹0"
-                  value={prospectForm.value}
-                  onChange={(e) => updateProspect("value", e.target.value)}
-                />
-                <DataField
-                  label="Probability"
-                  id="p-probability"
-                  type="number"
-                  size={4}
-                  placeholder="60"
-                  value={prospectForm.probability}
-                  onChange={(e) =>
-                    updateProspect("probability", e.target.value)
-                  }
-                />
-                <DataField
-                  label="Expected Close Date"
-                  id="p-expected-close"
-                  type="date"
-                  size={4}
-                  value={prospectForm.expectedClose}
-                  onChange={(e) =>
-                    updateProspect("expectedClose", e.target.value)
-                  }
-                />
-
-                <SelectField
-                  label="Stage"
-                  id="p-stage"
-                  size={6}
-                  value={prospectForm.stage}
-                  onChange={(e) => updateProspect("stage", e.target.value)}
-                  searchable={false}
-                >
-                  {["Interested", "Proposal", "Negotiation", "Won"].map((s) => (
-                    <Option key={s} value={s} label={s} />
-                  ))}
-                </SelectField>
-
                 <SelectField
                   label="Priority"
                   id="p-priority"
-                  size={6}
+                  size={12}
                   value={prospectForm.priority}
                   onChange={(e) => updateProspect("priority", e.target.value)}
                   searchable={false}
@@ -147,7 +118,6 @@ export function ActionModal({
                     <Option key={p} value={p} label={p} />
                   ))}
                 </SelectField>
-
                 <DataField
                   label="Requirement"
                   id="p-requirement"
@@ -155,9 +125,7 @@ export function ActionModal({
                   rows={3}
                   size={12}
                   value={prospectForm.requirement}
-                  onChange={(e) =>
-                    updateProspect("requirement", e.target.value)
-                  }
+                  onChange={(e) => updateProspect("requirement", e.target.value)}
                 />
               </div>
             </div>

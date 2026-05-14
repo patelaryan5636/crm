@@ -27,8 +27,8 @@ export function ProspectFormModal({
         <div className="space-y-5">
           <ModalProfile
             name={prospectLead.name}
-            subtitle={prospectLead.company}
-            meta={prospectLead.phone}
+            subtitle={prospectLead.companyName || prospectLead.company || "-"}
+            meta={prospectLead.mobile}
           />
 
           <div className="grid grid-cols-12 gap-4">
@@ -46,47 +46,10 @@ export function ProspectFormModal({
               value={prospectForm.company}
               onChange={(e) => updateField("company", e.target.value)}
             />
-            <DataField
-              label="Deal Value"
-              id="prospect-value"
-              size={4}
-              placeholder="₹0"
-              value={prospectForm.value}
-              onChange={(e) => updateField("value", e.target.value)}
-            />
-            <DataField
-              label="Probability"
-              id="prospect-probability"
-              type="number"
-              size={4}
-              placeholder="60"
-              value={prospectForm.probability}
-              onChange={(e) => updateField("probability", e.target.value)}
-            />
-            <DataField
-              label="Expected Close"
-              id="prospect-close-date"
-              type="date"
-              size={4}
-              value={prospectForm.expectedClose}
-              onChange={(e) => updateField("expectedClose", e.target.value)}
-            />
-            <SelectField
-              label="Stage"
-              id="prospect-stage"
-              size={6}
-              value={prospectForm.stage}
-              onChange={(e) => updateField("stage", e.target.value)}
-              searchable={false}
-            >
-              {PROSPECT_STAGES.map((stage) => (
-                <Option key={stage} value={stage} label={stage} />
-              ))}
-            </SelectField>
             <SelectField
               label="Priority"
               id="prospect-priority"
-              size={6}
+              size={12}
               value={prospectForm.priority}
               onChange={(e) => updateField("priority", e.target.value)}
               searchable={false}

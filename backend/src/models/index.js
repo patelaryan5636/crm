@@ -913,6 +913,17 @@ const ReminderSchema = new Schema({
   isMissed: { type: Boolean, default: false },
   isDone: { type: Boolean, default: false },
   doneAt: { type: Date, default: null },
+  // Follow-up type and priority — used by Sales Executive follow-up panel
+  type: {
+    type: String,
+    enum: ['Call', 'Email', 'Meeting', 'Whatsapp', 'Demo'],
+    default: 'Call',
+  },
+  priority: {
+    type: String,
+    enum: ['High', 'Medium', 'Low'],
+    default: 'Medium',
+  },
 }, { timestamps: true });
 
 ReminderSchema.index({ admin: 1, user: 1, remindAt: 1, isDone: 1 });

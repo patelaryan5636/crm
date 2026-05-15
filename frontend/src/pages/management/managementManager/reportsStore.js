@@ -1,69 +1,119 @@
 // reportsStore.js — computed from canonical store
 import { projects, teamLeaders } from "./managementManagerStore";
 
+const getDaysDifference = (start, end) => {
+  if (!start || !end) return 0;
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+
+  return Math.max(
+    Math.ceil(
+      (endDate - startDate) / (1000 * 60 * 60 * 24)
+    ),
+    0
+  );
+};
+
+const deliveredProjects = projects.filter(
+  (project) =>
+    project.status === "Delivered" &&
+    project.deliveredDate
+);
+
+const onTimeProjects = deliveredProjects.filter(
+  (project) =>
+    new Date(project.deliveredDate) <=
+    new Date(project.deadline)
+);
+
+const delayedDeliveredProjects =
+  deliveredProjects.filter(
+    (project) =>
+      new Date(project.deliveredDate) >
+      new Date(project.deadline)
+  );
+
+const avgDelayDays =
+  delayedDeliveredProjects.length > 0
+    ? Math.round(
+        delayedDeliveredProjects.reduce(
+          (total, project) =>
+            total +
+            getDaysDifference(
+              project.deadline,
+              project.deliveredDate
+            ),
+          0
+        ) / delayedDeliveredProjects.length
+      )
+    : 0;
+
+const avgCompletionDays =
+  deliveredProjects.length > 0
+    ? Math.round(
+        deliveredProjects.reduce(
+          (total, project) =>
+            total +
+            getDaysDifference(
+              project.startDate,
+              project.deliveredDate
+            ),
+          0
+        ) / deliveredProjects.length
+      )
+    : 0;
+
 export const teamReports = teamLeaders.map((tl) => {
   const tlProjects = projects.filter(
     (project) => project.assignedTL === tl.id
   );
 
-  const deliveredProjects = tlProjects.filter(
+  const delivered = tlProjects.filter(
     (project) => project.status === "Delivered"
-  );
+  ).length;
 
-  const delayedProjects = tlProjects.filter(
+  const delayed = tlProjects.filter(
     (project) => project.status === "Delayed"
-  );
+  ).length;
+
+  const inProgress = tlProjects.filter((project) =>
+    [
+      "In Progress",
+      "Work Started",
+      "Review Stage",
+      "Finalization",
+    ].includes(project.status)
+  ).length;
 
   return {
     id: tl.id,
     name: tl.name,
     totalProjects: tlProjects.length,
-    completed: deliveredProjects.length,
-    delayed: delayedProjects.length,
-    inProgress:
-      tlProjects.length -
-      deliveredProjects.length -
-      delayedProjects.length,
+    completed: delivered,
+    delayed,
+    inProgress,
   };
 });
 
 export const tlReports = teamReports;
 
 export const deliveryMetrics = {
-  totalDelivered: projects.filter(
-    (project) => project.status === "Delivered"
-  ).length,
+  totalDelivered: deliveredProjects.length,
 
-  onTimeDelivered: projects.filter(
-    (project) =>
-      project.status === "Delivered" &&
-      project.handoverLink
-  ).length,
+  onTimeDelivered: onTimeProjects.length,
 
-  delayedDelivered: projects.filter(
-    (project) =>
-      project.status === "Delivered" &&
-      !project.handoverLink
-  ).length,
+  delayedDelivered:
+    delayedDeliveredProjects.length,
 
   onTimePercentage:
     Math.round(
-      (
-        projects.filter(
-          (project) =>
-            project.status === "Delivered" &&
-            project.handoverLink
-        ).length /
-        Math.max(
-          projects.filter(
-            (project) => project.status === "Delivered"
-          ).length,
-          1
-        )
-      ) * 1000
+      (onTimeProjects.length /
+        Math.max(deliveredProjects.length, 1)) *
+        1000
     ) / 10,
 
-  avgDelayDays: 2.5,
+  avgDelayDays,
 };
 
 const monthMap = {};
@@ -86,6 +136,13 @@ projects.forEach((project) => {
   }
 
   monthMap[month].delivered++;
+
+  if (
+    new Date(project.deliveredDate) >
+    new Date(project.deadline)
+  ) {
+    monthMap[month].delayed++;
+  }
 });
 
 export const monthlyDeliveryData =
@@ -94,14 +151,13 @@ export const monthlyDeliveryData =
 export const reportKPIs = {
   totalProjects: projects.length,
 
-  completedProjects: projects.filter(
-    (project) => project.status === "Delivered"
-  ).length,
+  completedProjects:
+    deliveredProjects.length,
 
   onTimePercentage:
     deliveryMetrics.onTimePercentage,
 
-  avgCompletionDays: 13.5,
+  avgCompletionDays,
 };
 
 const dailyMap = {};
@@ -140,4 +196,6 @@ projects.forEach((project) => {
 
 export const projectReports = Object.values(
   dailyMap
-).sort((a, b) => a.date.localeCompare(b.date));
+).sort((a, b) =>
+  a.date.localeCompare(b.date)
+);

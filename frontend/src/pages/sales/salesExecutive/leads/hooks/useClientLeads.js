@@ -441,14 +441,25 @@ export function useClientLeads() {
       }
 
       if (actionValue === "Follow Up") {
-        const reminderDateTime = followUpForm.date;
-        if (Number.isNaN(new Date(reminderDateTime).getTime())) {
+        const parsedFollowUp = new Date(followUpForm.date);
+        if (Number.isNaN(parsedFollowUp.getTime())) {
           alert("Choose a valid follow-up date before saving.");
           return;
         }
-        const commentForFollowUp = trimmedComment || followUpForm.notes.trim() || null;
+        if (parsedFollowUp.getTime() <= Date.now()) {
+          alert("Follow-up date and time must be in the future.");
+          return;
+        }
+        const reminderDateTime = parsedFollowUp.toISOString();
+        const followUpDescription = [
+          followUpForm.type ? `Type: ${followUpForm.type}` : null,
+          followUpForm.notes.trim() || trimmedComment || null,
+        ]
+          .filter(Boolean)
+          .join(" — ");
+        const commentForFollowUp = followUpDescription || null;
         const updated = await updateLeadStatus(leadId, "TALK", commentForFollowUp);
-        await setLeadReminder(leadId, reminderDateTime, followUpForm.notes.trim() || commentForFollowUp);
+        await setLeadReminder(leadId, reminderDateTime, followUpDescription || null);
 
         syncLeadState(leadId, (row) => ({
           ...row,

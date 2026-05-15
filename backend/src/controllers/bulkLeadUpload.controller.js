@@ -561,6 +561,17 @@ exports.saveLeadProspect = catchAsync(async (req, res, next) => {
     return next(new AppError('Lead not found or not assigned to you', 404));
   }
 
+  const clientId = lead.client?._id || lead.client;
+  if (!clientId) {
+    return next(new AppError('Lead client is missing', 400));
+  }
+
+  const contactName = contactPerson?.trim() || lead.client?.name || '';
+  const companyName = company?.trim() || lead.client?.companyName || '';
+  if (!contactName || !companyName) {
+    return next(new AppError('Contact person and company are required', 400));
+  }
+
   const parsedValue = value === '' || value === null || value === undefined ? 0 : Number(value);
   if (Number.isNaN(parsedValue)) {
     return next(new AppError('Prospect value must be a valid number', 400));
@@ -584,8 +595,8 @@ exports.saveLeadProspect = catchAsync(async (req, res, next) => {
     client: clientId,
     filledBy: req.user._id,
     updatedBy: req.user._id,
-    contactPerson: contactPerson?.trim() || lead.client?.name || '',
-    company: company?.trim() || lead.client?.companyName || '',
+    contactPerson: contactName,
+    company: companyName,
     value: parsedValue,
     probability: parsedProbability,
     expectedClose: expectedCloseDate,

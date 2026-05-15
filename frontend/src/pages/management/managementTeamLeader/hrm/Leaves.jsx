@@ -1,7 +1,11 @@
 import { useState, useMemo } from "react";
 import {
   Heading, DashGrid, EnhancedDashCard, DataTable, Grid,
+<<<<<<< HEAD
   GColumnChart, GPieChart,
+=======
+  GAreaChart, GPieChart,
+>>>>>>> 184f463 (save current changes)
   Modal, ModalGrid, ModalData, ModalProfile, Button,
   DataField, SelectField, Option,
   openModal, closeModal,
@@ -29,6 +33,7 @@ const MY_COLS = [
   { key: "status",    label: "Status"     },
 ];
 
+<<<<<<< HEAD
 const LEAVE_COLS = [
   { key: "name",      label: "Employee Name" },
   { key: "type",      label: "Leave Type"    },
@@ -36,6 +41,27 @@ const LEAVE_COLS = [
   { key: "from",      label: "From Date"     },
   { key: "to",        label: "To Date"       },
   { key: "status",    label: "Leave Status"  },
+=======
+const PENDING_COLS = [
+  { key: "name",      label: "Member"     },
+  { key: "role",      label: "Role"       },
+  { key: "type",      label: "Leave Type" },
+  { key: "reason",    label: "Reason"     },
+  { key: "dateRange", label: "Date Range" },
+  { key: "days",      label: "Days"       },
+  { key: "appliedOn", label: "Applied On" },
+];
+
+const HISTORY_COLS = [
+  { key: "name",      label: "Member"      },
+  { key: "role",      label: "Role"        },
+  { key: "type",      label: "Leave Type"  },
+  { key: "reason",    label: "Reason"      },
+  { key: "dateRange", label: "Date Range"  },
+  { key: "days",      label: "Days"        },
+  { key: "actionOn",  label: "Actioned On" },
+  { key: "status",    label: "Status"      },
+>>>>>>> 184f463 (save current changes)
 ];
 
 const calcDays = (from, to) => {
@@ -58,15 +84,23 @@ export default function Leaves() {
   const [errors, setErrors] = useState({});
   const applyDays = calcDays(form.dateFrom, form.dateTo);
 
+<<<<<<< HEAD
 
+=======
+  const pendingRows = useMemo(() => teamReqs.filter((r) => r.status === "Pending"),  [teamReqs]);
+  const historyRows = useMemo(() => teamReqs.filter((r) => r.status !== "Pending"),  [teamReqs]);
+>>>>>>> 184f463 (save current changes)
 
   const onChange = (field, value) => {
     setForm((p) => ({ ...p, [field]: value }));
     if (errors[field]) setErrors((e) => ({ ...e, [field]: "" }));
   };
 
+<<<<<<< HEAD
   const pendingRows = useMemo(() => teamReqs.filter((r) => r.status === "Pending"),  [teamReqs]);
 
+=======
+>>>>>>> 184f463 (save current changes)
   const validate = () => {
     const e = {};
     if (!form.leaveType)     e.leaveType = "Select a leave type.";
@@ -107,8 +141,14 @@ export default function Leaves() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500">
 
+<<<<<<< HEAD
       {/* ── KPI cards ──────────────────────────────────── */}
       <DashGrid cols={12} gap={4}>
+=======
+      {/* ── Section heading + KPI cards ──────────────────────────────────── */}
+      <DashGrid cols={12} gap={4}>
+        <Heading primaryText="Leave" secondaryText="Management · Team Overview" size={12} />
+>>>>>>> 184f463 (save current changes)
         {kpiLeaves.map((k, i) => (
           <EnhancedDashCard
             key={k.title}
@@ -123,17 +163,29 @@ export default function Leaves() {
 
       {/* ── Charts row ───────────────────────────────────────────────────── */}
       <Grid cols={12} gap={4}>
+<<<<<<< HEAD
         <GColumnChart
           title="Monthly Leave Trend"
           subtitle="Approved vs Rejected vs Pending — last 5 months"
           data={monthlyLeaveTrend.map(d => ({ ...d, name: d.month }))}
           bars={[
+=======
+        <GAreaChart
+          title="Monthly Leave Trend"
+          subtitle="Approved vs Rejected vs Pending — last 5 months"
+          data={monthlyLeaveTrend}
+          areas={[
+>>>>>>> 184f463 (save current changes)
             { key: "approved", label: "Approved", color: "#22c55e" },
             { key: "rejected", label: "Rejected", color: "#f43f5e" },
             { key: "pending",  label: "Pending",  color: "#f59e0b" },
           ]}
           size={8}
+<<<<<<< HEAD
           height={320}
+=======
+          height={260}
+>>>>>>> 184f463 (save current changes)
         />
         <GPieChart
           title="Leave Type Breakdown"
@@ -141,7 +193,11 @@ export default function Leaves() {
           data={leaveTypeDistribution}
           colors={["#f43f5e", "#3b82f6", "#22c55e", "#94a3b8"]}
           size={4}
+<<<<<<< HEAD
           height={320}
+=======
+          height={260}
+>>>>>>> 184f463 (save current changes)
         />
       </Grid>
 
@@ -174,6 +230,11 @@ export default function Leaves() {
         size={12}
         pageSize={5}
         searchable
+<<<<<<< HEAD
+=======
+        exportable
+        exportFileName="my_leaves"
+>>>>>>> 184f463 (save current changes)
         filters={[
           { title: "Leave Status", type: "toggle", key: "status", options: ["Pending", "Approved", "Rejected"] },
           { title: "Leave Type",   type: "toggle", key: "type",   options: LEAVE_TYPES },
@@ -198,18 +259,28 @@ export default function Leaves() {
         ]}
       />
 
+<<<<<<< HEAD
       {/* ── Leave Requests (Team Members) ──────────────────────────────────── */}
       <div id="mtl-pending-section">
         <DataTable
           title="Leave Requests"
           columns={LEAVE_COLS}
           rows={teamReqs}
+=======
+      {/* ── Pending Leaves (team members) ──────────────────────────────────── */}
+      <div id="mtl-pending-section">
+        <DataTable
+          title={`Pending Leaves${pendingRows.length ? ` (${pendingRows.length})` : ""}`}
+          columns={PENDING_COLS}
+          rows={pendingRows}
+>>>>>>> 184f463 (save current changes)
           userProfile="name"
           ellipse={3}
           size={12}
           pageSize={10}
           searchable
           exportable
+<<<<<<< HEAD
           exportFileName="leave_requests"
           filters={[
             { title: "Leave Status", type: "toggle", key: "status", options: ["Approved", "Pending", "Rejected"] },
@@ -225,24 +296,70 @@ export default function Leaves() {
                 openModal("mtl-hrm-pending-view");
               },
             },
+=======
+          exportFileName="pending_leaves"
+          filters={[
+            { title: "Leave Type", type: "toggle", key: "type", options: LEAVE_TYPES },
+            { title: "Role",       type: "toggle", key: "role", options: ["Frontend", "Backend", "Designer", "QA", "DevOps"] },
+          ]}
+>>>>>>> 184f463 (save current changes)
             {
               icon: <BadgeCheck size={15} />,
               tooltip: "Approve",
               variant: "primary",
+<<<<<<< HEAD
               show: (row) => row.status === "Pending",
+=======
+>>>>>>> 184f463 (save current changes)
               onClick: (row) => setMemberStatus(row, "Approved"),
             },
             {
               icon: <Ban size={15} />,
               tooltip: "Reject",
               variant: "danger",
+<<<<<<< HEAD
               show: (row) => row.status === "Pending",
+=======
+>>>>>>> 184f463 (save current changes)
               onClick: (row) => setMemberStatus(row, "Rejected"),
             },
           ]}
         />
       </div>
 
+<<<<<<< HEAD
+=======
+      {/* ── Leave History ───────────────────────────────────────────────────── */}
+      <DataTable
+        title="Leave History"
+        columns={HISTORY_COLS}
+        rows={historyRows}
+        userProfile="name"
+        ellipse={3}
+        size={12}
+        pageSize={10}
+        searchable
+        exportable
+        exportFileName="leave_history"
+        filters={[
+          { title: "Status",     type: "toggle", key: "status", options: ["Approved", "Rejected"] },
+          { title: "Leave Type", type: "toggle", key: "type",   options: LEAVE_TYPES },
+          { title: "Role",       type: "toggle", key: "role",   options: ["Frontend", "Backend", "Designer", "QA", "DevOps"] },
+        ]}
+        actions={[
+          {
+            icon: <Eye size={15} />,
+            tooltip: "View Details",
+            variant: "ghost",
+            onClick: (row) => {
+              setHistoryView(teamReqs.find((r) => r.id === row.id) ?? row);
+              openModal("mtl-hrm-history-view");
+            },
+          },
+        ]}
+      />
+
+>>>>>>> 184f463 (save current changes)
       {/* ── Apply Leave Modal ───────────────────────────────────────────────── */}
       <Modal id="mtl-hrm-leave-apply" title="Apply for Leave" size="lg">
         <div className="space-y-5">

@@ -1,17 +1,27 @@
 import { useState } from "react";
 import {
   Heading, DashGrid, EnhancedDashCard, DataTable, Grid,
+<<<<<<< HEAD
   GColumnChart, GDoughnutChart, GPieChart, GAreaChart,
   Modal, ModalGrid, ModalData, ModalProfile, Button,
   openModal, closeModal, DataField, SelectField, Option
+=======
+  GColumnChart, GDoughnutChart,
+  Modal, ModalGrid, ModalData, ModalProfile, Button,
+  openModal, closeModal,
+>>>>>>> 184f463 (save current changes)
 } from "../../../../components/shared/Common_Components";
 import SessionTimer from "../../../../components/shared/SessionTimer";
 import { useAttendance } from "../../../../context/AttendanceContext";
 import { Users, UserCheck, UserX, CalendarClock, Eye, Clock, TrendingUp } from "lucide-react";
 import {
   kpiAttendance, attendanceRows, ATTENDANCE_STATUS, currentTL,
+<<<<<<< HEAD
   weeklyAttendance, attendanceDistribution, myTimingLogs, employeeAttendanceSummary,
   monthlyAttendanceGraph, employeeAttendanceBar, clockInTrendGraph, leaveTypeDistribution
+=======
+  weeklyAttendance, attendanceDistribution,
+>>>>>>> 184f463 (save current changes)
 } from "./hrmStore";
 
 const KPI_ICONS   = [<Users size={20} />, <UserCheck size={20} />, <UserX size={20} />, <CalendarClock size={20} />];
@@ -29,6 +39,7 @@ const COLS = [
   { key: "status",     label: "Status"       },
 ];
 
+<<<<<<< HEAD
 const SUMMARY_COLS = [
   { key: "name",            label: "Employee Name" },
   { key: "present",         label: "Present Days" },
@@ -39,10 +50,13 @@ const SUMMARY_COLS = [
   { key: "remainingLeaves", label: "Remaining Leaves" },
 ];
 
+=======
+>>>>>>> 184f463 (save current changes)
 // ── Bridge: SessionTimer ← AttendanceContext ──────────────────────────────────
 function MyAttendanceWidget() {
   const ctx = useAttendance();
   return (
+<<<<<<< HEAD
     <div className="flex flex-col gap-6">
       {/* ── Page Action Buttons ────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-end gap-3">
@@ -66,12 +80,30 @@ function MyAttendanceWidget() {
         onCheckOut={ctx.checkOut}
       />
     </div>
+=======
+    <SessionTimer
+      label="Today's Attendance"
+      targetSeconds={8 * 60 * 60}
+      status={ctx.status}
+      elapsed={ctx.elapsed}
+      pct={ctx.pct}
+      remaining={ctx.remaining}
+      checkInAt={ctx.checkInAt}
+      checkOutAt={ctx.checkOutAt}
+      targetReached={ctx.targetReached}
+      onCheckIn={ctx.checkIn}
+      onPause={ctx.pause}
+      onResume={ctx.resume}
+      onCheckOut={ctx.checkOut}
+    />
+>>>>>>> 184f463 (save current changes)
   );
 }
 
 export default function Attendance() {
   const [selected, setSelected] = useState(null);
 
+<<<<<<< HEAD
   const formatTime = (timeStr) => {
     if (!timeStr || timeStr === "—") return "—";
     const [h, m] = timeStr.split(":");
@@ -108,6 +140,18 @@ export default function Attendance() {
 
       {/* ── KPI cards ──────────────────────────────────── */}
       <DashGrid cols={12} gap={4}>
+=======
+  return (
+    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+
+      {/* ── Section heading + KPI cards ──────────────────────────────────── */}
+      <DashGrid cols={12} gap={4}>
+        <Heading
+          primaryText="Attendance"
+          secondaryText={`${currentTL.team} · Today's Overview`}
+          size={12}
+        />
+>>>>>>> 184f463 (save current changes)
         {kpiAttendance.map((k, i) => (
           <EnhancedDashCard
             key={k.title}
@@ -123,6 +167,7 @@ export default function Attendance() {
       {/* ── My attendance session timer ───────────────────────────────────── */}
       <MyAttendanceWidget />
 
+<<<<<<< HEAD
 
       {/* ── Analytics & Insights Section (moved up) ──────────────────────── */}
       <Grid cols={12} gap={6}>
@@ -144,6 +189,30 @@ export default function Attendance() {
           ]}
           size={8}
           height={320}
+=======
+      {/* ── Charts row ───────────────────────────────────────────────────── */}
+      <Grid cols={12} gap={4}>
+        <GColumnChart
+          title="Weekly Attendance"
+          subtitle="Present vs Absent vs Late — this week"
+          data={weeklyAttendance}
+          bars={[
+            { key: "present", label: "Present", color: "#22c55e" },
+            { key: "absent",  label: "Absent",  color: "#f43f5e" },
+            { key: "late",    label: "Late",     color: "#f59e0b" },
+          ]}
+          size={8}
+          height={260}
+        />
+        <GDoughnutChart
+          title="Today's Status"
+          subtitle="Attendance distribution"
+          data={attendanceDistribution}
+          colors={["#22c55e", "#f43f5e", "#f59e0b", "#3b82f6", "#94a3b8"]}
+          size={4}
+          height={260}
+          innerRadius={60}
+>>>>>>> 184f463 (save current changes)
         />
       </Grid>
 
@@ -160,6 +229,7 @@ export default function Attendance() {
         exportable
         exportFileName="team_attendance"
         filters={[
+<<<<<<< HEAD
           { title: "Status", type: "toggle", key: "status", options: ["Present", "Absent", "Leave", "Half Day", "Late"] },
           { title: "Department", type: "select", key: "department", options: ["Engineering", "Design", "QA", "DevOps"] }
         ]}
@@ -205,6 +275,11 @@ export default function Attendance() {
               return row.leaves === Number(value);
             }
           }
+=======
+          { title: "Attendance Status", type: "toggle", key: "status",     options: ["Present", "Absent", "Late", "Half Day", "Leave"] },
+          { title: "Department",        type: "select", key: "department", options: ["Engineering", "Design", "QA", "DevOps"] },
+          { title: "Role",              type: "toggle", key: "role",       options: ["Frontend", "Backend", "Designer", "QA", "DevOps"] },
+>>>>>>> 184f463 (save current changes)
         ]}
         actions={[
           {
@@ -212,15 +287,20 @@ export default function Attendance() {
             tooltip: "View Details",
             variant: "ghost",
             onClick: (row) => {
+<<<<<<< HEAD
               const summary = row;
               const log = attendanceRows.find((r) => r.name === summary.name) || {};
               setSelected({ log, summary });
+=======
+              setSelected(attendanceRows.find((r) => r.id === row.id) ?? row);
+>>>>>>> 184f463 (save current changes)
               openModal("mtl-hrm-att-view");
             },
           },
         ]}
       />
 
+<<<<<<< HEAD
 
 
       {/* ── View modal ───────────────────────────────────────────────────── */}
@@ -252,6 +332,45 @@ export default function Attendance() {
               <ModalData label="Present Days" value={selected.summary.present ?? "0"} />
               <ModalData label="Absent Days" value={selected.summary.absent ?? "0"} />
               <ModalData label="Leave Count" value={selected.summary.leaves ?? "0"} />
+=======
+      {/* ── View modal ───────────────────────────────────────────────────── */}
+      <Modal id="mtl-hrm-att-view" title="Attendance Details" size="md">
+        {selected && (
+          <div className="flex flex-col gap-4">
+            <ModalProfile
+              name={selected.name}
+              subtitle={`${selected.role} · ${selected.status}`}
+              meta={`Date: ${selected.date}`}
+            />
+
+            {/* Clock in/out visual strip */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <Clock size={14} className="text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-500">Clock In</p>
+                  <p className="text-sm font-black text-emerald-700">{selected.clockIn}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-rose-50 border border-rose-100">
+                <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
+                  <Clock size={14} className="text-rose-600" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-rose-500">Clock Out</p>
+                  <p className="text-sm font-black text-rose-700">{selected.clockOut}</p>
+                </div>
+              </div>
+            </div>
+
+            <ModalGrid title="Summary" cols={2}>
+              <ModalData label="Total Hours" value={selected.hours} />
+              <ModalData label="Status"      value={selected.status} />
+              <ModalData label="Role"        value={selected.role} />
+              <ModalData label="Date"        value={selected.date} />
+>>>>>>> 184f463 (save current changes)
             </ModalGrid>
 
             <div className="flex justify-end pt-2 border-t border-slate-100">
@@ -261,6 +380,7 @@ export default function Attendance() {
         )}
       </Modal>
 
+<<<<<<< HEAD
       {/* ── Add Attendance Modal ───────────────────────────────────────────── */}
       <Modal id="mtl-hrm-add-attendance" title="Add Attendance" size="md">
         <div className="flex flex-col gap-4">
@@ -380,6 +500,8 @@ export default function Attendance() {
         </div>
       </Modal>
 
+=======
+>>>>>>> 184f463 (save current changes)
     </div>
   );
 }

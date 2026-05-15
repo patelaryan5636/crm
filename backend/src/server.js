@@ -27,6 +27,7 @@ const attendanceRoutes = require('./routes/attendance');
 const salesExecutiveLeadRoutes = require('./routes/salesExecutiveLeads');
 const salesExecutiveProspectRoutes = require('./routes/salesExecutiveProspects');
 const salesExecutiveFollowUpRoutes = require('./routes/salesExecutiveFollowUps');
+const salesExecutiveDashboardRoutes = require('./routes/salesExecutiveDashboard');
 const ticketRoutes = require('./routes/tickets');
 
 dotenv.config();
@@ -95,6 +96,8 @@ try {
 	console.log('✓ /api/sales-executive/prospects routes registered');
 	app.use('/api/sales-executive/follow-ups', salesExecutiveFollowUpRoutes);
 	console.log('✓ /api/sales-executive/follow-ups routes registered');
+	app.use('/api/sales-executive/dashboard', salesExecutiveDashboardRoutes);
+	console.log('✓ /api/sales-executive/dashboard routes registered');
   app.use('/api/support-tickets', ticketRoutes);
   console.log('✓ /api/support-tickets routes registered');
 } catch (error) {

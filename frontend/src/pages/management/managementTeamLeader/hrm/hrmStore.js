@@ -17,7 +17,7 @@ export const kpiAttendance = [
 
 // ─── Attendance records ───────────────────────────────────────────────────────
 export const attendanceRows = [
-<<<<<<< HEAD
+
   { id: "A001", employeeId: "EM-201", name: "Karan Malhotra", role: "Frontend", department: "Engineering", date: "2026-05-12", clockIn: "09:05", clockOut: "18:10", hours: "9h 05m" },
   { id: "A002", employeeId: "EM-202", name: "Divya Iyer",     role: "Backend",  department: "Engineering", date: "2026-05-12", clockIn: "09:20", clockOut: "18:00", hours: "8h 40m" },
   { id: "A003", employeeId: "EM-203", name: "Manish Joshi",   role: "Designer", department: "Design",      date: "2026-05-12", clockIn: "10:15", clockOut: "18:15", hours: "8h 00m" },
@@ -47,21 +47,6 @@ export const attendanceRows = [
   }
   return row;
 });
-=======
-  { id: "A001", employeeId: "EM-201", name: "Karan Malhotra", role: "Frontend", department: "Engineering", date: "2026-05-12", clockIn: "09:05", clockOut: "18:10", hours: "9h 05m", status: "Present"  },
-  { id: "A002", employeeId: "EM-202", name: "Divya Iyer",     role: "Backend",  department: "Engineering", date: "2026-05-12", clockIn: "09:20", clockOut: "18:00", hours: "8h 40m", status: "Present"  },
-  { id: "A003", employeeId: "EM-203", name: "Manish Joshi",   role: "Designer", department: "Design",      date: "2026-05-12", clockIn: "10:15", clockOut: "18:15", hours: "8h 00m", status: "Late"     },
-  { id: "A004", employeeId: "EM-204", name: "Sara Khan",      role: "Frontend", department: "Engineering", date: "2026-05-12", clockIn: "09:00", clockOut: "18:00", hours: "9h 00m", status: "Present"  },
-  { id: "A005", employeeId: "EM-205", name: "Rohit Bansal",   role: "Backend",  department: "Engineering", date: "2026-05-12", clockIn: "—",     clockOut: "—",     hours: "—",      status: "Absent"   },
-  { id: "A006", employeeId: "EM-206", name: "Aisha Verma",    role: "QA",       department: "QA",          date: "2026-05-12", clockIn: "—",     clockOut: "—",     hours: "—",      status: "Leave"    },
-  { id: "A007", employeeId: "EM-207", name: "Tushar Rao",     role: "DevOps",   department: "DevOps",      date: "2026-05-12", clockIn: "08:55", clockOut: "18:05", hours: "9h 10m", status: "Present"  },
-  { id: "A008", employeeId: "EM-208", name: "Meera Pillai",   role: "Backend",  department: "Engineering", date: "2026-05-12", clockIn: "09:10", clockOut: "13:30", hours: "4h 20m", status: "Half Day" },
-  { id: "A009", employeeId: "EM-209", name: "Yash Chauhan",   role: "Frontend", department: "Engineering", date: "2026-05-12", clockIn: "09:02", clockOut: "18:02", hours: "9h 00m", status: "Present"  },
-  { id: "A010", employeeId: "EM-210", name: "Ritika Singh",   role: "Designer", department: "Design",      date: "2026-05-12", clockIn: "09:30", clockOut: "18:30", hours: "9h 00m", status: "Present"  },
-  { id: "A011", employeeId: "EM-211", name: "Aditya Nair",    role: "Backend",  department: "Engineering", date: "2026-05-12", clockIn: "—",     clockOut: "—",     hours: "—",      status: "Absent"   },
-  { id: "A012", employeeId: "EM-212", name: "Nikita Bhat",    role: "QA",       department: "QA",          date: "2026-05-12", clockIn: "09:08", clockOut: "18:08", hours: "9h 00m", status: "Present"  },
-];
->>>>>>> 184f463 (save current changes)
 
 export const ATTENDANCE_STATUS = ["Present", "Absent", "Late", "Half Day", "Leave"];
 
@@ -135,7 +120,6 @@ export const teamLeaveRequests = [
   { id: "TL007", name: "Meera Pillai",   role: "Backend",  type: "Sick Leave",   from: "2026-04-15", to: "2026-04-15", days: "1", appliedOn: "2026-04-14", reason: "Migraine",             status: "Rejected", actionOn: "2026-04-14" },
   { id: "TL008", name: "Yash Chauhan",   role: "Frontend", type: "Casual Leave", from: "2026-04-05", to: "2026-04-05", days: "1", appliedOn: "2026-04-04", reason: "Home repair work",     status: "Approved", actionOn: "2026-04-04" },
 ].map((r) => ({ ...r, dateRange: `${r.from} to ${r.to}` }));
-<<<<<<< HEAD
 
 // ─── My Timing Logs ──────────────────────────────────────────────────────────
 export const myTimingLogs = [
@@ -179,5 +163,4 @@ export const employeeAttendanceSummary = [
   { id: "EAS04", name: "Sara Khan",      department: "Engineering", present: 26, absent: 0, leaves: 1, percentage: 100, workingDays: 26, remainingLeaves: 12 },
   { id: "EAS05", name: "Rohit Bansal",   department: "Engineering", present: 16, absent: 5, leaves: 2, percentage: 65, workingDays: 23, remainingLeaves: 6 },
 ];
-=======
->>>>>>> 184f463 (save current changes)
+

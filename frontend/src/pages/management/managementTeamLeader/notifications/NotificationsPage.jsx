@@ -35,21 +35,21 @@ const TYPE_BADGE = {
 };
 
 const COLS = [
-  { key: "type",         label: "Type"          },
-  { key: "priority",     label: "Priority"      },
-  { key: "subject",      label: "Subject"       },
-  { key: "employeeName", label: "Employee Name" },
-  { key: "projectName",  label: "Project Name"  },
-  { key: "date",         label: "Date & Time"   },
-  { key: "status",       label: "Status"        },
+  { key: "notificationType", label: "Type",          width: "16%" },
+  { key: "priority",     label: "Priority",      width: "10%" },
+  { key: "subject",      label: "Subject",       width: "26%" },
+  { key: "employeeName", label: "Employee Name", width: "13%" },
+  { key: "projectName",  label: "Project Name",  width: "13%" },
+  { key: "date",         label: "Date & Time",   width: "14%" },
+  { key: "status",       label: "Status",        width: "8%" },
 ];
 
 const REMINDER_COLS = [
-  { key: "reminder",  label: "Reminder"   },
-  { key: "relatedTo", label: "Related To" },
-  { key: "time",      label: "Time"       },
-  { key: "repeat",    label: "Frequency"  },
-  { key: "type",      label: "Type"       },
+  { key: "reminder",  label: "Reminder",   width: "30%" },
+  { key: "relatedTo", label: "Related To", width: "20%" },
+  { key: "time",      label: "Time",       width: "18%" },
+  { key: "repeat",    label: "Frequency",  width: "15%" },
+  { key: "type",      label: "Type",       width: "17%" },
 ];
 
 // ── Icon button with portal tooltip ──────────────────────────────────────────
@@ -133,7 +133,7 @@ export default function NotificationsPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-4 animate-in fade-in duration-500">
 
       {/* KPI cards */}
       <DashGrid cols={12} gap={4}>
@@ -287,7 +287,7 @@ export default function NotificationsPage() {
       <DataTable
         title="All Notifications"
         columns={COLS}
-        rows={rows}
+        rows={rows.map(r => ({ ...r, notificationType: r.type }))}
         size={12}
         pageSize={10}
         searchable
@@ -296,7 +296,7 @@ export default function NotificationsPage() {
         filters={[
           { title: "Employee Name",     type: "text",   key: "employeeName" },
           { title: "Project Name",      type: "text",   key: "projectName"  },
-          { title: "Notification Type", type: "select", key: "type",     options: NOTIFICATION_TYPES },
+          { title: "Notification Type", type: "select", key: "notificationType", options: NOTIFICATION_TYPES },
           { title: "Status",            type: "toggle", key: "status",   options: NOTIFICATION_STATUS },
           { title: "Priority",          type: "select", key: "priority", options: NOTIFICATION_PRIORITIES },
           {

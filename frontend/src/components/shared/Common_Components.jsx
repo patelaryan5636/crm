@@ -1585,8 +1585,9 @@ export const DataTable = ({
               {columns.map((col) => (
                 <th
                   key={col.key}
+                  style={col.width ? { width: col.width } : {}}
                   onClick={() => !col.headerNode && handleSort(col.key)}
-                  className={`group py-4 px-5 text-left text-xs font-black text-white uppercase tracking-[0.2em] whitespace-nowrap transition-colors select-none ${col.headerNode ? "" : "cursor-pointer hover:bg-white/5"}`}
+                  className={`group py-4 px-4 text-left text-[11px] font-black text-white uppercase tracking-[0.2em] whitespace-nowrap transition-colors select-none ${col.headerNode ? "" : "cursor-pointer hover:bg-white/5"}`}
                 >
                   {col.headerNode ? (
                     col.headerNode
@@ -1749,7 +1750,7 @@ export const DataTable = ({
                         };
                         const [statusBg, statusText] = STATUS_MAP[val] ?? ["bg-slate-100", "text-slate-600"];
                         return (
-                          <td key={col.key} className="py-3.5 px-5 whitespace-nowrap">
+                          <td key={col.key} style={col.width ? { width: col.width } : {}} className="py-3 px-4 whitespace-nowrap">
                             <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusBg} ${statusText}`}>
                               {val ?? "—"}
                             </span>
@@ -1759,7 +1760,8 @@ export const DataTable = ({
                       return (
                         <td
                           key={col.key}
-                          className="py-3.5 px-5 text-[#2a465a] font-medium whitespace-nowrap"
+                          style={col.width ? { width: col.width } : {}}
+                          className="py-3 px-4 text-[#2a465a] font-medium whitespace-nowrap"
                         >
                           {(() => {
                             const raw = row[col.key] ?? "—";

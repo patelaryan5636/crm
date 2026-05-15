@@ -13,7 +13,7 @@ import {
   closeModal,
 } from "../../../components/shared/Common_Components";
 import { clients } from "./clientsStore";
-import { projects } from "../store/managementManagerStore";
+import { projects } from "./managementManagerStore";
 
 export default function ManagementManagerClients() {
   const [selectedClient, setSelectedClient] = useState(null);

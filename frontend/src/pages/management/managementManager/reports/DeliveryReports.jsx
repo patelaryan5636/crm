@@ -1,5 +1,5 @@
 import { Grid, DashGrid, DashCard, GColumnChart } from "../../../../components/shared/Common_Components";
-import { deliveryMetrics, monthlyDeliveryData } from "../store/reportsStore";
+import { deliveryMetrics, monthlyDeliveryData } from "../reportsStore";
 import { TrendingUp, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function DeliveryReports() {

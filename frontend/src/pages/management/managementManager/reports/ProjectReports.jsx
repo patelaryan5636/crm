@@ -1,5 +1,5 @@
 import { Grid, GLineChart } from "../../../../components/shared/Common_Components";
-import { projectReports } from "../store/reportsStore";
+import { projectReports } from "../reportsStore";
 
 export default function ProjectReports() {
   const chartData = projectReports.map((p) => ({

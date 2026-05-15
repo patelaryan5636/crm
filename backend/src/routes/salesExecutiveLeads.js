@@ -6,6 +6,18 @@ const { requireUser } = require('../middleware/auth');
 // Base path: /api/sales-executive/leads
 
 /**
+ * GET /api/sales-executive/leads/dump
+ * Fetch dump leads for the current Sales Executive (own dumps only)
+ * Scoped to: admin (tenant) + assignedTo (this executive) + isDumped: true
+ * Query params: page, pageSize, search, reason, dateFrom, dateTo
+ */
+router.get(
+  '/dump',
+  requireUser,
+  bulkLeadUploadController.getMyDumpLeads
+);
+
+/**
  * GET /api/sales-executive/leads
  * Fetch all leads assigned to the current Sales Executive
  * Production-level endpoint with status statistics

@@ -861,6 +861,147 @@ exports.setLeadReminder = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * GET /api/sales-executive/leads/dump
+ * Fetch dump leads that belong to the current Sales Executive (assignedTo = me)
+ * Scoped strictly to: admin (tenant) + assignedTo (this executive)
+ * Returns: stats + paginated dump leads with client info, dump metadata
+ */
+exports.getMyDumpLeads = catchAsync(async (req, res, next) => {
+  const { Lead } = require('../models');
+
+  // Role guard — only Sales Executive
+  if (req.user?.role !== 'SALES_EXECUTIVE') {
+    return next(new AppError('Only Sales Executives can access this resource', 403));
+  }
+
+  // Parse optional query params
+  const page     = Math.max(1, parseInt(req.query.page)     || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize) || 50));
+  const search   = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+  const reason   = typeof req.query.reason === 'string' ? req.query.reason.trim() : '';
+  const dateFrom = req.query.dateFrom ? new Date(req.query.dateFrom) : null;
+  const dateTo   = req.query.dateTo   ? new Date(req.query.dateTo)   : null;
+
+  // ── Core filter: tenant + this executive + dumped ──
+  const baseFilter = {
+    admin:      req.admin._id,
+    assignedTo: req.user._id,
+    isDumped:   true,
+    isDeleted:  { $ne: true },
+  };
+
+  // Optional date range on dumpedAt
+  if (dateFrom || dateTo) {
+    baseFilter.dumpedAt = {};
+    if (dateFrom) baseFilter.dumpedAt.$gte = dateFrom;
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59, 999);
+      baseFilter.dumpedAt.$lte = end;
+    }
+  }
+
+  // Optional dump reason filter
+  if (reason) {
+    baseFilter.dumpReason = { $regex: reason, $options: 'i' };
+  }
+
+  // Fetch all matching dump leads (we need client data for search)
+  const rawLeads = await Lead.find(baseFilter)
+    .populate({ path: 'client', select: 'name email mobile companyName' })
+    .populate('dumpedBy', 'name role')
+    .populate('assignedBy', 'name role')
+    .populate('team', 'name')
+    .sort({ dumpedAt: -1 })
+    .lean();
+
+  // Apply client-level search (name / mobile / email / company)
+  let filtered = rawLeads;
+  if (search) {
+    const q = search.toLowerCase();
+    filtered = rawLeads.filter((l) => {
+      const c = l.client || {};
+      return (
+        (c.name        || '').toLowerCase().includes(q) ||
+        (c.mobile      || '').toLowerCase().includes(q) ||
+        (c.email       || '').toLowerCase().includes(q) ||
+        (c.companyName || '').toLowerCase().includes(q)
+      );
+    });
+  }
+
+  // ── Stats (computed from full filtered set, before pagination) ──
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const totalDump    = filtered.length;
+  const noResponse   = filtered.filter((l) =>
+    (l.dumpReason || '').toLowerCase().includes('no response') ||
+    (l.dumpReason || '').toLowerCase().includes('not talk')
+  ).length;
+  const todayDumped  = filtered.filter((l) => {
+    if (!l.dumpedAt) return false;
+    const d = new Date(l.dumpedAt);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() === today.getTime();
+  }).length;
+
+  // ── Pagination ──
+  const totalRecords = filtered.length;
+  const totalPages   = Math.ceil(totalRecords / pageSize) || 1;
+  const safePage     = Math.min(page, totalPages);
+  const skip         = (safePage - 1) * pageSize;
+  const paginated    = filtered.slice(skip, skip + pageSize);
+
+  // ── Transform to flat response shape ──
+  const leads = paginated.map((l) => ({
+    id:          l._id,
+    name:        l.client?.name        || '',
+    email:       l.client?.email       || '',
+    mobile:      l.client?.mobile      || '',
+    companyName: l.client?.companyName || '',
+    dumpReason:  l.dumpReason          || 'Not specified',
+    dumpedBy:    l.dumpedBy?.name      || 'System',
+    dumpedByRole:l.dumpedBy?.role      || null,
+    dumpDate:    l.dumpedAt
+      ? new Date(l.dumpedAt).toISOString().split('T')[0]
+      : null,
+    assignedBy:  l.assignedBy?.name    || null,
+    team:        l.team?.name          || null,
+    notTalkCount:l.notTalkCount        || 0,
+    talkCount:   l.talkCount           || 0,
+    lastContactedAt: l.lastContactedAt
+      ? new Date(l.lastContactedAt).toISOString().split('T')[0]
+      : null,
+    // Restore is Manager/Admin only — surface this flag so frontend can show correct UI
+    canRestore:  false,
+  }));
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        leads,
+        stats: {
+          totalDump,
+          noResponse,
+          todayDumped,
+          // Restore is Manager/Admin only — not available to Sales Executive
+          restoreAccess: 'Manager',
+        },
+        pagination: {
+          page:         safePage,
+          pageSize,
+          totalRecords,
+          totalPages,
+        },
+      },
+      'Dump leads retrieved successfully'
+    )
+  );
+});
+
+/**
  * Helper: Get client IP address
  */
 const getClientIp = (req) => {

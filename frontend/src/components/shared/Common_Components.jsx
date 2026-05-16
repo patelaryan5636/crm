@@ -960,6 +960,7 @@ export const DataTable = ({
   // for the actual photo. Clicking the avatar opens the photo in a new tab.
   // Example: userProfile="name"  → the "name" column gets an avatar prefix
   userProfile,
+  onApplyFilters,      // (filters) => void
 }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -1055,6 +1056,22 @@ export const DataTable = ({
     setAppliedDateFrom(dateFrom);
     setAppliedDateTo(dateTo);
     setPage(1);
+
+    if (onApplyFilters) {
+      const activeFilters = {};
+      filters.forEach(f => {
+        const val = filterValues[f.title];
+        const isEmpty = Array.isArray(val) ? val.length === 0 : !val || val.trim() === "";
+        if (!isEmpty) activeFilters[f.key || f.title] = val;
+      });
+      onApplyFilters({
+        ...activeFilters,
+        startDate: dateFrom,
+        endDate: dateTo,
+        search
+      });
+    }
+
     closeFilterModal();
   };
 
@@ -1069,6 +1086,10 @@ export const DataTable = ({
     setAppliedDateFrom("");
     setAppliedDateTo("");
     setPage(1);
+
+    if (onApplyFilters) {
+      onApplyFilters({ search }); // Reset but keep search
+    }
   };
 
   useEffect(() => {
@@ -1106,7 +1127,7 @@ export const DataTable = ({
     // Custom filters (only applied ones, not live input values)
     resolvedFilters.forEach((f) => {
       const val = appliedFilters[f.title];
-      const isEmpty = Array.isArray(val) ? val.length === 0 : val.trim() === "";
+      const isEmpty = Array.isArray(val) ? val.length === 0 : !val || val.trim() === "";
       if (!isEmpty) {
         result = result.filter((row) => f.fn(row, val));
       }
@@ -1273,7 +1294,11 @@ export const DataTable = ({
           <div className="flex-1 min-w-0 sm:flex-none sm:w-48">
             <DatePicker
               value={singleDate}
-              onChange={(val) => { setSingleDate(val); setPage(1); }}
+              onChange={(val) => {
+                setSingleDate(val);
+                setPage(1);
+                if (onApplyFilters) onApplyFilters({ startDate: val, endDate: val, search });
+              }}
               placeholder="Filter by date"
             />
           </div>

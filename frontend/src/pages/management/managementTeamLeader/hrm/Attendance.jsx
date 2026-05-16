@@ -163,7 +163,6 @@ export default function Attendance() {
           { title: "Status", type: "toggle", key: "status", options: ["Present", "Absent", "Leave", "Half Day", "Late"] },
           { title: "Department", type: "select", key: "department", options: ["Engineering", "Design", "QA", "DevOps"] }
         ]}
-        date={true}
         actions={[
           {
             icon: <Eye size={15} />,

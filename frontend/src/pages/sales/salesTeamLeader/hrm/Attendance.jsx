@@ -45,19 +45,24 @@ function MyAttendanceWidget() {
 export default function Attendance() {
   const [selected, setSelected] = useState(null);
   const [teamAttendance, setTeamAttendance] = useState([]);
+  const [currentFilters, setCurrentFilters] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const fetchTeam = async () => {
+  const fetchTeam = async (filters = {}) => {
     setLoading(true);
     try {
-      const res = await hrmService.getTeamAttendance();
+      const params = { ...filters };
+      if (!params.startDate && !params.endDate) {
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        params.startDate = todayStr;
+        params.endDate = todayStr;
+      }
+      const res = await hrmService.getTeamAttendance(params);
       if (res.success) {
         const mapped = res.data.map(u => {
           const att = u.attendance;
-          let status = "Absent";
-          if (att) {
-            if (att.clockIn) status = "Present";
-          }
+          const status = u.status || "Absent";
 
           const formatTime = (date) => {
              if (!date) return "—";
@@ -65,11 +70,21 @@ export default function Attendance() {
              return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           };
 
+          const formatRole = (str) => {
+            if (!str) return "";
+            const clean = str.replace(/^(SALES|FINANCE|MANAGEMENT)_/, '');
+            if (clean === 'TL') return "Team Leader";
+            return clean.toLowerCase().split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+          };
+
+          const d = new Date(u.date);
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
           return {
             id: u.id,
             name: u.name,
-            role: u.role?.replace('SALES_', '').replace('_', ' '),
-            date: new Date().toLocaleDateString(),
+            role: formatRole(u.role),
+            date: dateStr,
             clockIn: formatTime(att?.clockIn),
             clockOut: formatTime(att?.clockOut),
             hours: att?.hoursWorked ? `${att.hoursWorked}h` : "—",
@@ -87,17 +102,21 @@ export default function Attendance() {
   };
 
   useEffect(() => {
-    fetchTeam();
-    const interval = setInterval(fetchTeam, 60000); // Auto-refresh every 60s
+    fetchTeam(currentFilters);
+    const interval = setInterval(() => fetchTeam(currentFilters), 60000); // Auto-refresh every 60s
     return () => clearInterval(interval);
-  }, []);
+  }, [currentFilters]);
+
+  const handleApplyFilters = (filters) => {
+    setCurrentFilters(filters);
+  };
 
   const handleClockOutMember = async (row) => {
     if (!window.confirm(`Are you sure you want to clock out ${row.name}?`)) return;
     try {
       const res = await hrmService.clockOut(row.id);
       if (res.success) {
-        fetchTeam(); // Refresh table
+        fetchTeam(currentFilters); // Refresh table
       }
     } catch (err) {
       console.error("Failed to clock out member:", err);
@@ -105,7 +124,7 @@ export default function Attendance() {
   };
 
   // ── Today's KPIs ──
-  const presentCount = teamAttendance.filter((r) => r.status === "Present" || r.status === "Late").length;
+  const presentCount = teamAttendance.filter((r) => r.status === "Present" || r.status === "Active").length;
   const absentCount  = teamAttendance.filter((r) => r.status === "Absent").length;
   const leaveCount   = teamAttendance.filter((r) => r.status === "Leave").length;
   const onTimeCount  = teamAttendance.filter((r) => r.status === "Present").length;
@@ -117,6 +136,7 @@ export default function Attendance() {
     { title: "On Leave",      value: String(leaveCount)   },
   ];
 
+  const executiveNames = [...new Set(teamAttendance.map((r) => r.name))];
 
   return (
     <div className="flex flex-col gap-6">
@@ -147,8 +167,9 @@ export default function Attendance() {
         exportFileName="team_attendance"
         filters={[
           { title: "Status",    type: "toggle", key: "status", options: ["Present", "Active", "Absent", "Leave"] },
-          { title: "Executive", type: "select", key: "name",   options: [...new Set(teamAttendance.map((r) => r.name))] },
+          { title: "Executive", type: "select", key: "name",   options: executiveNames },
         ]}
+        onApplyFilters={handleApplyFilters}
         actions={[
           {
             icon: <Eye size={15} />, tooltip: "View Details", variant: "ghost",

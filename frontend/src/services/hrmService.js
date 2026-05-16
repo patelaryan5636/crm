@@ -15,10 +15,10 @@ export const MOCK_ATTENDANCE = [
 ];
 
 export const MOCK_LEAVES_INIT = [
-  { id: 1, type: "Sick",   from: "2026-05-13", to: "2026-05-14", days: 2, reason: "Fever and rest.",     status: "Approved" },
-  { id: 2, type: "Casual", from: "2026-04-10", to: "2026-04-10", days: 1, reason: "Personal work.",      status: "Approved" },
-  { id: 3, type: "Paid",   from: "2026-03-20", to: "2026-03-22", days: 3, reason: "Family function.",    status: "Rejected" },
-  { id: 4, type: "Sick",   from: "2026-06-02", to: "2026-06-02", days: 1, reason: "Doctor appointment.", status: "Pending"  },
+  { id: 1, type: "Sick", from: "2026-05-13", to: "2026-05-14", days: 2, reason: "Fever and rest.", status: "Approved" },
+  { id: 2, type: "Casual", from: "2026-04-10", to: "2026-04-10", days: 1, reason: "Personal work.", status: "Approved" },
+  { id: 3, type: "Paid", from: "2026-03-20", to: "2026-03-22", days: 3, reason: "Family function.", status: "Rejected" },
+  { id: 4, type: "Sick", from: "2026-06-02", to: "2026-06-02", days: 1, reason: "Doctor appointment.", status: "Pending" },
 ];
 
 export const hrmService = {
@@ -73,8 +73,8 @@ export const hrmService = {
   },
 
   // GET /attendance/team
-  async getTeamAttendance() {
-    const response = await apiClient.get('/attendance/team');
+  async getTeamAttendance(params = {}) {
+    const response = await apiClient.get('/attendance/team', { params });
     return response.data;
   },
 };

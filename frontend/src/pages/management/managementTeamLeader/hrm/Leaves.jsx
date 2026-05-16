@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import {
-  DashGrid, EnhancedDashCard, DataTable, Grid,
+  Heading, DashGrid, EnhancedDashCard, DataTable, Grid,
   GColumnChart, GPieChart,
   Modal, ModalGrid, ModalData, ModalProfile, Button,
   DataField, SelectField, Option,
@@ -22,32 +22,20 @@ const KPI_ACCENTS = ["#3b82f6", "#22c55e", "#f59e0b", "#f43f5e"];
 // ── Column definitions ────────────────────────────────────────────────────────
 const MY_COLS = [
   { key: "type",      label: "Leave Type", width: "16%" },
-  { key: "reason",    label: "Reason",     width: "30%" },
-  { key: "dateRange", label: "Date Range", width: "22%" },
-  { key: "days",      label: "Days",       width: "12%" },
-  { key: "appliedOn", label: "Applied On", width: "12%" },
-  { key: "status",    label: "Status",     width: "8%" },
+  { key: "reason",    label: "Reason",     width: "36%" },
+  { key: "dateRange", label: "Date Range", width: "20%", align: "center" },
+  { key: "days",      label: "Days",       width: "10%", align: "center" },
+  { key: "appliedOn", label: "Applied On", width: "10%", align: "center" },
+  { key: "status",    label: "Status",     width: "8%", align: "center" },
 ];
 
-const PENDING_COLS = [
-  { key: "name",      label: "Member", width: "20%" },
-  { key: "role",      label: "Role", width: "15%" },
-  { key: "type",      label: "Leave Type", width: "15%" },
-  { key: "reason",    label: "Reason", width: "20%" },
-  { key: "dateRange", label: "Date Range", width: "15%" },
-  { key: "days",      label: "Days", width: "5%" },
-  { key: "appliedOn", label: "Applied On", width: "10%" },
-];
-
-const HISTORY_COLS = [
-  { key: "name",      label: "Member", width: "15%" },
-  { key: "role",      label: "Role", width: "10%" },
-  { key: "type",      label: "Leave Type", width: "15%" },
-  { key: "reason",    label: "Reason", width: "15%" },
-  { key: "dateRange", label: "Date Range", width: "15%" },
-  { key: "days",      label: "Days", width: "5%" },
-  { key: "actionOn",  label: "Actioned On", width: "15%" },
-  { key: "status",    label: "Status", width: "10%" },
+const LEAVE_COLS = [
+  { key: "name",      label: "Employee Name", width: "22%" },
+  { key: "type",      label: "Leave Type",    width: "16%" },
+  { key: "appliedOn", label: "Applied On",    width: "16%", align: "center" },
+  { key: "from",      label: "From Date",     width: "14%", align: "center" },
+  { key: "to",        label: "To Date",       width: "14%", align: "center" },
+  { key: "status",    label: "Leave Status",  width: "18%", align: "center" },
 ];
 
 const calcDays = (from, to) => {
@@ -70,14 +58,14 @@ export default function Leaves() {
   const [errors, setErrors] = useState({});
   const applyDays = calcDays(form.dateFrom, form.dateTo);
 
-  const pendingRows = useMemo(() => teamReqs.filter((r) => r.status === "Pending"),  [teamReqs]);
-  const historyRows = useMemo(() => teamReqs.filter((r) => r.status !== "Pending"),  [teamReqs]);
+
 
   const onChange = (field, value) => {
     setForm((p) => ({ ...p, [field]: value }));
     if (errors[field]) setErrors((e) => ({ ...e, [field]: "" }));
   };
 
+  const pendingRows = useMemo(() => teamReqs.filter((r) => r.status === "Pending"),  [teamReqs]);
 
   const validate = () => {
     const e = {};
@@ -117,7 +105,7 @@ export default function Leaves() {
   };
 
   return (
-    <div className="flex flex-col gap-4 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
 
       {/* ── KPI cards ──────────────────────────────────── */}
       <DashGrid cols={12} gap={4}>
@@ -186,8 +174,6 @@ export default function Leaves() {
         size={12}
         pageSize={5}
         searchable
-        exportable
-        exportFileName="my_leaves"
         filters={[
           { title: "Leave Status", type: "toggle", key: "status", options: ["Pending", "Approved", "Rejected"] },
           { title: "Leave Type",   type: "toggle", key: "type",   options: LEAVE_TYPES },
@@ -212,22 +198,22 @@ export default function Leaves() {
         ]}
       />
 
-      {/* ── Pending Leaves (team members) ──────────────────────────────────── */}
+      {/* ── Leave Requests (Team Members) ──────────────────────────────────── */}
       <div id="mtl-pending-section">
         <DataTable
-          title={`Pending Leaves${pendingRows.length ? ` (${pendingRows.length})` : ""}`}
-          columns={PENDING_COLS}
-          rows={pendingRows}
+          title="Leave Requests"
+          columns={LEAVE_COLS}
+          rows={teamReqs}
           userProfile="name"
           ellipse={3}
           size={12}
           pageSize={10}
           searchable
           exportable
-          exportFileName="pending_leaves"
+          exportFileName="leave_requests"
           filters={[
+            { title: "Leave Status", type: "toggle", key: "status", options: ["Approved", "Pending", "Rejected"] },
             { title: "Leave Type", type: "toggle", key: "type", options: LEAVE_TYPES },
-            { title: "Role",       type: "toggle", key: "role", options: ["Frontend", "Backend", "Designer", "QA", "DevOps"] },
           ]}
           actions={[
             {
@@ -257,35 +243,6 @@ export default function Leaves() {
         />
       </div>
 
-      {/* ── Leave History ───────────────────────────────────────────────────── */}
-      <DataTable
-        title="Leave History"
-        columns={HISTORY_COLS}
-        rows={historyRows}
-        userProfile="name"
-        ellipse={3}
-        size={12}
-        pageSize={10}
-        searchable
-        exportable
-        exportFileName="leave_history"
-        filters={[
-          { title: "Status",     type: "toggle", key: "status", options: ["Approved", "Rejected"] },
-          { title: "Leave Type", type: "toggle", key: "type",   options: LEAVE_TYPES },
-          { title: "Role",       type: "toggle", key: "role",   options: ["Frontend", "Backend", "Designer", "QA", "DevOps"] },
-        ]}
-        actions={[
-          {
-            icon: <Eye size={15} />,
-            tooltip: "View Details",
-            variant: "ghost",
-            onClick: (row) => {
-              setHistoryView(teamReqs.find((r) => r.id === row.id) ?? row);
-              openModal("mtl-hrm-history-view");
-            },
-          },
-        ]}
-      />
       {/* ── Apply Leave Modal ───────────────────────────────────────────────── */}
       <Modal id="mtl-hrm-leave-apply" title="Apply for Leave" size="lg">
         <div className="space-y-5">

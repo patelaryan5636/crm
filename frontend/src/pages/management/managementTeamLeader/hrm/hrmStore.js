@@ -17,7 +17,6 @@ export const kpiAttendance = [
 
 // ─── Attendance records ───────────────────────────────────────────────────────
 export const attendanceRows = [
-
   { id: "A001", employeeId: "EM-201", name: "Karan Malhotra", role: "Frontend", department: "Engineering", date: "2026-05-12", clockIn: "09:05", clockOut: "18:10", hours: "9h 05m" },
   { id: "A002", employeeId: "EM-202", name: "Divya Iyer",     role: "Backend",  department: "Engineering", date: "2026-05-12", clockIn: "09:20", clockOut: "18:00", hours: "8h 40m" },
   { id: "A003", employeeId: "EM-203", name: "Manish Joshi",   role: "Designer", department: "Design",      date: "2026-05-12", clockIn: "10:15", clockOut: "18:15", hours: "8h 00m" },
@@ -163,4 +162,3 @@ export const employeeAttendanceSummary = [
   { id: "EAS04", name: "Sara Khan",      department: "Engineering", present: 26, absent: 0, leaves: 1, percentage: 100, workingDays: 26, remainingLeaves: 12 },
   { id: "EAS05", name: "Rohit Bansal",   department: "Engineering", present: 16, absent: 5, leaves: 2, percentage: 65, workingDays: 23, remainingLeaves: 6 },
 ];
-

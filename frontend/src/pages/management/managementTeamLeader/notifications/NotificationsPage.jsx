@@ -133,7 +133,7 @@ export default function NotificationsPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-4 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-4">
 
       {/* KPI cards */}
       <DashGrid cols={12} gap={4}>
@@ -296,20 +296,22 @@ export default function NotificationsPage() {
         filters={[
           { title: "Employee Name",     type: "text",   key: "employeeName" },
           { title: "Project Name",      type: "text",   key: "projectName"  },
-          { title: "Notification Type", type: "select", key: "notificationType", options: NOTIFICATION_TYPES },
+          { title: "Notification Type", type: "toggle", key: "notificationType", options: NOTIFICATION_TYPES },
           { title: "Status",            type: "toggle", key: "status",   options: NOTIFICATION_STATUS },
-          { title: "Priority",          type: "select", key: "priority", options: NOTIFICATION_PRIORITIES },
+          { title: "Priority",          type: "toggle", key: "priority", options: NOTIFICATION_PRIORITIES },
           {
-            title: "Date Filter", type: "select", key: "dateFilter",
+            title: "Date Filter", type: "toggle", key: "dateFilter",
             options: ["Today", "This Week", "This Month"],
-            fn: (row, value) => {
+            fn: (row, values) => {
               if (!row.date) return false;
               const today = new Date(); today.setHours(0,0,0,0);
               const rDate = new Date(row.date); rDate.setHours(0,0,0,0);
-              if (value === "Today")      return rDate.getTime() === today.getTime();
-              if (value === "This Week")  { const w = new Date(today); w.setDate(today.getDate()-7); return rDate >= w && rDate <= today; }
-              if (value === "This Month") return rDate.getMonth() === today.getMonth() && rDate.getFullYear() === today.getFullYear();
-              return true;
+              return values.some(value => {
+                if (value === "Today")      return rDate.getTime() === today.getTime();
+                if (value === "This Week")  { const w = new Date(today); w.setDate(today.getDate()-7); return rDate >= w && rDate <= today; }
+                if (value === "This Month") return rDate.getMonth() === today.getMonth() && rDate.getFullYear() === today.getFullYear();
+                return false;
+              });
             },
           },
         ]}

@@ -167,7 +167,7 @@ export default function Attendance() {
         filters={[
 
           { title: "Status", type: "toggle", key: "status", options: ["Present", "Absent", "Leave", "Half Day", "Late"] },
-          { title: "Department", type: "select", key: "department", options: ["Engineering", "Design", "QA", "DevOps"] }
+          { title: "Department", type: "toggle", key: "department", options: ["Engineering", "Design", "QA", "DevOps"] }
         ]}
         date={true}
         actions={[
@@ -197,18 +197,22 @@ export default function Attendance() {
         exportable
         exportFileName="attendance_summary"
         filters={[
-          { title: "Department", type: "select", key: "department", options: ["Engineering", "Design", "QA", "DevOps"] },
-          { title: "Attendance %", type: "select", key: "percentage", options: ["Above 90%", "70% - 90%", "Below 70%"], fn: (row, value) => {
+          { title: "Department", type: "toggle", key: "department", options: ["Engineering", "Design", "QA", "DevOps"] },
+          { title: "Attendance %", type: "toggle", key: "percentage", options: ["Above 90%", "70% - 90%", "Below 70%"], fn: (row, values) => {
               const p = row.rawPercentage;
-              if (value === "Above 90%") return p >= 90;
-              if (value === "70% - 90%") return p >= 70 && p < 90;
-              if (value === "Below 70%") return p < 70;
-              return true;
+              return values.some(value => {
+                if (value === "Above 90%") return p >= 90;
+                if (value === "70% - 90%") return p >= 70 && p < 90;
+                if (value === "Below 70%") return p < 70;
+                return false;
+              });
             } 
           },
-          { title: "Leave Count", type: "select", key: "leaves", options: ["0", "1", "2", "3", "4+"], fn: (row, value) => {
-              if (value === "4+") return row.leaves >= 4;
-              return row.leaves === Number(value);
+          { title: "Leave Count", type: "toggle", key: "leaves", options: ["0", "1", "2", "3", "4+"], fn: (row, values) => {
+              return values.some(value => {
+                if (value === "4+") return row.leaves >= 4;
+                return row.leaves === Number(value);
+              });
             }
           }
 

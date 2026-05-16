@@ -4163,6 +4163,7 @@ export const UserChat = ({
   placeholder = "Type a message… (Enter to send)",
   maxHeight = "max-h-80",
   showAttach = true,
+  readOnly = false,
 }) => {
   const [text, setText] = React.useState("");
   const chatEndRef = React.useRef(null);
@@ -4265,7 +4266,8 @@ export const UserChat = ({
         <div ref={chatEndRef} />
       </div>
 
-      {/* ── Reply input row ── */}
+      {/* ── Reply input row — hidden in readOnly mode or when onSend is null ── */}
+      {!readOnly && onSend && (
       <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 focus-within:ring-2 focus-within:ring-[#2a465a]/20 focus-within:border-[#2a465a]/40 transition">
 
         {/* Attach image button (hidden file input + paperclip icon) */}
@@ -4333,6 +4335,7 @@ export const UserChat = ({
         </div>
 
       </div>
+      )}
     </div>
   );
 };

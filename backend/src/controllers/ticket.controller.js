@@ -116,11 +116,13 @@ exports.createTicket = catchAsync(async (req, res, next) => {
 
 // ─────────────────────────────────────────────────────────────
 // GET: Fetch All Tickets (With Filtering & Pagination)
-// User sees tickets assigned to them or raised by them
-// Admin/Manager sees all tickets in organization
+// view=assigned  → only tickets assigned to me (Team Tickets for TL/Manager)
+// view=raised    → only tickets I raised (My Tickets)
+// default        → both assigned + raised (combined view)
+// Admin sees all tickets in organization
 // ─────────────────────────────────────────────────────────────
 exports.getAllTickets = catchAsync(async (req, res, next) => {
-  const { status, priority, assignedTo, sortBy, page = 1, limit = 20, showEscalated } = req.query;
+  const { status, priority, assignedTo, sortBy, page = 1, limit = 20, showEscalated, view } = req.query;
   const userId = req.user?._id;
   const adminId = req.admin?._id;
 
@@ -131,14 +133,23 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
   const user = await User.findById(userId).select('role');
 
   // Build filter
-  const filter = { admin: adminId, isDeleted: false };
+  // NOTE: TicketSchema does not use softDeletePlugin, so no isDeleted field exists
+  const filter = { admin: adminId };
 
-  // Non-admin users see only their tickets (assigned or raised)
   if (user?.role && !['ADMIN'].includes(user.role)) {
-    filter.$or = [
-      { assignedTo: userId },
-      { raisedBy: userId },
-    ];
+    if (view === 'assigned') {
+      // Team Tickets: only tickets assigned to this user
+      filter.assignedTo = userId;
+    } else if (view === 'raised') {
+      // My Tickets: only tickets raised by this user
+      filter.raisedBy = userId;
+    } else {
+      // Default: tickets assigned to OR raised by this user
+      filter.$or = [
+        { assignedTo: userId },
+        { raisedBy: userId },
+      ];
+    }
   }
 
   // Apply status filter
@@ -164,7 +175,6 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
   // Sort options
   let sortObj = { createdAt: -1 };
   if (sortBy === 'priority') {
-    const priorityOrder = { URGENT: 0, HIGH: 1, NORMAL: 2, LOW: 3 };
     sortObj = { priority: 1, createdAt: -1 };
   } else if (sortBy === 'escalatedAt') {
     sortObj = { escalatedAt: -1, createdAt: -1 };
@@ -178,6 +188,7 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
     .populate('raisedBy', 'name email role')
     .populate('assignedTo', 'name email role')
     .populate('resolvedBy', 'name email')
+    .populate('replies.user', 'name email role')
     .sort(sortObj)
     .skip(skip)
     .limit(parseInt(limit))
@@ -222,10 +233,10 @@ exports.getTicketById = catchAsync(async (req, res, next) => {
     return next(new AppError('Invalid ticket ID format', 400));
   }
 
+  // NOTE: TicketSchema does not use softDeletePlugin, no isDeleted field
   const ticket = await Ticket.findOne({
     _id: ticketId,
     admin: adminId,
-    isDeleted: false,
   })
     .populate('raisedBy', 'name email role department')
     .populate('assignedTo', 'name email role department')
@@ -270,23 +281,32 @@ exports.addReply = catchAsync(async (req, res, next) => {
   const ticket = await Ticket.findOne({
     _id: ticketId,
     admin: adminId,
-    isDeleted: false,
   });
 
   if (!ticket) {
     return next(new AppError('Ticket not found', 404));
   }
 
-  // Authorization: Only assignee, raiser, or admin can reply
-  const user = await User.findById(userId).select('role');
+  // Authorization:
+  // - ADMIN can always reply
+  // - The ASSIGNEE (team leader / manager) can reply — this is the "official" reply
+  // - The RAISER (sales executive) CANNOT send additional messages after creation
+  //   (their initial message is the ticket description itself)
+  const user = await User.findById(userId).select('role name');
   if (!['ADMIN'].includes(user?.role)) {
-    if (!ticket.raisedBy.equals(userId) && !ticket.assignedTo?.equals(userId)) {
-      return next(new AppError('You cannot reply to this ticket', 403));
+    if (!ticket.assignedTo?.equals(userId)) {
+      return next(new AppError('Only the assigned handler can reply to this ticket', 403));
     }
   }
 
-  // Add reply
+  // Add reply and update status to IN_PROGRESS when assignee first replies
   const updatedTicket = await ticketService.addReplyToTicket(ticket, message, user);
+
+  // Mark ticket as IN_PROGRESS when assignee replies (if still OPEN)
+  if (ticket.status === 'OPEN') {
+    updatedTicket.status = 'IN_PROGRESS';
+    await updatedTicket.save();
+  }
 
   // Create audit log
   await AuditLog.create({
@@ -299,25 +319,21 @@ exports.addReply = catchAsync(async (req, res, next) => {
     changes: { replyAdded: true },
   });
 
-  // Notify other parties
-  const otherParties = new Set();
-  if (!ticket.raisedBy.equals(userId)) otherParties.add(ticket.raisedBy._id);
-  if (ticket.assignedTo && !ticket.assignedTo.equals(userId)) otherParties.add(ticket.assignedTo._id);
-
-  for (const partyId of otherParties) {
-    try {
+  // Notify the ticket raiser that their ticket has been replied to
+  try {
+    if (!ticket.raisedBy.equals(userId)) {
       await notificationService.createNotification({
         admin: adminId,
-        recipient: partyId,
+        recipient: ticket.raisedBy,
         type: 'TICKET_UPDATED',
-        title: 'Ticket Update',
-        body: `${user.name} replied to ticket: "${ticket.subject}"`,
+        title: 'Ticket Replied',
+        body: `${user.name} replied to your ticket: "${ticket.subject}"`,
         refType: 'Ticket',
         refId: ticketId,
       });
-    } catch (err) {
-      console.error('Error sending notification:', err);
     }
+  } catch (err) {
+    console.error('Error sending notification:', err);
   }
 
   await updatedTicket.populate([
@@ -352,7 +368,6 @@ exports.escalateTicket = catchAsync(async (req, res, next) => {
   const ticket = await Ticket.findOne({
     _id: ticketId,
     admin: adminId,
-    isDeleted: false,
   });
 
   if (!ticket) {
@@ -447,7 +462,6 @@ exports.resolveTicket = catchAsync(async (req, res, next) => {
   const ticket = await Ticket.findOne({
     _id: ticketId,
     admin: adminId,
-    isDeleted: false,
   });
 
   if (!ticket) {
@@ -516,7 +530,6 @@ exports.closeTicket = catchAsync(async (req, res, next) => {
   const ticket = await Ticket.findOne({
     _id: ticketId,
     admin: adminId,
-    isDeleted: false,
   });
 
   if (!ticket) {
@@ -582,7 +595,6 @@ exports.reassignTicket = catchAsync(async (req, res, next) => {
   const ticket = await Ticket.findOne({
     _id: ticketId,
     admin: adminId,
-    isDeleted: false,
   });
 
   if (!ticket) {

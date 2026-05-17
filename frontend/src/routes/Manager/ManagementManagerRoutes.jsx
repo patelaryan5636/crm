@@ -12,10 +12,10 @@ import ManagementManagerTeams from "../../pages/management/managementManager/Man
 import ManagementManagerClients from "../../pages/management/managementManager/ManagementManagerClients";
 import ManagementManagerReports from "../../pages/management/managementManager/ManagementManagerReports";
 
-// ── Packet 4 (TODO) ─────────────────────────────────────────────────────
-// import HRMPage                    from "../../pages/management/managementManager/hrm/HRMPage";
-// import LoginLogs                  from "../../pages/management/managementManager/loginLogs/LoginLogs";
-// import ManagementManagerTickets   from "../../pages/management/managementManager/ManagementManagerTickets";
+// ── Packet 4 (DONE) ─────────────────────────────────────────────────────
+import HRMPage                    from "../../pages/management/managementManager/hrm/HRMPage";
+import LoginLogs                  from "../../pages/management/managementManager/loginLogs/LoginLogs";
+import ManagementManagerTickets   from "../../pages/management/managementManager/ManagementManagerTickets";
 
 function ManagementManagerRoutes() {
   return (
@@ -34,9 +34,9 @@ function ManagementManagerRoutes() {
         <Route path="reports" element={<ManagementManagerReports />} />
 
         {/* Packet 4 */}
-        {/* <Route path="hrm"         element={<HRMPage                  />} /> */}
-        {/* <Route path="login-logs"  element={<LoginLogs                />} /> */}
-        {/* <Route path="tickets"     element={<ManagementManagerTickets />} /> */}
+        <Route path="hrm"         element={<HRMPage                  />} />
+        <Route path="login-logs"  element={<LoginLogs                />} />
+        <Route path="tickets"     element={<ManagementManagerTickets />} />
 
         <Route path="*" element={<Navigate to="/management-manager" replace />} />
       </Route>

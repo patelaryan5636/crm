@@ -79,7 +79,8 @@ const TARGET_PERIOD = ['DAILY', 'WEEKLY', 'MONTHLY'];
 const HOLDER_TYPE = ['SUPER_ADMIN', 'ADMIN', 'USER'];
 const NOTIF_TYPE = [
   'PAYMENT_SUCCESS', 'PAYMENT_FAILED', 'WORK_ORDER_SIGNED',
-  'TICKET_UPDATED', 'LEAD_ASSIGNED', 'REMINDER_DUE',
+  'TICKET_CREATED', 'TICKET_UPDATED', 'TICKET_ESCALATED', 'TICKET_RESOLVED', 'TICKET_CLOSED',
+  'LEAD_ASSIGNED', 'REMINDER_DUE',
   'ANNOUNCEMENT', 'TARGET_ALERT', 'LEAVE_STATUS', 'GENERAL',
 ];
 const AUDIT_ACTIONS = [
@@ -93,7 +94,7 @@ const AUDIT_ACTIONS = [
   'WORK_ORDER_GENERATED', 'WORK_ORDER_SIGNED', 'WORK_ORDER_APPROVED',
   'LEAVE_APPLIED', 'LEAVE_APPROVED', 'LEAVE_REJECTED', 'LEAVE_CANCELLED',
   'TARGET_SET', 'TARGET_UPDATED',
-  'ANNOUNCEMENT_SENT', 'TICKET_CREATED', 'TICKET_RESOLVED', 'TICKET_ESCALATED',
+  'ANNOUNCEMENT_SENT', 'TICKET_CREATED', 'TICKET_UPDATED', 'TICKET_RESOLVED', 'TICKET_ESCALATED', 'TICKET_CLOSED', 'TICKET_REASSIGNED',
   'ADMIN_CREATED', 'ADMIN_UPDATED', 'ADMIN_DEACTIVATED',
   'LIMIT_CHANGED', 'PASSWORD_CHANGED', 'PROFILE_UPDATED',
   'ATTENDANCE_CLOCK_IN', 'ATTENDANCE_CLOCK_OUT',
@@ -1198,7 +1199,7 @@ const TicketSchema = new Schema({
   subject: { type: String, required: true, trim: true },
   message: { type: String, required: true },
   status: { type: String, enum: TICKET_STATUS, default: 'OPEN' },
-  priority: { type: String, enum: ['LOW', 'NORMAL', 'HIGH', 'URGENT'], default: 'NORMAL' },
+  priority: { type: String, enum: ['LOW', 'NORMAL', 'MEDIUM', 'HIGH', 'URGENT'], default: 'NORMAL' },
   refType: {
     type: String,
     enum: ['CLIENT_DATA', 'SALES_MANAGER', 'SALES_TL', 'EXECUTIVE', 'SYSTEM'],
@@ -1216,7 +1217,6 @@ const TicketSchema = new Schema({
   resolvedAt: { type: Date, default: null },
   resolvedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
 }, { timestamps: true });
-
 TicketSchema.index({ admin: 1, raisedBy: 1, status: 1 });
 TicketSchema.index({ admin: 1, assignedTo: 1, status: 1 });
 

@@ -110,8 +110,8 @@ const escalateTicket = async (ticket, escalatedByUser, admin) => {
       throw new Error('Cannot escalate further from this role');
     }
 
-    // Get next level in chain
-    const nextRole = escalationChain[1];
+    // Get next level in chain — always index [0] (immediate next level)
+    const nextRole = escalationChain[0];
     if (!nextRole) {
       throw new Error('No next level in escalation chain');
     }
@@ -329,7 +329,8 @@ const getAssigneesByRole = async (admin, allowedRoles = []) => {
 // ─────────────────────────────────────────────────────────────
 const getTicketStats = async (admin, userId = null) => {
   try {
-    const filter = { admin: admin._id, isDeleted: false };
+    // NOTE: TicketSchema does not use softDeletePlugin, no isDeleted field
+    const filter = { admin: admin._id };
 
     if (userId) {
       // Get stats for specific user (as assignee or raiser)
@@ -360,10 +361,8 @@ const getTicketStats = async (admin, userId = null) => {
             }
           ],
           'escalated': [
-            {
-              $match: { isEscalated: true },
-              $count: 'total'
-            }
+            { $match: { isEscalated: true } },
+            { $count: 'total' }
           ],
           'total': [
             { $count: 'total' }
@@ -388,9 +387,9 @@ const getUserTickets = async (admin, userId, filters = {}) => {
     const user = await User.findById(userId).select('role department');
     if (!user) throw new AppError('User not found', 404);
 
+    // NOTE: TicketSchema does not use softDeletePlugin, no isDeleted field
     const baseFilter = {
       admin: admin._id,
-      isDeleted: false,
     };
 
     // Tickets assigned to this user

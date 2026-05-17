@@ -13,32 +13,32 @@ const Joi = require('joi');
 // ─────────────────────────────────────────────────────────────
 const createTicketSchema = Joi.object({
   subject: Joi.string()
-    .min(5)
+    .min(3)
     .max(200)
     .required()
     .trim()
     .messages({
       'string.empty': 'Subject is required',
-      'string.min': 'Subject must be at least 5 characters',
+      'string.min': 'Subject must be at least 3 characters',
       'string.max': 'Subject must not exceed 200 characters',
     }),
 
   message: Joi.string()
-    .min(10)
+    .min(3)
     .max(2000)
     .required()
     .trim()
     .messages({
       'string.empty': 'Message is required',
-      'string.min': 'Message must be at least 10 characters',
+      'string.min': 'Message must be at least 3 characters',
       'string.max': 'Message must not exceed 2000 characters',
     }),
 
   priority: Joi.string()
-    .valid('LOW', 'NORMAL', 'HIGH', 'URGENT')
+    .valid('LOW', 'NORMAL', 'MEDIUM', 'HIGH', 'URGENT')
     .default('NORMAL')
     .messages({
-      'any.only': 'Priority must be one of: LOW, NORMAL, HIGH, URGENT',
+      'any.only': 'Priority must be one of: LOW, NORMAL, MEDIUM, HIGH, URGENT',
     }),
 
   refType: Joi.string()
@@ -64,13 +64,13 @@ const createTicketSchema = Joi.object({
 // ─────────────────────────────────────────────────────────────
 const addReplySchema = Joi.object({
   message: Joi.string()
-    .min(5)
+    .min(1)
     .max(1000)
     .required()
     .trim()
     .messages({
       'string.empty': 'Reply message is required',
-      'string.min': 'Reply must be at least 5 characters',
+      'string.min': 'Reply cannot be empty',
       'string.max': 'Reply must not exceed 1000 characters',
     }),
 });
@@ -81,12 +81,11 @@ const addReplySchema = Joi.object({
 // ─────────────────────────────────────────────────────────────
 const escalateTicketSchema = Joi.object({
   escalationReason: Joi.string()
-    .min(5)
     .max(500)
     .optional()
+    .allow('')
     .trim()
     .messages({
-      'string.min': 'Escalation reason must be at least 5 characters',
       'string.max': 'Escalation reason must not exceed 500 characters',
     }),
 });
@@ -97,13 +96,13 @@ const escalateTicketSchema = Joi.object({
 // ─────────────────────────────────────────────────────────────
 const resolveTicketSchema = Joi.object({
   resolutionMessage: Joi.string()
-    .min(10)
+    .min(5)
     .max(1000)
-    .required()
+    .optional()
+    .allow('')
     .trim()
     .messages({
-      'string.empty': 'Resolution message is required',
-      'string.min': 'Resolution must be at least 10 characters',
+      'string.min': 'Resolution must be at least 5 characters',
       'string.max': 'Resolution must not exceed 1000 characters',
     }),
 });
@@ -157,7 +156,7 @@ const filterTicketsSchema = Joi.object({
     }),
 
   priority: Joi.string()
-    .valid('LOW', 'NORMAL', 'HIGH', 'URGENT')
+    .valid('LOW', 'NORMAL', 'MEDIUM', 'HIGH', 'URGENT')
     .optional()
     .messages({
       'any.only': 'Invalid priority filter',
@@ -194,10 +193,19 @@ const filterTicketsSchema = Joi.object({
   showEscalated: Joi.boolean()
     .default(false)
     .optional(),
+
+  // view=assigned → tickets assigned to me | view=raised → tickets I raised
+  view: Joi.string()
+    .valid('assigned', 'raised')
+    .optional(),
 });
 
 // ─────────────────────────────────────────────────────────────
 // VALIDATION MIDDLEWARE FACTORY
+// Express 5 compatible: req.query and req.params are read-only
+// getters — we store validated values on req._validated[source]
+// and also patch req.query via Object.defineProperty so existing
+// controller code reading req.query still works.
 // ─────────────────────────────────────────────────────────────
 const validate = (schema, source = 'body') => {
   return (req, res, next) => {
@@ -215,7 +223,27 @@ const validate = (schema, source = 'body') => {
       });
     }
 
-    req[source] = value;
+    if (source === 'body') {
+      // body is writable in Express 5
+      req.body = value;
+    } else if (source === 'query') {
+      // Express 5: req.query is a read-only getter — override with defineProperty
+      Object.defineProperty(req, 'query', {
+        value,
+        writable: true,
+        configurable: true,
+        enumerable: true,
+      });
+    } else if (source === 'params') {
+      // Express 5: req.params is also a read-only getter
+      Object.defineProperty(req, 'params', {
+        value,
+        writable: true,
+        configurable: true,
+        enumerable: true,
+      });
+    }
+
     next();
   };
 };

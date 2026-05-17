@@ -35,6 +35,7 @@ const salesExecutiveFollowUpRoutes = require('./routes/salesExecutiveFollowUps')
 const salesExecutiveDashboardRoutes = require('./routes/salesExecutiveDashboard');
 const ticketRoutes = require('./routes/tickets');
 const notificationRoutes = require('./routes/notifications');
+const logsRoutes = require('./routes/logs');
 
 dotenv.config();
 
@@ -120,6 +121,8 @@ try {
   console.log('✓ /api/support-tickets routes registered');
   app.use('/api/notifications', notificationRoutes);
   console.log('✓ /api/notifications routes registered');
+  app.use('/api/logs', logsRoutes);
+  console.log('✓ /api/logs routes registered');
 } catch (error) {
   console.error('❌ Error registering routes:', error);
 }

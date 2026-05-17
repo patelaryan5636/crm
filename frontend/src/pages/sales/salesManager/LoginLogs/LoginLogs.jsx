@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Heading, DashGrid, DashCard, DataTable,
   openModal, closeModal, Modal, ModalData, ModalProfile, Button,
 } from "../../../../components/shared/Common_Components";
-import { kpiLogs, loginLogRows, myLogRows } from "./LogsStore";
-import { LogIn, Users, AlertTriangle, ShieldAlert, Eye, UserCheck } from "lucide-react";
+import logService from "../../../../services/logService";
+import { LogIn, Users, Eye, UserCheck } from "lucide-react";
 
 const kpiIcons   = [<LogIn size={22}/>, <UserCheck size={22}/>, <Users size={22}/>, <Users size={22}/>];
 const kpiAccents = ["#3b82f6", "#8b5cf6", "#22c55e", "#f43f5e"];
@@ -22,6 +22,37 @@ const logCols = [
 
 export default function LoginLogs() {
   const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [myLogs, setMyLogs] = useState([]);
+  const [teamLogs, setTeamLogs] = useState([]);
+  const [kpiStats, setKpiStats] = useState({
+    myLoginsToday: 0,
+    myTotalLogins: 0,
+    teamLoginsToday: 0,
+    teamTotalLogins: 0
+  });
+
+  const fetchLogs = async () => {
+    try {
+      setLoading(true);
+      const res = await logService.getLoginLogs();
+      if (res.success && res.data) {
+        setMyLogs(res.data.myLogs || []);
+        setTeamLogs(res.data.teamLogs || []);
+        if (res.data.kpiStats) {
+          setKpiStats(res.data.kpiStats);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch login logs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
 
   const actions = [
     {
@@ -29,6 +60,13 @@ export default function LoginLogs() {
       variant: "ghost",
       onClick: (row) => { setSelected(row); openModal("log-view-modal"); },
     },
+  ];
+
+  const kpiLogs = [
+    { title: "My Logins (Today)",   value: String(kpiStats.myLoginsToday) },
+    { title: "My Total Logins",     value: String(kpiStats.myTotalLogins) },
+    { title: "Team Logins Today",   value: String(kpiStats.teamLoginsToday) },
+    { title: "Team Total Logins",   value: String(kpiStats.teamTotalLogins) },
   ];
 
   return (
@@ -53,8 +91,9 @@ export default function LoginLogs() {
       <DataTable
         title="My Login Logs"
         columns={logCols}
-        rows={myLogRows}
+        rows={myLogs}
         actions={actions}
+        loading={loading}
         size={12}
         pageSize={5}
         searchable
@@ -62,7 +101,7 @@ export default function LoginLogs() {
         exportable
         exportFileName="my-login-logs"
         filters={[
-          { title: "Status", type: "toggle", key: "status", options: ["Active", "Rejected", "Pending"] },
+          { title: "Status", type: "toggle", key: "status", options: ["Active", "Rejected"] },
         ]}
       />
 
@@ -70,8 +109,9 @@ export default function LoginLogs() {
       <DataTable
         title="Login Log Records"
         columns={logCols}
-        rows={loginLogRows}
+        rows={teamLogs}
         actions={actions}
+        loading={loading}
         size={12}
         pageSize={10}
         searchable
@@ -80,6 +120,7 @@ export default function LoginLogs() {
         exportFileName="login-logs"
         filters={[
           { title: "Role", type: "toggle", key: "role", options: ["Executive", "Team Leader", "Sales Manager"] },
+          { title: "Status", type: "toggle", key: "status", options: ["Active", "Rejected"] }
         ]}
       />
 

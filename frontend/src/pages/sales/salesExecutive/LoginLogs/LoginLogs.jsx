@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Heading, DashGrid, EnhancedDashCard, DataTable,
   openModal, closeModal, Modal, ModalData, ModalProfile, Button,
 } from "../../../../components/shared/Common_Components";
-import { kpiLogs, myLogRows } from "./LogsStore";
+import logService from "../../../../services/logService";
 import { LogIn, UserCheck, Eye, MapPin, Shield } from "lucide-react";
 
 const kpiIcons = [<LogIn size={22} />, <UserCheck size={22} />, <Shield size={22} />, <MapPin size={22} />];
@@ -18,6 +18,33 @@ const logCols = [
 
 export default function LoginLogs() {
   const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [myLogs, setMyLogs] = useState([]);
+  const [kpiStats, setKpiStats] = useState({
+    myLoginsToday: 0,
+    myTotalLogins: 0
+  });
+
+  const fetchLogs = async () => {
+    try {
+      setLoading(true);
+      const res = await logService.getLoginLogs();
+      if (res.success && res.data) {
+        setMyLogs(res.data.myLogs || []);
+        if (res.data.kpiStats) {
+          setKpiStats(res.data.kpiStats);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch login logs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
 
   const actions = [
     {
@@ -25,6 +52,13 @@ export default function LoginLogs() {
       variant: "ghost",
       onClick: (row) => { setSelected(row); openModal("log-view-modal"); },
     },
+  ];
+
+  const kpiLogs = [
+    { title: "My Logins (Today)",   value: String(kpiStats.myLoginsToday) },
+    { title: "My Total Logins",     value: String(kpiStats.myTotalLogins) },
+    { title: "Active Sessions",     value: "1" },
+    { title: "Organization Logins", value: String(kpiStats.myTotalLogins) }
   ];
 
   return (
@@ -49,8 +83,9 @@ export default function LoginLogs() {
       <DataTable
         title="My Login History"
         columns={logCols}
-        rows={myLogRows}
+        rows={myLogs}
         actions={actions}
+        loading={loading}
         size={12}
         pageSize={10}
         searchable
@@ -58,7 +93,7 @@ export default function LoginLogs() {
         exportable
         exportFileName="my-login-logs"
         filters={[
-          { title: "Status", type: "toggle", key: "status", options: ["Success", "Failed", "Logged Out"] },
+          { title: "Status", type: "toggle", key: "status", options: ["Active", "Rejected"] },
         ]}
       />
 
@@ -68,7 +103,7 @@ export default function LoginLogs() {
           <div className="flex flex-col gap-4">
             <ModalProfile
               name={selected.name}
-              subtitle=""
+              subtitle={`${selected.role} · ${selected.latitude}, ${selected.longitude}`}
               meta={`${selected.date} at ${selected.time}`}
             />
             <div className="grid grid-cols-2 gap-3">

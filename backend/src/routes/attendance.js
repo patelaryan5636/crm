@@ -9,6 +9,7 @@ const { requireUser } = require('../middleware/auth');
 router.use(requireUser);
 
 router.get('/today', hrmController.getTodayStatus);
+router.get('/my', hrmController.getMyAttendanceHistory);
 router.get('/team', hrmController.getTeamAttendance);
 router.post('/clock-in', hrmController.clockIn);
 router.post('/clock-out', hrmController.clockOut);

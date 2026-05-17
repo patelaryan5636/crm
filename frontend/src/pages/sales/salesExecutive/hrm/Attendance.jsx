@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Heading, DashGrid, EnhancedDashCard, DataTable,
   openModal, closeModal, Modal, ModalData, ModalGrid, Button,
 } from "../../../../components/shared/Common_Components";
 import SessionTimer from "../../../../components/shared/SessionTimer";
-import { kpiAttendance, attendanceRows } from "./HrmStore";
 import { CalendarDays, CheckCircle2, XCircle, CalendarClock, Eye } from "lucide-react";
 import { useAttendance } from "../../../../context/AttendanceContext";
+import { hrmService } from "../../../../services/hrmService";
 
 // Personal attendance card config — 4 cards only
 const KPI_CONFIG = [
@@ -44,6 +44,60 @@ function AttendanceWidget() {
 // ── Main Attendance Page ──────────────────────────────────────────────────────
 export default function Attendance() {
   const [selected, setSelected] = useState(null);
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchMyAttendance = async () => {
+    setLoading(true);
+    try {
+      const res = await hrmService.getMyAttendanceHistory();
+      if (res.success) {
+        const mapped = res.data.map(r => {
+          const formatTime = (date) => {
+            if (!date) return "—";
+            return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          };
+
+          const d = new Date(r.date);
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+          let status = "Present";
+          if (r.clockIn && !r.clockOut) status = "Active";
+          if (r.isHalfDay) status = "Half Day";
+          if (r.isAbsent) status = "Absent";
+
+          return {
+            ...r,
+            date: dateStr,
+            clockIn: formatTime(r.clockIn),
+            clockOut: formatTime(r.clockOut),
+            hours: r.hoursWorked ? `${r.hoursWorked}h` : "—",
+            status: status
+          };
+        });
+        setRecords(mapped);
+      }
+    } catch (err) {
+      console.error("Failed to fetch attendance history:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMyAttendance();
+  }, []);
+
+  const totalDays = records.length;
+  const presentDays = records.filter(r => r.status === "Present" || r.status === "Active").length;
+  const absentDays = records.filter(r => r.status === "Absent").length;
+  
+  const kpis = [
+    { title: "Working Days", value: String(totalDays) },
+    { title: "Present",      value: String(presentDays) },
+    { title: "Absent",       value: String(absentDays) },
+    { title: "Leaves Taken", value: "0" }, // Simplified
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -51,7 +105,7 @@ export default function Attendance() {
       {/* Personal Attendance Summary Cards */}
       <DashGrid cols={12} gap={4}>
         <Heading primaryText="HRM" secondaryText="Attendance" size={12} />
-        {kpiAttendance.map((k, i) => (
+        {kpis.map((k, i) => (
           <EnhancedDashCard
             key={k.title}
             title={k.title}
@@ -70,7 +124,8 @@ export default function Attendance() {
       <DataTable
         title="Attendance Records"
         columns={COLS}
-        rows={attendanceRows}
+        rows={records}
+        loading={loading}
         actions={[
           {
             icon: <Eye size={15} />,
@@ -87,7 +142,7 @@ export default function Attendance() {
         exportable
         exportFileName="attendance-report"
         filters={[
-          { title: "Status", type: "toggle", key: "status", options: ["Present", "Absent", "Late", "Half Day", "Leave"] },
+          { title: "Status", type: "toggle", key: "status", options: ["Present", "Absent", "Active", "Half Day"] },
         ]}
       />
 

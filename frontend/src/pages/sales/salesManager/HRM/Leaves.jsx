@@ -1,19 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Heading, DashGrid, DashCard, DataTable,
   openModal, closeModal, Modal, ModalData, ModalProfile, ModalGrid, Button,
   DataField, SelectField, Option, Grid,
 } from "../../../../components/shared/Common_Components";
 import DatePicker from "../../../../components/shared/DatePicker";
-import { kpiLeaves, pendingLeaveRows, leaveHistoryRows } from "./HrmStore";
 import { Calendar, CheckCircle, Clock, XCircle, Eye, BadgeCheck, Ban, Trash2, Download, Plus } from "lucide-react";
+import { hrmService } from "../../../../services/hrmService";
+import { toast } from "react-hot-toast";
+import { useCurrentUser } from "../../../../hooks/useCurrentUser";
 
 const KPI_ICONS   = [<Calendar size={22} />, <CheckCircle size={22} />, <Clock size={22} />, <XCircle size={22} />];
 const KPI_ACCENTS = ["#3b82f6", "#22c55e", "#f59e0b", "#f43f5e"];
 
 // Columns for My Leaves table
 const MY_LEAVES_COLS = [
-  { key: "type",      label: "Leave Type"  },
+  { key: "leaveType",      label: "Leave Type"  },
   { key: "reason",      label: "Reason"  },
   { key: "dateRange", label: "Date Range"  },
   { key: "days",      label: "Days"        },
@@ -21,18 +23,10 @@ const MY_LEAVES_COLS = [
   { key: "status",    label: "Status"      },
 ];
 
-// Seed data — sales manager's own past leaves
-const MY_LEAVES_SEED = [
-  { id: "ML001", type: "Sick Leave",    from: "2026-04-10", to: "2026-04-11", days: "2", appliedOn: "2026-04-09", reason: "Fever and body ache",              status: "Accepted"    },
-  { id: "ML002", type: "Casual Leave",  from: "2026-04-22", to: "2026-04-22", days: "1", appliedOn: "2026-04-20", reason: "Personal errand",                  status: "Rejected"    },
-  { id: "ML003", type: "Earned Leave",  from: "2026-05-01", to: "2026-05-03", days: "3", appliedOn: "2026-04-28", reason: "Family trip planned in advance",    status: "Accepted"    },
-  { id: "ML004", type: "Casual Leave",  from: "2026-05-15", to: "2026-05-15", days: "1", appliedOn: "2026-05-13", reason: "Home maintenance work",             status: "Not Respond" },
-  { id: "ML005", type: "Sick Leave",    from: "2026-05-28", to: "2026-05-29", days: "2", appliedOn: "2026-05-27", reason: "Viral infection — doctor advised rest", status: "Pending" },
-].map((r) => ({ ...r, dateRange: `${r.from} to ${r.to}` }));
 const PENDING_COLS = [
   { key: "name",      label: "Employee" },
   { key: "role",      label: "Role" },
-  { key: "type",      label: "Leave Type" },
+  { key: "leaveType",      label: "Leave Type" },
   { key: "reason",    label: "Reason" },
   { key: "dateRange", label: "Date Range" },
   { key: "days",      label: "Days" },
@@ -43,7 +37,7 @@ const PENDING_COLS = [
 const HISTORY_COLS = [
   { key: "name",      label: "Employee" },
   { key: "role",      label: "Role" },
-  { key: "type",      label: "Leave Type" },
+  { key: "leaveType",      label: "Leave Type" },
   { key: "reason",    label: "Reason" },
   { key: "dateRange", label: "Date Range" },
   { key: "days",      label: "Days" },
@@ -52,20 +46,67 @@ const HISTORY_COLS = [
 ];
 
 export default function Leaves() {
-  const [pending, setPending] = useState(
-    pendingLeaveRows.map((r) => ({ ...r, dateRange: `${r.from} to ${r.to}` }))
-  );
-  const [history, setHistory] = useState(
-    leaveHistoryRows.map((r) => ({ ...r, dateRange: `${r.from} to ${r.to}` }))
-  );
+  const currentUser = useCurrentUser();
+  const [pending, setPending] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [myLeaves, setMyLeaves] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // My Leaves
-  const [myLeaves,     setMyLeaves]     = useState(MY_LEAVES_SEED);
   const [myLeaveView,  setMyLeaveView]  = useState(null);
-
-  // Separate selected state for each modal
   const [pendingSelected, setPendingSelected] = useState(null);
   const [historySelected, setHistorySelected] = useState(null);
+
+  const fetchLeaves = async () => {
+    setLoading(true);
+    try {
+      const [myRes, teamRes] = await Promise.all([
+        hrmService.getMyLeaves(),
+        hrmService.getTeamLeaves()
+      ]);
+
+      const formatRole = (str) => {
+        if (!str) return "";
+        const clean = str.replace(/^(SALES|FINANCE|MANAGEMENT)_/, '');
+        if (clean === 'TL') return "Team Leader";
+        return clean.toLowerCase().split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      };
+
+      const mapLeave = (l) => ({
+        ...l,
+        name: l.user?.name || "Unknown",
+        role: formatRole(l.user?.role),
+        dateRange: `${new Date(l.fromDate).toLocaleDateString()} to ${new Date(l.toDate).toLocaleDateString()}`,
+        appliedOn: new Date(l.createdAt).toLocaleDateString(),
+        actionOn: l.approvedAt ? new Date(l.approvedAt).toLocaleDateString() : "—",
+        status: l.status.charAt(0).toUpperCase() + l.status.slice(1).toLowerCase(),
+        raw: l
+      });
+
+      if (myRes.success) {
+        setMyLeaves(myRes.data.map(mapLeave));
+      }
+
+      if (teamRes.success) {
+        // Exclude self from team tables (robust check)
+        const currentId = String(currentUser?._id || currentUser?.id || "");
+        const allTeam = teamRes.data
+          .filter(l => String(l.user?._id || l.user?.id || "") !== currentId)
+          .map(mapLeave);
+
+        setPending(allTeam.filter(l => l.raw.status === 'PENDING'));
+        setHistory(allTeam.filter(l => l.raw.status !== 'PENDING'));
+      }
+    } catch (err) {
+      console.error("Failed to fetch leaves:", err);
+      toast.error("Failed to load leaves.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeaves();
+  }, []);
 
   // ── Apply Leave form state ──
   const LEAVE_TYPES = [
@@ -85,11 +126,12 @@ export default function Leaves() {
     dateTo: "",
   });
   const [applyError, setApplyError] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   const calcDays = (from, to) => {
-    if (!from || !to) return "";
+    if (!from || !to) return 0;
     const diff = (new Date(to) - new Date(from)) / (1000 * 60 * 60 * 24);
-    return diff < 0 ? "" : String(diff + 1);
+    return diff < 0 ? 0 : diff + 1;
   };
 
   const applyDays = calcDays(applyForm.dateFrom, applyForm.dateTo);
@@ -99,7 +141,7 @@ export default function Leaves() {
     if (applyError[field]) setApplyError((e) => ({ ...e, [field]: "" }));
   };
 
-  const handleApplySubmit = () => {
+  const handleApplySubmit = async () => {
     const errs = {};
     if (!applyForm.leaveType) errs.leaveType = "Please select a leave type.";
     if (!applyForm.reason.trim()) errs.reason = "Reason is required.";
@@ -109,50 +151,56 @@ export default function Leaves() {
       errs.dateTo = "End date must be on or after start date.";
     if (Object.keys(errs).length) { setApplyError(errs); return; }
 
-    // Add to pending list
-    const today = new Date().toISOString().split("T")[0];
-    const newId = `ML${Date.now()}`;
-    const newLeave = {
-      id: newId,
-      name: "You (Sales Manager)",
-      role: "Sales Manager",
-      teamLeader: "—",
-      type: applyForm.leaveType,
-      reason: applyForm.reason,
-      from: applyForm.dateFrom,
-      to: applyForm.dateTo,
-      days: applyDays,
-      dateRange: `${applyForm.dateFrom} to ${applyForm.dateTo}`,
-      appliedOn: today,
-      status: "Pending",
-    };
-    setPending((prev) => [newLeave, ...prev]);
+    setSubmitting(true);
+    try {
+      const res = await hrmService.applyLeave({
+        leaveType: applyForm.leaveType,
+        fromDate: applyForm.dateFrom,
+        toDate: applyForm.dateTo,
+        reason: applyForm.reason,
+        days: applyDays
+      });
 
-    // Also add to My Leaves
-    setMyLeaves((prev) => [newLeave, ...prev]);
-
-    // Reset form and close
-    setApplyForm({ leaveType: "", reason: "", dateFrom: "", dateTo: "" });
-    setApplyError({});
-    closeModal("apply-leave-modal");
+      if (res.success) {
+        toast.success("Leave applied successfully.");
+        fetchLeaves();
+        setApplyForm({ leaveType: "", reason: "", dateFrom: "", dateTo: "" });
+        setApplyError({});
+        closeModal("apply-leave-modal");
+      }
+    } catch (err) {
+      toast.error(err.message || "Failed to apply leave.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const changeStatus = (row, newStatus) => {
-    const today = new Date().toISOString().split("T")[0];
+  const handleUpdateStatus = async (row, newStatus) => {
+    if (!window.confirm(`Are you sure you want to ${newStatus.toLowerCase()} this leave request?`)) return;
+    try {
+      const res = await hrmService.updateLeaveStatus(row.id, newStatus.toUpperCase());
+      if (res.success) {
+        toast.success(`Leave ${newStatus.toLowerCase()}ed.`);
+        fetchLeaves();
+        closeModal("leave-pending-modal");
+      }
+    } catch (err) {
+      toast.error(err.message || "Action failed.");
+    }
+  };
 
-    // Remove from pending
-    setPending((prev) => prev.filter((r) => r.id !== row.id));
-
-    // Add/update in history
-    setHistory((prev) => {
-      const exists = prev.find((r) => r.id === row.id);
-      const updated = { ...row, status: newStatus, actionOn: today, dateRange: row.dateRange ?? `${row.from} to ${row.to}` };
-      if (exists) return prev.map((r) => r.id === row.id ? updated : r);
-      return [updated, ...prev];
-    });
-
-    // Keep pending modal in sync if open
-    setPendingSelected((s) => s && s.id === row.id ? { ...s, status: newStatus, actionOn: today } : s);
+  const handleDeleteLeave = async (row) => {
+    if (!window.confirm("Are you sure you want to cancel this leave application?")) return;
+    try {
+      const res = await hrmService.deleteLeave(row.id);
+      if (res.success) {
+        toast.success("Leave canceled.");
+        fetchLeaves();
+        closeModal("my-leave-view-modal");
+      }
+    } catch (err) {
+      toast.error(err.message || "Failed to cancel leave.");
+    }
   };
 
   // Pending table: View + Accept + Reject
@@ -162,7 +210,7 @@ export default function Leaves() {
       tooltip: "View Details",
       variant: "ghost",
       onClick: (row) => {
-        setPendingSelected(pending.find((r) => r.id === row.id) ?? row);
+        setPendingSelected(row);
         openModal("leave-pending-modal");
       },
     },
@@ -170,33 +218,39 @@ export default function Leaves() {
       icon: <BadgeCheck size={15} />,
       tooltip: "Accept",
       variant: "primary",
-      onClick: (row) => changeStatus(row, "Accepted"),
+      onClick: (row) => handleUpdateStatus(row, "Approved"),
     },
     {
       icon: <Ban size={15} />,
       tooltip: "Reject",
       variant: "danger",
-      onClick: (row) => changeStatus(row, "Rejected"),
+      onClick: (row) => handleUpdateStatus(row, "Rejected"),
     },
   ];
 
-  // History table: View + Delete only
+  // History table: View only
   const historyActions = [
     {
       icon: <Eye size={15} />,
       tooltip: "View Details",
       variant: "ghost",
       onClick: (row) => {
-        setHistorySelected(history.find((r) => r.id === row.id) ?? row);
+        setHistorySelected(row);
         openModal("leave-history-modal");
       },
-    },
-    {
-      icon: <Trash2 size={15} />,
-      tooltip: "Delete",
-      variant: "danger",
-      onClick: (row) => setHistory((prev) => prev.filter((r) => r.id !== row.id)),
-    },
+    }
+  ];
+
+  const totalApplied = myLeaves.length;
+  const approved = myLeaves.filter(l => l.raw.status === 'APPROVED').length;
+  const pendingCount = myLeaves.filter(l => l.raw.status === 'PENDING').length;
+  const rejected = myLeaves.filter(l => l.raw.status === 'REJECTED').length;
+
+  const kpis = [
+    { title: "Total Applied", value: String(totalApplied) },
+    { title: "Approved",      value: String(approved) },
+    { title: "Pending",       value: String(pendingCount) },
+    { title: "Rejected",      value: String(rejected) },
   ];
 
   return (
@@ -204,7 +258,7 @@ export default function Leaves() {
       {/* KPI cards */}
       <DashGrid cols={12} gap={4}>
         <Heading primaryText="HRM" secondaryText="Leaves" size={12} />
-        {kpiLeaves.map((k, i) => (
+        {kpis.map((k, i) => (
           <DashCard key={k.title} title={k.title} value={k.value}
             icon={KPI_ICONS[i]} accentColor={KPI_ACCENTS[i]} size={3} />
         ))}
@@ -223,6 +277,7 @@ export default function Leaves() {
         title="My Leaves"
         columns={MY_LEAVES_COLS}
         rows={myLeaves}
+        loading={loading}
         ellipse={4}
         actions={[
           {
@@ -230,7 +285,7 @@ export default function Leaves() {
             tooltip: "View Details",
             variant: "ghost",
             onClick: (row) => {
-              setMyLeaveView(myLeaves.find((r) => r.id === row.id) ?? row);
+              setMyLeaveView(row);
               openModal("my-leave-view-modal");
             },
           },
@@ -238,7 +293,8 @@ export default function Leaves() {
             icon: <Trash2 size={15} />,
             tooltip: "Cancel / Delete",
             variant: "danger",
-            onClick: (row) => setMyLeaves((prev) => prev.filter((r) => r.id !== row.id)),
+            disabled: (row) => row.raw.status !== 'PENDING',
+            onClick: handleDeleteLeave,
           },
         ]}
         size={12}
@@ -247,8 +303,8 @@ export default function Leaves() {
         exportable
         exportFileName="my-leaves"
         filters={[
-          { title: "Status",     type: "toggle", key: "status", options: ["Pending", "Accepted", "Rejected", "Not Respond"] },
-          { title: "Leave Type", type: "toggle", key: "type",   options: ["Sick Leave", "Casual Leave", "Earned Leave", "Maternity Leave", "Paternity Leave", "Bereavement Leave", "Unpaid Leave", "Other"] },
+          { title: "Status",     type: "toggle", key: "status", options: ["Pending", "Approved", "Rejected"] },
+          { title: "Leave Type", type: "toggle", key: "leaveType",   options: LEAVE_TYPES },
         ]}
       />
 
@@ -258,6 +314,7 @@ export default function Leaves() {
         userProfile="name"
         columns={PENDING_COLS}
         rows={pending}
+        loading={loading}
         actions={pendingActions}
         ellipse={3}
         size={12}
@@ -266,9 +323,8 @@ export default function Leaves() {
         exportable
         exportFileName="pending-leaves"
         filters={[
-          { title: "Leave Type", type: "toggle", key: "type",       options: ["Sick Leave", "Casual Leave", "Earned Leave"] },
-          { title: "Team Leader", type: "select", key: "teamLeader", options: [...new Set(pendingLeaveRows.map((r) => r.teamLeader))] },
-          { title: "Role",        type: "toggle", key: "role",       options: ["Executive", "Team Leader"] },
+          { title: "Leave Type", type: "toggle", key: "leaveType",       options: LEAVE_TYPES },
+          { title: "Role",        type: "toggle", key: "role",       options: [...new Set(pending.map(l => l.role))] },
         ]}
       />
 
@@ -278,44 +334,17 @@ export default function Leaves() {
         userProfile={"name"}
         columns={HISTORY_COLS}
         rows={history}
+        loading={loading}
         actions={historyActions}
-        bulkAction
-        bulkActions={[
-          {
-            title: "Delete Selected",
-            icon: <Trash2 size={14} />,
-            onClick: (selected) => {
-              const ids = new Set(selected.map((r) => r.id));
-              setHistory((prev) => prev.filter((r) => !ids.has(r.id)));
-            },
-          },
-          {
-            title: "Export Selected",
-            icon: <Download size={14} />,
-            onClick: (selected) => {
-              if (!selected.length) return;
-              const keys    = Object.keys(selected[0]);
-              const header  = keys.join(",");
-              const escape  = (v) => { const s = v == null ? "" : String(v); return s.includes(",") || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s; };
-              const csvRows = selected.map((r) => keys.map((k) => escape(r[k])).join(","));
-              const blob    = new Blob(["\uFEFF" + [header, ...csvRows].join("\n")], { type: "text/csv;charset=utf-8;" });
-              const url     = URL.createObjectURL(blob);
-              const a       = document.createElement("a");
-              a.href = url; a.download = "leave-history-selected.csv"; a.click();
-              URL.revokeObjectURL(url);
-            },
-          },
-        ]}
         ellipse={3}
         size={12}
         pageSize={10}
         exportable
         exportFileName="leave-history"
         filters={[
-          { title: "Status",      type: "toggle", key: "status",     options: ["Accepted", "Rejected", "Not Respond"] },
-          { title: "Leave Type",  type: "toggle", key: "type",       options: ["Sick Leave", "Casual Leave", "Earned Leave"] },
-          { title: "Team Leader", type: "select", key: "teamLeader", options: [...new Set(leaveHistoryRows.map((r) => r.teamLeader))] },
-          { title: "Role",        type: "toggle", key: "role",       options: ["Executive", "Team Leader"] },
+          { title: "Status",      type: "toggle", key: "status",     options: ["Approved", "Rejected"] },
+          { title: "Leave Type",  type: "toggle", key: "leaveType",       options: LEAVE_TYPES },
+          { title: "Role",        type: "toggle", key: "role",       options: [...new Set(history.map(l => l.role))] },
         ]}
       />
 
@@ -325,11 +354,11 @@ export default function Leaves() {
           <div className="flex flex-col gap-4">
             {/* Status banner */}
             <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border text-sm font-semibold ${
-              myLeaveView.status === "Accepted"
+              myLeaveView.raw.status === "APPROVED"
                 ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                : myLeaveView.status === "Rejected"
+                : myLeaveView.raw.status === "REJECTED"
                   ? "bg-rose-50 border-rose-200 text-rose-700"
-                  : myLeaveView.status === "Pending"
+                  : myLeaveView.raw.status === "PENDING"
                     ? "bg-amber-50 border-amber-200 text-amber-700"
                     : "bg-slate-50 border-slate-200 text-slate-600"
             }`}>
@@ -338,11 +367,11 @@ export default function Leaves() {
             </div>
 
             <ModalGrid title="Leave Info" cols={2}>
-              <ModalData label="Leave Type"  value={myLeaveView.type} />
+              <ModalData label="Leave Type"  value={myLeaveView.leaveType} />
               <ModalData label="Applied On"  value={myLeaveView.appliedOn} />
-              <ModalData label="From Date"   value={myLeaveView.from} />
-              <ModalData label="To Date"     value={myLeaveView.to} />
-              <ModalData label="Total Days"  value={`${myLeaveView.days} day${myLeaveView.days === "1" ? "" : "s"}`} />
+              <ModalData label="From Date"   value={new Date(myLeaveView.raw.fromDate).toLocaleDateString()} />
+              <ModalData label="To Date"     value={new Date(myLeaveView.raw.toDate).toLocaleDateString()} />
+              <ModalData label="Total Days"  value={`${myLeaveView.days} day${myLeaveView.days === 1 ? "" : "s"}`} />
               <ModalData label="Status"      value={myLeaveView.status} />
             </ModalGrid>
 
@@ -351,12 +380,9 @@ export default function Leaves() {
             </ModalGrid>
 
             <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
-              {myLeaveView.status === "Pending" && (
+              {myLeaveView.raw.status === "PENDING" && (
                 <button
-                  onClick={() => {
-                    setMyLeaves((prev) => prev.filter((r) => r.id !== myLeaveView.id));
-                    closeModal("my-leave-view-modal");
-                  }}
+                  onClick={() => handleDeleteLeave(myLeaveView)}
                   className="px-4 py-2.5 rounded-xl text-sm font-bold text-rose-600 border border-rose-200 hover:bg-rose-50 transition active:scale-95"
                 >
                   Cancel Application
@@ -426,7 +452,7 @@ export default function Leaves() {
                 id="apply-days"
                 type="text"
                 size={12}
-                value={applyDays ? `${applyDays} day${applyDays === "1" ? "" : "s"}` : ""}
+                value={applyDays ? `${applyDays} day${applyDays === 1 ? "" : "s"}` : ""}
                 placeholder="# Days"
                 disabled
               />
@@ -464,6 +490,7 @@ export default function Leaves() {
             <Button
               text="Submit Application"
               onClick={handleApplySubmit}
+              loading={submitting}
             />
           </div>
         </div>
@@ -475,15 +502,14 @@ export default function Leaves() {
           <div className="flex flex-col gap-4">
             <ModalProfile
               name={pendingSelected.name}
-              subtitle={`${pendingSelected.role} · ${pendingSelected.teamLeader}`}
+              subtitle={`${pendingSelected.role}`}
               meta={`Applied: ${pendingSelected.appliedOn}`}
             />
             <ModalGrid title="Leave Info" cols={2}>
-              <ModalData label="Leave Type"  value={pendingSelected.type} />
-              <ModalData label="From Date"   value={pendingSelected.from} />
-              <ModalData label="To Date"     value={pendingSelected.to} />
+              <ModalData label="Leave Type"  value={pendingSelected.leaveType} />
+              <ModalData label="From Date"   value={new Date(pendingSelected.raw.fromDate).toLocaleDateString()} />
+              <ModalData label="To Date"     value={new Date(pendingSelected.raw.toDate).toLocaleDateString()} />
               <ModalData label="Total Days"  value={pendingSelected.days} />
-              <ModalData label="Team Leader" value={pendingSelected.teamLeader} />
               <ModalData label="Role"        value={pendingSelected.role} />
             </ModalGrid>
             <ModalGrid title="Reason" cols={1}>
@@ -491,25 +517,19 @@ export default function Leaves() {
             </ModalGrid>
 
             {/* Accept / Reject buttons — only when still Pending */}
-            {pendingSelected.status === "Pending" && (
+            {pendingSelected.raw.status === "PENDING" && (
               <div className="flex gap-3 pt-2 border-t border-slate-100">
                 <Button
                   text="Accept"
                   variant="primary"
                   size={6}
-                  onClick={() => {
-                    changeStatus(pendingSelected, "Accepted");
-                    closeModal("leave-pending-modal");
-                  }}
+                  onClick={() => handleUpdateStatus(pendingSelected, "Approved")}
                 />
                 <Button
                   text="Reject"
                   variant="danger"
                   size={6}
-                  onClick={() => {
-                    changeStatus(pendingSelected, "Rejected");
-                    closeModal("leave-pending-modal");
-                  }}
+                  onClick={() => handleUpdateStatus(pendingSelected, "Rejected")}
                 />
               </div>
             )}
@@ -527,17 +547,16 @@ export default function Leaves() {
           <div className="flex flex-col gap-4">
             <ModalProfile
               name={historySelected.name}
-              subtitle={`${historySelected.role} · ${historySelected.teamLeader}`}
+              subtitle={`${historySelected.role}`}
               meta={`Applied: ${historySelected.appliedOn}`}
             />
             <ModalGrid title="Leave Info" cols={2}>
-              <ModalData label="Leave Type"          value={historySelected.type} />
-              <ModalData label="From Date"           value={historySelected.from} />
-              <ModalData label="To Date"             value={historySelected.to} />
+              <ModalData label="Leave Type"          value={historySelected.leaveType} />
+              <ModalData label="From Date"           value={new Date(historySelected.raw.fromDate).toLocaleDateString()} />
+              <ModalData label="To Date"             value={new Date(historySelected.raw.toDate).toLocaleDateString()} />
               <ModalData label="Total Days"          value={historySelected.days} />
               <ModalData label="Status"              value={historySelected.status} />
               <ModalData label="Accepted/Rejected On" value={historySelected.actionOn || "—"} />
-              <ModalData label="Team Leader"         value={historySelected.teamLeader} />
               <ModalData label="Role"                value={historySelected.role} />
             </ModalGrid>
             <ModalGrid title="Reason" cols={1}>

@@ -31,20 +31,37 @@ export const hrmService = {
 
   // GET /hrm/attendance
   async getAttendance() {
-    const response = await apiClient.get('/attendance/today');
+    const response = await apiClient.get('/attendance/today', { params: { _t: Date.now() } });
     return response.data;
   },
 
-  // GET /hrm/leaves
-  async getLeaves() {
-    // Assuming there's a leaves endpoint
-    const response = await apiClient.get('/leaves');
+  // GET /leaves/my
+  async getMyLeaves() {
+    const response = await apiClient.get('/leaves/my');
     return response.data;
   },
 
-  // POST /hrm/leaves
+  // GET /leaves/team
+  async getTeamLeaves() {
+    const response = await apiClient.get('/leaves/team', { params: { _t: Date.now() } });
+    return response.data;
+  },
+
+  // POST /leaves
   async applyLeave(payload) {
     const response = await apiClient.post('/leaves', payload);
+    return response.data;
+  },
+
+  // PATCH /leaves/:id/status
+  async updateLeaveStatus(id, status, rejectionNote = "") {
+    const response = await apiClient.patch(`/leaves/${id}/status`, { status, rejectionNote });
+    return response.data;
+  },
+
+  // DELETE /leaves/:id
+  async deleteLeave(id) {
+    const response = await apiClient.delete(`/leaves/${id}`);
     return response.data;
   },
 
@@ -68,13 +85,19 @@ export const hrmService = {
 
   // GET /attendance/today
   async getTodayStatus() {
-    const response = await apiClient.get('/attendance/today');
+    const response = await apiClient.get('/attendance/today', { params: { _t: Date.now() } });
+    return response.data;
+  },
+
+  // GET /attendance/my
+  async getMyAttendanceHistory(params = {}) {
+    const response = await apiClient.get('/attendance/my', { params: { ...params, _t: Date.now() } });
     return response.data;
   },
 
   // GET /attendance/team
   async getTeamAttendance(params = {}) {
-    const response = await apiClient.get('/attendance/team', { params });
+    const response = await apiClient.get('/attendance/team', { params: { ...params, _t: Date.now() } });
     return response.data;
   },
 };

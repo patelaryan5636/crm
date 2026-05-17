@@ -20,7 +20,8 @@ const apiClient = axios.create({
 // ────────────────────────────────────────────────────────────
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    // Check sessionStorage first (Admin/User), then localStorage (SuperAdmin)
+    const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -42,10 +43,10 @@ apiClient.interceptors.response.use(
 
     if (response?.status === 401 && !skipAuthRedirect) {
       // Unauthorized — clear storage and redirect to login
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('admin');
-      localStorage.removeItem('user');
+      sessionStorage.removeItem('accessToken');
+      sessionStorage.removeItem('refreshToken');
+      sessionStorage.removeItem('admin');
+      sessionStorage.removeItem('user');
       window.location.href = '/login';
     }
 

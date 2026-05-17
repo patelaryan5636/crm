@@ -90,6 +90,16 @@ const leaveColumns = [
   { key: "statusDisplay", label: "STATUS", width: "15%" },
 ];
 
+const approvalColumns = [
+  { key: "name", label: "NAME", width: "15%" },
+  { key: "role", label: "ROLE", width: "15%" },
+  { key: "leaveType", label: "LEAVE TYPE", width: "15%" },
+  { key: "dates", label: "FROM - TO DATES", width: "20%" },
+  { key: "days", label: "DAYS", width: "10%" },
+  { key: "actionedByName", label: "ACTIONED BY", width: "15%" },
+  { key: "statusDisplay", label: "STATUS", width: "10%" },
+];
+
 export default function HRM() {
   const currentUser = useCurrentUser();
   const [activeTab, setActiveTab] = useState('Overview');
@@ -114,12 +124,20 @@ export default function HRM() {
           const from = l.fromDate ? new Date(l.fromDate).toLocaleDateString() : '—';
           const to = l.toDate ? new Date(l.toDate).toLocaleDateString() : '—';
           const status = l.status || 'PENDING';
-          
+
+          const formatRole = (str) => {
+            if (!str) return "—";
+            const clean = str.replace(/^(SALES|FINANCE|MANAGEMENT)_/, '');
+            if (clean === 'TL') return "Team Leader";
+            return clean.toLowerCase().split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+          };
           return {
             ...l,
             id: l._id,
             name: l.user?.name || "Unknown",
+            role: formatRole(l.user?.role),
             dates: `${from} to ${to}`,
+            actionedByName: l.actionedByName || "—",
             statusDisplay: (
               <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
                 status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : 
@@ -387,11 +405,11 @@ export default function HRM() {
       {activeTab === 'Approvals' && (
         <div className="flex-col gap-3 w-full">
            <div className="flex justify-end mb-4">
-             <button onClick={() => handleExportCSV(leaveColumns, allLeaves.filter(l => l.status !== 'PENDING'), 'leave_approvals_export.csv')} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#355872] rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm w-full sm:w-auto justify-center">
+             <button onClick={() => handleExportCSV(approvalColumns, allLeaves.filter(l => l.status !== 'PENDING'), 'leave_approvals_export.csv')} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#355872] rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm w-full sm:w-auto justify-center">
                  <Download size={16} /> Export CSV
               </button>
           </div>
-          <DataTable columns={leaveColumns} rows={allLeaves.filter(l => l.status !== 'PENDING')} loading={loading} actions={[{
+          <DataTable columns={approvalColumns} rows={allLeaves.filter(l => l.status !== 'PENDING')} loading={loading} actions={[{
             icon: <Eye size={16} />,
             tooltip: "View Details",
             onClick: (row) => {
@@ -448,13 +466,16 @@ export default function HRM() {
             </div>
             <ModalGrid title="Employee Info" cols={2}>
               <ModalData label="Name" value={selectedLeave.name} />
-              <ModalData label="Role" value={selectedLeave.user?.role || '—'} />
+              <ModalData label="Role" value={selectedLeave.role || '—'} />
               <ModalData label="Applied On" value={new Date(selectedLeave.createdAt).toLocaleDateString()} />
             </ModalGrid>
             <ModalGrid title="Leave Details" cols={2}>
               <ModalData label="Type" value={selectedLeave.leaveType} />
               <ModalData label="Dates" value={selectedLeave.dates} />
               <ModalData label="Total Days" value={selectedLeave.days} />
+              {selectedLeave.status !== 'PENDING' && (
+                <ModalData label="Actioned By" value={selectedLeave.actionedByName || '—'} />
+              )}
             </ModalGrid>
             <ModalGrid title="Reason" cols={1}>
               <ModalData label="Description" value={selectedLeave.reason} />

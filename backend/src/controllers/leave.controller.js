@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { Leave, User, Team } = require('../models/index');
+const { Leave, User, Team, Admin } = require('../models/index');
 const catchAsync = require('../utils/catchAsync');
 const ApiResponse = require('../utils/apiResponse');
 const AppError = require('../utils/appError');
@@ -98,9 +98,44 @@ exports.getTeamLeaves = catchAsync(async (req, res, next) => {
     }
   })
   .populate('user', 'name role')
-  .sort({ createdAt: -1 });
+  .sort({ createdAt: -1 })
+  .lean();
 
-  res.status(200).json(new ApiResponse(200, leaves, 'Team leaves fetched.'));
+  // Fetch unique non-null approvedBy IDs as strings
+  const approverIds = [...new Set(leaves.map(l => l.approvedBy).filter(Boolean).map(id => String(id)))];
+
+  // Bulk query both User and Admin collections
+  const [users, admins] = await Promise.all([
+    User.find({ _id: { $in: approverIds } }).select('name').lean(),
+    Admin.find({ _id: { $in: approverIds } }).select('name').lean()
+  ]);
+
+  // Create lookup maps
+  const userMap = new Map(users.map(u => [String(u._id), u.name]));
+  const adminMap = new Map(admins.map(a => [String(a._id), a.name]));
+
+  const processedLeaves = leaves.map((l) => {
+    let actionedByName = '—';
+    const s = (l.status || '').toUpperCase().trim();
+    
+    if (s !== 'PENDING' && s !== '') {
+      if (l.approvedBy) {
+        const approverId = String(l.approvedBy);
+        if (adminMap.has(approverId)) {
+          actionedByName = adminMap.get(approverId);
+        } else if (userMap.has(approverId)) {
+          actionedByName = userMap.get(approverId);
+        } else {
+          actionedByName = 'Admin';
+        }
+      } else {
+        actionedByName = 'Admin';
+      }
+    }
+    return { ...l, actionedByName };
+  });
+
+  res.status(200).json(new ApiResponse(200, processedLeaves, 'Team leaves fetched.'));
 });
 
 /**

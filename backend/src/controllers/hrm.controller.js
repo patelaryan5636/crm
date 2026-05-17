@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { Attendance, User, Team } = require('../models/index');
+const { Attendance, User, Team, Leave } = require('../models/index');
 const catchAsync = require('../utils/catchAsync');
 const ApiResponse = require('../utils/apiResponse');
 const AppError = require('../utils/appError');
@@ -14,13 +14,41 @@ const getTodayDate = () => {
 };
 
 /**
+ * Helper: Parse YYYY-MM-DD to local midnight
+ */
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return null;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
+/**
+ * Helper: Format date to local YYYY-MM-DD
+ */
+const toLocalYMD = (d) => {
+  if (!d) return null;
+  const dt = new Date(d);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+};
+
+const getEffectiveAdminId = (req) => {
+  const admin = req.user?.admin || req.admin;
+  if (!admin) return null;
+  if (typeof admin === 'string') return admin;
+  if (typeof admin === 'object') {
+    return admin._id || admin.id || admin.toString();
+  }
+  return String(admin);
+};
+
+/**
  * @desc    Clock In
  * @route   POST /api/attendance/clock-in
  * @access  Private (User)
  */
 exports.clockIn = catchAsync(async (req, res, next) => {
   const today = getTodayDate();
-  
+
   // Check if already clocked in for today
   let attendance = await Attendance.findOne({ user: req.user._id, date: today });
 
@@ -168,8 +196,8 @@ exports.toggleBreak = catchAsync(async (req, res, next) => {
 
   res.status(200).json(
     new ApiResponse(
-      200, 
-      attendance, 
+      200,
+      attendance,
       `Break ${action === 'pause' ? 'started' : 'ended'} successfully.`
     )
   );
@@ -182,25 +210,15 @@ exports.toggleBreak = catchAsync(async (req, res, next) => {
  */
 exports.getTodayStatus = catchAsync(async (req, res) => {
   const today = getTodayDate();
-  const attendance = await Attendance.findOne({ 
-    user: req.user._id, 
-    date: today 
+  const attendance = await Attendance.findOne({
+    user: req.user._id,
+    date: today
   });
 
   res.status(200).json(
     new ApiResponse(200, attendance || null, 'Today\'s status fetched.')
   );
 });
-
-const getEffectiveAdminId = (req) => {
-  const admin = req.user?.admin || req.admin;
-  if (!admin) return null;
-  if (typeof admin === 'string') return admin;
-  if (typeof admin === 'object') {
-    return admin._id || admin.id || admin.toString();
-  }
-  return String(admin);
-};
 
 /**
  * @desc    Get Team Attendance (For Managers/TLs)
@@ -210,8 +228,10 @@ const getEffectiveAdminId = (req) => {
 exports.getTeamAttendance = catchAsync(async (req, res, next) => {
   const adminId = getEffectiveAdminId(req);
   const userId = req.user?._id || req.admin?._id;
-  const role = req.user?.role || req.userType; 
-  const today = getTodayDate();
+  const role = req.user?.role || req.userType;
+  const userDept = req.user?.department;
+  
+  const { startDate, endDate, teamLeader, search } = req.query;
 
   if (!adminId) {
     return next(new AppError('Organization context not found.', 401));
@@ -223,89 +243,119 @@ exports.getTeamAttendance = catchAsync(async (req, res, next) => {
   let targetUserIds = [];
 
   if (role === 'ADMIN') {
-    // Admins see everyone in their organization
     const users = await User.find({ admin: adminIdObj, isDeleted: false, isActive: true }).select('_id');
     targetUserIds = users.map(u => u._id);
-  } else if (role === 'SALES_MANAGER') {
-    // Managers see all TLs and Executives
+  } else if (role.endsWith('_MANAGER')) {
+    // Managers see everyone in their department
+    if (!userDept) {
+      return next(new AppError('Department context not found for manager.', 400));
+    }
     const users = await User.find({
       admin: adminIdObj,
-      role: { $in: ['SALES_TL', 'SALES_EXECUTIVE'] },
+      department: userDept,
       isDeleted: false,
-      isActive: true
+      isActive: true,
+      _id: { $ne: userIdObj } // Exclude self
     }).select('_id');
     targetUserIds = users.map(u => u._id);
-  } else if (role === 'SALES_TL') {
+  } else if (role.endsWith('_TL')) {
     // TLs see members of ALL teams they lead OR users who report to them directly
     const teams = await Team.find({ admin: adminIdObj, leader: userIdObj, isDeleted: false, isActive: true });
     const teamMemberIds = teams.flatMap(t => t.members.map(m => m.user)).filter(id => id && String(id) !== String(userId));
-    
-    // Also check for users where manager = TL (direct reports)
     const directReports = await User.find({ admin: adminIdObj, manager: userIdObj, isDeleted: false, isActive: true }).select('_id');
-    const reportIds = directReports.map(u => u._id);
-
-    // Merge and deduplicate
-    targetUserIds = [...new Set([...teamMemberIds.map(String), ...reportIds.map(String)])];
+    targetUserIds = [...new Set([...teamMemberIds.map(String), ...directReports.map(String)])];
   } else {
     return next(new AppError('You are not authorized to view team attendance.', 403));
   }
 
-  // If no targets, return empty early
   if (targetUserIds.length === 0) {
     return res.status(200).json(new ApiResponse(200, [], 'No team members found.'));
   }
 
-  const targetIdsObj = targetUserIds.map(id => new mongoose.Types.ObjectId(id));
+  // Build User filter
+  const userQuery = { _id: { $in: targetUserIds } };
+  if (search) {
+    userQuery.name = { $regex: search, $options: 'i' };
+  }
 
-  // Fetch users details
-  const users = await User.find({ _id: { $in: targetIdsObj } })
+  const users = await User.find(userQuery)
     .select('_id name role email phone manager')
     .populate('manager', 'name');
 
-  // Fetch attendance for these users for today
+  // If teamLeader filter is applied
+  let filteredUsers = users;
+  if (teamLeader && teamLeader !== 'All') {
+    const tls = Array.isArray(teamLeader) ? teamLeader : [teamLeader];
+    filteredUsers = users.filter(u => tls.includes(u.manager?.name || "Self"));
+  }
+
+  const finalUserIds = filteredUsers.map(u => u._id);
+  
+  // Date range handling (Local time)
+  const start = parseLocalDate(startDate) || getTodayDate();
+  const end = parseLocalDate(endDate) || new Date(start);
+  end.setHours(23, 59, 59, 999);
+
+  // Fetch Attendance
   const attendanceRecords = await Attendance.find({
     admin: adminIdObj,
-    user: { $in: targetIdsObj },
-    date: today
+    user: { $in: finalUserIds },
+    date: { $gte: start, $lte: end }
   }).lean();
 
-  // Merge data
-  const result = users.map(u => {
-    const attendance = attendanceRecords.find(a => String(a.user) === String(u._id));
-    
-    // Calculate current session duration if active
-    let hoursWorked = attendance?.hoursWorked || 0;
-    if (attendance && attendance.clockIn && !attendance.clockOut) {
-      const now = new Date();
-      const start = new Date(attendance.clockIn);
+  // Fetch Leaves
+  const leaves = await Leave.find({
+    admin: adminIdObj,
+    user: { $in: finalUserIds },
+    status: 'APPROVED',
+    $or: [
+      { fromDate: { $lte: end }, toDate: { $gte: start } }
+    ]
+  }).lean();
+
+  const results = [];
+  
+  // Loop through each user and each date in range
+  const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) || 1;
+  
+  for (const u of filteredUsers) {
+    for (let i = 0; i < daysDiff; i++) {
+      const currentDate = new Date(start);
+      currentDate.setDate(start.getDate() + i);
       
-      // Subtract breaks
-      let breakMs = 0;
-      attendance.breaks?.forEach(b => {
-        if (b.startedAt && b.endedAt) {
-          breakMs += (new Date(b.endedAt) - new Date(b.startedAt));
-        } else if (b.startedAt && !b.endedAt) {
-          breakMs += (now - new Date(b.startedAt));
-        }
+      const currentYMD = toLocalYMD(currentDate);
+
+      const att = attendanceRecords.find(a => {
+        return String(a.user) === String(u._id) && toLocalYMD(a.date) === currentYMD;
       });
-      
-      const netMs = Math.max(0, now - start - breakMs);
-      hoursWorked = Number((netMs / 3600000).toFixed(2));
+
+      const leave = leaves.find(l => {
+        const leaveStart = toLocalYMD(l.fromDate);
+        const leaveEnd = toLocalYMD(l.toDate);
+        return String(l.user) === String(u._id) && 
+               currentYMD >= leaveStart && 
+               currentYMD <= leaveEnd;
+      });
+
+      let calcStatus = "Absent";
+      if (att) {
+        if (att.clockIn && !att.clockOut) calcStatus = "Active"; 
+        else if (att.clockIn && att.clockOut) calcStatus = "Present";
+      } else if (leave) {
+        calcStatus = "Leave";
+      }
+
+      results.push({
+        id: u._id,
+        name: u.name,
+        role: u.role,
+        teamLeader: u.manager?.name || "Self",
+        date: currentDate.toISOString(),
+        attendance: att || null,
+        status: calcStatus
+      });
     }
+  }
 
-    return {
-      id: u._id,
-      name: u.name,
-      role: u.role,
-      email: u.email,
-      phone: u.phone,
-      teamLeader: u.manager?.name || "Self",
-      attendance: attendance ? {
-        ...attendance,
-        hoursWorked // Use our live calculated value
-      } : null
-    };
-  });
-
-  res.status(200).json(new ApiResponse(200, result, 'Team attendance fetched successfully.'));
+  res.status(200).json(new ApiResponse(200, results, 'Team attendance fetched successfully.'));
 });

@@ -49,11 +49,11 @@ export const registerAdmin = async (registrationData) => {
   try {
     const response = await apiClient.post('/auth/register', registrationData);
     
-    // Store tokens in localStorage
+    // Store tokens in sessionStorage
     if (response.data.data?.accessToken) {
-      localStorage.setItem('accessToken', response.data.data.accessToken);
-      localStorage.setItem('refreshToken', response.data.data.refreshToken);
-      localStorage.setItem('admin', JSON.stringify(response.data.data.admin));
+      sessionStorage.setItem('accessToken', response.data.data.accessToken);
+      sessionStorage.setItem('refreshToken', response.data.data.refreshToken);
+      sessionStorage.setItem('admin', JSON.stringify(response.data.data.admin));
     }
     
     return response.data;
@@ -92,9 +92,9 @@ export const loginAdmin = async (payload) => {
     });
 
     if (response.data.data?.accessToken) {
-      localStorage.setItem('accessToken', response.data.data.accessToken);
-      localStorage.setItem('refreshToken', response.data.data.refreshToken);
-      localStorage.setItem('admin', JSON.stringify(response.data.data.admin));
+      sessionStorage.setItem('accessToken', response.data.data.accessToken);
+      sessionStorage.setItem('refreshToken', response.data.data.refreshToken);
+      sessionStorage.setItem('admin', JSON.stringify(response.data.data.admin));
     }
 
     return response.data;
@@ -115,9 +115,9 @@ export const loginDepartment = async (payload) => {
     });
 
     if (response.data.data?.accessToken) {
-      localStorage.setItem('accessToken', response.data.data.accessToken);
-      localStorage.setItem('refreshToken', response.data.data.refreshToken);
-      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      sessionStorage.setItem('accessToken', response.data.data.accessToken);
+      sessionStorage.setItem('refreshToken', response.data.data.refreshToken);
+      sessionStorage.setItem('user', JSON.stringify(response.data.data.user));
     }
 
     return response.data;
@@ -153,8 +153,12 @@ export const loginSuperAdmin = async (payload) => {
  * Logout — Clear tokens
  */
 export const logout = () => {
+  sessionStorage.removeItem('accessToken');
+  sessionStorage.removeItem('refreshToken');
+  sessionStorage.removeItem('admin');
+  sessionStorage.removeItem('user');
+  
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
-  localStorage.removeItem('admin');
-  localStorage.removeItem('user');
+  localStorage.removeItem('superAdmin');
 };

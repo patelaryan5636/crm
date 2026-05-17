@@ -10,7 +10,9 @@ import { useMemo } from "react";
 export function useCurrentUser() {
   return useMemo(() => {
     try {
-      const raw = localStorage.getItem("user") || localStorage.getItem("admin");
+      const raw = sessionStorage.getItem("user") || 
+                  sessionStorage.getItem("admin") || 
+                  localStorage.getItem("superAdmin");
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;

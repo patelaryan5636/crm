@@ -9,7 +9,7 @@ import {
 import DatePicker from "../../../../components/shared/DatePicker";
 import {
   Calendar, CheckCircle, Clock, XCircle,
-  Eye, BadgeCheck, Ban, Trash2, AlertCircle,
+  Eye, Trash2, AlertCircle,
 } from "lucide-react";
 import {
   kpiLeaves, myLeavesSeed, teamLeaveRequests, LEAVE_TYPES,
@@ -96,12 +96,6 @@ export default function Leaves() {
     setForm(EMPTY);
     setErrors({});
     closeModal("mtl-hrm-leave-apply");
-  };
-
-  const setMemberStatus = (row, newStatus) => {
-    setTeamReqs((prev) =>
-      prev.map((r) => r.id === row.id ? { ...r, status: newStatus, actionOn: today() } : r)
-    );
   };
 
   return (
@@ -225,20 +219,6 @@ export default function Leaves() {
                 openModal("mtl-hrm-pending-view");
               },
             },
-            {
-              icon: <BadgeCheck size={15} />,
-              tooltip: "Approve",
-              variant: "primary",
-              show: (row) => row.status === "Pending",
-              onClick: (row) => setMemberStatus(row, "Approved"),
-            },
-            {
-              icon: <Ban size={15} />,
-              tooltip: "Reject",
-              variant: "danger",
-              show: (row) => row.status === "Pending",
-              onClick: (row) => setMemberStatus(row, "Rejected"),
-            },
           ]}
         />
       </div>
@@ -354,14 +334,6 @@ export default function Leaves() {
             <ModalGrid title="Reason" cols={1}>
               <ModalData label="Full Reason" value={pendingView.reason} />
             </ModalGrid>
-            {pendingView.status === "Pending" && (
-              <div className="flex gap-3 pt-2 border-t border-slate-100">
-                <Button text="Approve" variant="primary" size={6}
-                  onClick={() => { setMemberStatus(pendingView, "Approved"); closeModal("mtl-hrm-pending-view"); }} />
-                <Button text="Reject" variant="danger" size={6}
-                  onClick={() => { setMemberStatus(pendingView, "Rejected"); closeModal("mtl-hrm-pending-view"); }} />
-              </div>
-            )}
             <div className="flex justify-end">
               <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("mtl-hrm-pending-view")} />
             </div>

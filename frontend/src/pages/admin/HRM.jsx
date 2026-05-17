@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Users, UserCheck, UserX, Calendar, Download, Check, X, Eye } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, UserCheck, UserX, Calendar, Download, BadgeCheck, Ban, Eye } from 'lucide-react';
 import {
   Heading,
   P,
@@ -13,10 +13,14 @@ import {
   openModal,
   closeModal,
   ModalGrid,
-  ModalData
+  ModalData,
+  Button
 } from '../../components/shared/Common_Components';
+import { hrmService } from '../../services/hrmService';
+import { toast } from 'react-hot-toast';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 
-// -- Dummy Data for Charts & Overview --
+// -- Dummy Data for Charts & Overview (Static) --
 const attendanceTrendData = [
   { name: 'Mon', present: 120, absent: 5, leave: 10 },
   { name: 'Tue', present: 125, absent: 2, leave: 8 },
@@ -41,15 +45,8 @@ const employeeCompositionData = [
   { name: 'Support', value: 25 },
 ];
 
-const leaveStatusData = [
-  { name: 'Approved', value: 45 },
-  { name: 'Pending', value: 15 },
-  { name: 'Rejected', value: 5 },
-];
+// -- Columns for Tables --
 
-// -- Dummy Data for Tables --
-
-// Employees
 const employeesColumns = [
   { key: "name", label: "EMPLOYEE NAME", width: "20%" },
   { key: "department", label: "DEPARTMENT", width: "16%" },
@@ -58,6 +55,7 @@ const employeesColumns = [
   { key: "workingDays", label: "WORKING DAYS", width: "16%" },
   { key: "empStatus", label: "CURRENT STATUS", width: "16%" },
 ];
+
 const employeesRows = [
   { name: "Alice Smith", department: "Sales", date: "2024-01-15", attendance: "98%", totalLeaves: "2", workingDays: "22", status: "Active" },
   { name: "Bob Johnson", department: "Engineering", date: "2023-11-01", attendance: "95%", totalLeaves: "5", workingDays: "20", status: "Active" },
@@ -66,7 +64,6 @@ const employeesRows = [
   { name: "Emma Wilson", department: "Marketing", date: "2023-08-05", attendance: "100%", totalLeaves: "0", workingDays: "22", status: "Active" },
 ];
 
-// Attendance
 const attendanceColumns = [
   { key: "name", label: "NAME", width: "20%" },
   { key: "department", label: "DEPARTMENT", width: "15%" },
@@ -76,6 +73,7 @@ const attendanceColumns = [
   { key: "totalHours", label: "TOTAL HOURS", width: "10%" },
   { key: "attStatus", label: "STATUS", width: "10%" },
 ];
+
 const attendanceRows = [
   { name: "Alice Smith", department: "Sales", date: "2024-11-01", clockIn: "09:00 AM", clockOut: "05:00 PM", totalHours: "8h", status: "Present" },
   { name: "Bob Johnson", department: "Engineering", date: "2024-11-01", clockIn: "09:15 AM", clockOut: "05:30 PM", totalHours: "8h 15m", status: "Late" },
@@ -84,68 +82,162 @@ const attendanceRows = [
   { name: "Emma Wilson", department: "Marketing", date: "2024-11-02", clockIn: "-", clockOut: "-", totalHours: "0h", status: "On Leave" },
 ];
 
-// Leave Requests
 const leaveColumns = [
   { key: "name", label: "NAME", width: "20%" },
   { key: "leaveType", label: "LEAVE TYPE", width: "20%" },
   { key: "dates", label: "FROM - TO DATES", width: "30%" },
   { key: "days", label: "DAYS", width: "15%" },
-  { key: "status", label: "STATUS", width: "15%" },
-];
-const leaveRows = [
-  { name: "Bob Johnson", leaveType: "Sick Leave", dates: "2024-11-05 to 2024-11-06", days: "2", status: "Approved" },
-  { name: "Charlie Brown", leaveType: "Vacation", dates: "2024-11-10 to 2024-11-15", days: "6", status: "Pending" },
-  { name: "Emma Wilson", leaveType: "Personal", dates: "2024-11-20 to 2024-11-20", days: "1", status: "Rejected" },
-  { name: "Frank White", leaveType: "Sick Leave", dates: "2024-11-08 to 2024-11-09", days: "2", status: "Approved" },
-  { name: "Grace Lee", leaveType: "Maternity", dates: "2024-12-01 to 2025-03-01", days: "90", status: "Approved" },
-];
-
-// Approvals
-const approvalsColumns = [
-  { key: "name", label: "NAME", width: "20%" },
-  { key: "leaveDates", label: "LEAVE DATES", width: "25%" },
-  { key: "reason", label: "REASON", width: "35%" },
-];
-const approvalsRows = [
-  { id: 1, name: "Charlie Brown", leaveDates: "2024-11-10 to 2024-11-15", reason: "Family Vacation", status: "Pending" },
-  { id: 2, name: "David Clark", leaveDates: "2024-11-25 to 2024-11-26", reason: "Moving House", status: "Pending" },
-  { id: 3, name: "Henry Ford", leaveDates: "2024-12-20 to 2024-12-27", reason: "Holiday Trip", status: "Pending" },
-  { id: 4, name: "Ivy Chen", leaveDates: "2024-11-18 to 2024-11-19", reason: "Family Emergency", status: "Pending" },
-  { id: 5, name: "Alice Smith", leaveDates: "2024-12-24 to 2025-01-02", reason: "Year-end Vacation", status: "Pending" },
+  { key: "statusDisplay", label: "STATUS", width: "15%" },
 ];
 
 export default function HRM() {
+  const currentUser = useCurrentUser();
   const [activeTab, setActiveTab] = useState('Overview');
   const tabs = ['Overview', 'Employees', 'Attendance', 'Leave Requests', 'Approvals'];
 
-  // Modal states
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [allLeaves, setAllLeaves] = useState([]);
+  const [selectedLeave, setSelectedLeave] = useState(null);
   const [selectedApproval, setSelectedApproval] = useState(null);
-  const [approvalsData, setApprovalsData] = useState(approvalsRows);
 
-  // Handle Approvals actions
-  const handleRejectApproval = (id) => {
-    setApprovalsData(prev => prev.map(row => row.id === id ? { ...row, status: 'Rejected' } : row));
+  const fetchLeaves = async () => {
+    setLoading(true);
+    try {
+      const res = await hrmService.getTeamLeaves();
+      if (res.success) {
+        // Exclude current user from the list (robust check for _id or id)
+        const currentId = String(currentUser?._id || currentUser?.id || "");
+        const filtered = res.data.filter(l => String(l.user?._id || l.user?.id || "") !== currentId);
+        
+        const mapped = filtered.map(l => {
+          const from = l.fromDate ? new Date(l.fromDate).toLocaleDateString() : '—';
+          const to = l.toDate ? new Date(l.toDate).toLocaleDateString() : '—';
+          const status = l.status || 'PENDING';
+          
+          return {
+            ...l,
+            id: l._id,
+            name: l.user?.name || "Unknown",
+            dates: `${from} to ${to}`,
+            statusDisplay: (
+              <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : 
+                status === 'REJECTED' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+              }`}>
+                {status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()}
+              </span>
+            )
+          };
+        });
+        setAllLeaves(mapped);
+      }
+    } catch (err) {
+      console.error("Failed to fetch leaves:", err);
+      toast.error("Failed to load leave requests.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const approvalActions = [
+  useEffect(() => {
+    fetchLeaves();
+  }, []);
+
+  const leaveStats = [
+    { name: 'Approved', value: allLeaves.filter(l => l.status === 'APPROVED').length },
+    { name: 'Pending', value: allLeaves.filter(l => l.status === 'PENDING').length },
+    { name: 'Rejected', value: allLeaves.filter(l => l.status === 'REJECTED').length },
+  ];
+
+  const onLeaveTodayCount = allLeaves.filter(l => {
+    if (l.status !== 'APPROVED') return false;
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const start = new Date(l.fromDate);
+    start.setHours(0,0,0,0);
+    const end = new Date(l.toDate);
+    end.setHours(23,59,59,999);
+    return today >= start && today <= end;
+  }).length;
+
+  const handleUpdateStatus = async (id, status) => {
+    if (!id) {
+      toast.error("Invalid leave record ID.");
+      return;
+    }
+    
+    setActionLoading(true);
+    const startTime = Date.now();
+
+    try {
+      const res = await hrmService.updateLeaveStatus(id, status);
+      
+      // Ensure spinner stays for at least 800ms for visual polish
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 800) await new Promise(r => setTimeout(r, 800 - elapsed));
+
+      if (res.success) {
+        toast.success(`Leave ${status.toLowerCase()} successfully.`);
+        await fetchLeaves(); 
+        closeModal("approval-modal");
+      } else {
+        toast.error(res.message || `Failed to ${status.toLowerCase()} leave.`);
+      }
+    } catch (err) {
+      console.error("[HRM] Approval Action Error:", err);
+      
+      // Artificial delay for fast-failing errors (like 403)
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 800) await new Promise(r => setTimeout(r, 800 - elapsed));
+
+      // Extract the most descriptive error message
+      const msg = err.data?.message || err.message || "An error occurred.";
+      
+      // FALLBACK ALERT to ensure user sees the 403 restriction message
+      if (err.statusCode === 403) {
+        alert(`ACCESS DENIED: ${msg}`);
+      }
+      
+      toast.error(msg, { duration: 4000 });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const leaveActions = [
     {
-      label: "Approve",
-      icon: <Check size={16} />,
+      icon: <Eye size={16} />,
+      tooltip: "View Details",
+      onClick: (row) => {
+        setSelectedLeave(row);
+        openModal("view-leave-modal");
+      },
+      variant: "ghost"
+    },
+    {
+      icon: <BadgeCheck size={16} />,
+      tooltip: "Approve",
       onClick: (row) => {
         setSelectedApproval(row);
         openModal("approval-modal");
       },
-      variant: "primary"
+      variant: "primary",
+      disabled: (row) => row.status !== 'PENDING'
     },
     {
-      label: "Reject",
-      icon: <X size={16} />,
-      onClick: (row) => handleRejectApproval(row.id),
-      variant: "danger"
+      icon: <Ban size={16} />,
+      tooltip: "Reject",
+      onClick: (row) => {
+        if(window.confirm("Are you sure you want to reject this leave request?")) {
+           handleUpdateStatus(row.id, 'REJECTED');
+        }
+      },
+      variant: "danger",
+      disabled: (row) => row.status !== 'PENDING'
     }
   ];
 
-  // Helper: Export CSV (used by Attendance & Leave)
   const handleExportCSV = (columns, rows, filename) => {
     if (rows.length === 0) return;
     const headers = columns.map(col => col.label).join(',');
@@ -165,10 +257,7 @@ export default function HRM() {
   const styledEmployeesRows = employeesRows.map(row => ({
     ...row,
     empStatus: (
-      <span 
-        title={row.status === 'Active' ? 'Employee is active' : 'Employee is inactive'} 
-        className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${row.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}
-      >
+      <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${row.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
         {row.status}
       </span>
     )
@@ -196,15 +285,12 @@ export default function HRM() {
 
   return (
     <div className="space-y-6">
-      
-      {/* Header & Tabs Wrap */}
       <div className="flex flex-col gap-6">
         <div className="flex flex-col">
           <Heading primaryText="HRM" secondaryText="Dashboard" size={12} />
           <P text="Overview of human resources and employee activities." size="sm" />
         </div>
 
-        {/* Tabs */}
         <div className="flex border-b border-slate-200 gap-6 sm:gap-8 overflow-x-auto no-scrollbar">
           {tabs.map(tab => (
             <button
@@ -223,205 +309,162 @@ export default function HRM() {
         </div>
       </div>
 
-      {/* ── Overview Tab ── */}
       {activeTab === 'Overview' && (
         <div className="space-y-6">
           <DashGrid cols={12} gap={6}>
-            <EnhancedDashCard
-              title="Total Employees"
-              value="135"
-              icon={<Users size={22} />}
-              accentColor="#38bdf8"
-              size={3}
-            />
-            <EnhancedDashCard
-              title="Present Today"
-              value="118"
-              icon={<UserCheck size={22} />}
-              accentColor="#22c55e"
-              size={3}
-            />
-            <EnhancedDashCard
-              title="Absent Today"
-              value="7"
-              icon={<UserX size={22} />}
-              accentColor="#f43f5e"
-              size={3}
-            />
-            <EnhancedDashCard
-              title="On Leave"
-              value="10"
-              icon={<Calendar size={22} />}
-              accentColor="#eab308"
-              size={3}
-            />
+            <EnhancedDashCard title="Total Employees" value="135" icon={<Users size={22} />} accentColor="#38bdf8" size={3} />
+            <EnhancedDashCard title="Present Today" value="118" icon={<UserCheck size={22} />} accentColor="#22c55e" size={3} />
+            <EnhancedDashCard title="Absent Today" value="7" icon={<UserX size={22} />} accentColor="#f43f5e" size={3} />
+            <EnhancedDashCard title="On Leave" value={String(onLeaveTodayCount)} icon={<Calendar size={22} />} accentColor="#eab308" size={3} />
           </DashGrid>
 
           <DashGrid cols={12} gap={6}>
             <GLineChart
               title="Attendance Trend"
-              subtitle="Weekly breakdown"
               data={attendanceTrendData}
               lines={[
                 { key: "present", label: "Present", color: "#3b82f6" },
                 { key: "absent", label: "Absent", color: "#f59e0b" },
                 { key: "leave", label: "Leave", color: "#f43f5e" },
               ]}
-              size={8}
-              height={320}
+              size={8} height={320}
             />
             <GDoughnutChart
               title="Leave Status"
-              subtitle="Distribution of leave requests"
-              data={leaveStatusData}
-              colors={["#8b5cf6", "#14b8a6", "#f43f5e"]}
-              size={4}
-              height={320}
-              innerRadius={80}
+              data={leaveStats}
+              colors={["#10b981", "#f59e0b", "#f43f5e"]}
+              size={4} height={320} innerRadius={80}
             />
             <GColumnChart
               title="Department Attendance"
-              subtitle="Attendance % by department"
               data={departmentData}
               bars={[{ key: "attendance", label: "Attendance %", color: "#3b82f6" }]}
-              size={7}
-              height={320}
+              size={7} height={320}
             />
             <GDoughnutChart
               title="Employee Composition"
-              subtitle="Distribution by department"
               data={employeeCompositionData}
               colors={["#8b5cf6", "#14b8a6", "#f43f5e", "#22c55e", "#f59e0b"]}
-              size={5}
-              height={320}
-              innerRadius={70}
+              size={5} height={320} innerRadius={70}
             />
           </DashGrid>
         </div>
       )}
 
-      {/* ── Employees Tab ── */}
       {activeTab === 'Employees' && (
         <div className="flex-col gap-3 w-full">
           <div className="flex justify-end mb-4">
-            <button
-              onClick={() => handleExportCSV(employeesColumns, styledEmployeesRows, 'employees_export.csv')}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#355872] rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm w-full sm:w-auto justify-center"
-            >
+            <button onClick={() => handleExportCSV(employeesColumns, styledEmployeesRows, 'employees_export.csv')} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#355872] rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm w-full sm:w-auto justify-center">
                <Download size={16} /> Export CSV
             </button>
           </div>
-          <DataTable
-            columns={employeesColumns}
-            rows={styledEmployeesRows}
-            size={12}
-            pageSize={10}
-            searchable={true}
-            filters={[
-              { title: "Date", key: "date", type: "date" },
-              { title: "Department", key: "department", type: "select", options: ["Sales", "Engineering", "Finance", "Support", "Marketing"] }
-            ]}
-          />
+          <DataTable columns={employeesColumns} rows={styledEmployeesRows} size={12} pageSize={10} searchable={true} />
         </div>
       )}
 
-      {/* ── Attendance Tab ── */}
       {activeTab === 'Attendance' && (
         <div className="flex-col gap-3 w-full">
           <div className="flex justify-end mb-4">
-            <button
-              onClick={() => handleExportCSV(attendanceColumns, styledFilteredAttendanceRows, 'attendance_export.csv')}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#355872] rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm w-full sm:w-auto justify-center"
-            >
+            <button onClick={() => handleExportCSV(attendanceColumns, styledFilteredAttendanceRows, 'attendance_export.csv')} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#355872] rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm w-full sm:w-auto justify-center">
                <Download size={16} /> Export CSV
             </button>
           </div>
-          
-          <DataTable
-            columns={attendanceColumns}
-            rows={styledFilteredAttendanceRows}
-            size={12}
-            pageSize={10}
-            searchable={true}
-            hideTopBar={false}
-            filters={[
-              { title: "Date", key: "date", type: "date" },
-              { title: "Department", key: "department", type: "select", options: ["Sales", "Engineering", "Finance", "Support", "Marketing"] }
-            ]}
-          />
+          <DataTable columns={attendanceColumns} rows={styledFilteredAttendanceRows} size={12} pageSize={10} searchable={true} />
         </div>
       )}
 
-      {/* ── Leave Requests Tab ── */}
       {activeTab === 'Leave Requests' && (
         <div className="flex-col gap-3 w-full">
           <div className="flex justify-end mb-4">
-             <button
-                onClick={() => handleExportCSV(leaveColumns, leaveRows, 'leave_export.csv')}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#355872] rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm w-full sm:w-auto justify-center"
-              >
+             <button onClick={() => handleExportCSV(leaveColumns, allLeaves.filter(l => l.status === 'PENDING'), 'leave_requests_export.csv')} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#355872] rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm w-full sm:w-auto justify-center">
                  <Download size={16} /> Export CSV
               </button>
           </div>
-          <DataTable
-            columns={leaveColumns}
-            rows={leaveRows}
-            size={12}
-            pageSize={10}
-            searchable={true}
-          />
+          <DataTable columns={leaveColumns} rows={allLeaves.filter(l => l.status === 'PENDING')} loading={loading} actions={leaveActions} size={12} pageSize={10} searchable={true} />
         </div>
       )}
 
-      {/* ── Approvals Tab ── */}
       {activeTab === 'Approvals' && (
         <div className="flex-col gap-3 w-full">
-          <DataTable
-            columns={approvalsColumns}
-            rows={approvalsData.filter(row => row.status === 'Pending')}
-            actions={approvalActions}
-            size={12}
-            pageSize={10}
-            searchable={true}
-          />
+           <div className="flex justify-end mb-4">
+             <button onClick={() => handleExportCSV(leaveColumns, allLeaves.filter(l => l.status !== 'PENDING'), 'leave_approvals_export.csv')} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#355872] rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm w-full sm:w-auto justify-center">
+                 <Download size={16} /> Export CSV
+              </button>
+          </div>
+          <DataTable columns={leaveColumns} rows={allLeaves.filter(l => l.status !== 'PENDING')} loading={loading} actions={[{
+            icon: <Eye size={16} />,
+            tooltip: "View Details",
+            onClick: (row) => {
+              setSelectedLeave(row);
+              openModal("view-leave-modal");
+            },
+            variant: "ghost"
+          }]} size={12} pageSize={10} searchable={true} />
         </div>
       )}
 
-      {/* ── Approval Modal ── */}
       <Modal id="approval-modal" title="Confirm Approval" size="md">
         {selectedApproval && (
           <div className="space-y-6">
             <P text="Are you sure you want to approve this leave request?" size="sm" />
-            
             <div className="bg-white rounded-xl p-5 border border-slate-200">
               <ModalGrid title="Leave Information" cols={1}>
                 <ModalData label="Employee" value={selectedApproval.name} />
-                <ModalData label="Dates" value={selectedApproval.leaveDates} />
+                <ModalData label="Dates" value={selectedApproval.dates} />
                 <ModalData label="Reason" value={selectedApproval.reason} />
               </ModalGrid>
             </div>
-            
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-              <button
-                onClick={() => closeModal("approval-modal")}
-                className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setApprovalsData(prev => prev.map(row => row.id === selectedApproval.id ? { ...row, status: 'Approved' } : row));
-                  closeModal("approval-modal");
-                }}
-                className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#2a465a] text-white hover:bg-[#1e3a52] transition-colors flex items-center gap-2 shadow-md shadow-[#2a465a]/20"
-              >
-                <Check size={16} /> Confirm Approve
-              </button>
+
+            <div className="pt-4 border-t border-slate-100">
+              <DashGrid cols={12} gap={3}>
+                <Button 
+                  text="Cancel" 
+                  variant="ghost" 
+                  size={6} 
+                  onClick={() => closeModal("approval-modal")} 
+                />
+                <Button 
+                  text="Confirm Approve"
+                  variant="primary"
+                  size={6}
+                  loading={actionLoading}
+                  onClick={() => handleUpdateStatus(selectedApproval.id, 'APPROVED')} 
+                />
+              </DashGrid>
+            </div>
+            </div>
+            )}
+            </Modal>
+
+      <Modal id="view-leave-modal" title="Leave Application Details" size="md">
+        {selectedLeave && (
+          <div className="flex flex-col gap-4">
+            <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border text-sm font-semibold ${
+              selectedLeave.status === 'APPROVED' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 
+              selectedLeave.status === 'REJECTED' ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-amber-50 border-amber-200 text-amber-700'
+            }`}>
+              <span className="text-xs font-black uppercase tracking-widest">Status:</span>
+              {selectedLeave.status}
+            </div>
+            <ModalGrid title="Employee Info" cols={2}>
+              <ModalData label="Name" value={selectedLeave.name} />
+              <ModalData label="Role" value={selectedLeave.user?.role || '—'} />
+              <ModalData label="Applied On" value={new Date(selectedLeave.createdAt).toLocaleDateString()} />
+            </ModalGrid>
+            <ModalGrid title="Leave Details" cols={2}>
+              <ModalData label="Type" value={selectedLeave.leaveType} />
+              <ModalData label="Dates" value={selectedLeave.dates} />
+              <ModalData label="Total Days" value={selectedLeave.days} />
+            </ModalGrid>
+            <ModalGrid title="Reason" cols={1}>
+              <ModalData label="Description" value={selectedLeave.reason} />
+            </ModalGrid>
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("view-leave-modal")} />
             </div>
           </div>
         )}
       </Modal>
-
     </div>
   );
 }

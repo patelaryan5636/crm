@@ -219,9 +219,44 @@ exports.getTodayStatus = catchAsync(async (req, res) => {
     new ApiResponse(200, attendance || null, 'Today\'s status fetched.')
   );
 });
+/**
+ * @desc    Get My Attendance History
+ * @route   GET /api/attendance/my
+ * @access  Private (User)
+ */
+exports.getMyAttendanceHistory = catchAsync(async (req, res, next) => {
+  const adminId = getEffectiveAdminId(req);
+  const userId = req.user?._id;
+
+  if (!adminId) {
+    return next(new AppError('Organization context not found.', 401));
+  }
+
+  const { startDate, endDate } = req.query;
+
+  const query = {
+    admin: adminId,
+    user: userId
+  };
+
+  if (startDate || endDate) {
+    query.date = {};
+    if (startDate) query.date.$gte = parseLocalDate(startDate);
+    if (endDate) {
+      const end = parseLocalDate(endDate);
+      end.setHours(23, 59, 59, 999);
+      query.date.$lte = end;
+    }
+  }
+
+  const records = await Attendance.find(query).sort({ date: -1 }).lean();
+
+  res.status(200).json(new ApiResponse(200, records, 'Personal attendance history fetched.'));
+});
 
 /**
  * @desc    Get Team Attendance (For Managers/TLs)
+...
  * @route   GET /api/attendance/team
  * @access  Private (Manager/TL)
  */
@@ -273,7 +308,9 @@ exports.getTeamAttendance = catchAsync(async (req, res, next) => {
   }
 
   // Build User filter
-  const userQuery = { _id: { $in: targetUserIds } };
+  const userQuery = { 
+    _id: { $in: targetUserIds, $ne: userIdObj } 
+  };
   if (search) {
     userQuery.name = { $regex: search, $options: 'i' };
   }

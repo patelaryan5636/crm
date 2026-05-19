@@ -26,12 +26,7 @@ export default function ManagementManagerTeams() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Heading
-        primaryText="Teams"
-        secondaryText="Manage the Management department’s team leaders and employees, and update the structure."
-        fontSize="2xl"
-        size={12}
-      />
+      <Heading primaryText="Team" secondaryText="Management" size={12} />
 
       {/* ── Pill Tab Navigation — matches ManagementManagerProjects style ── */}
       <div className="flex flex-wrap items-center gap-1.5 bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm">

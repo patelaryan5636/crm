@@ -70,9 +70,8 @@ export default function ManagementManagerDashboard() {
       {/* ── 1. Header ──────────────────────────────────────────────────────── */}
       <Grid cols={12} gap={4}>
         <Heading
-          primaryText="Management Manager Dashboard"
-          secondaryText={`${currentMM.department} Department · ${teamLeaders.length} team leaders · ${projects.length} projects`}
-          fontSize="2xl"
+          primaryText="Manager"
+          secondaryText={`${teamLeaders.length} TLs · ${projects.length} projects`}
           size={12}
         />
       </Grid>

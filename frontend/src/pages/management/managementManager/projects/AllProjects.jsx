@@ -19,11 +19,24 @@ import {
   UserPlus,
   CheckCircle2,
   AlertTriangle,
+  Plus,
 } from "lucide-react";
-import { teamLeaders, employees, employeeName } from "../managementManagerStore";
+import { teamLeaders, clientList, employeeName } from "../managementManagerStore";
 import { PROJECT_COLS, PROJECT_STATUSES, PROJECT_PRIORITIES, deliveryBlockedReasons, asTableRow } from "./projectsStore";
 
-export default function AllProjects({ projects, updateProject, titleOverride, filterFn }) {
+const today = () => new Date().toISOString().slice(0, 10);
+
+const BLANK_CREATE = {
+  name: "",
+  clientId: "",
+  driveLink: "",
+  startDate: today(),
+  deadline: "",
+  priority: "Medium",
+  assignedTL: "",
+};
+
+export default function AllProjects({ projects, updateProject, addProject }) {
   const [viewRow,    setViewRow]    = useState(null);
   const [editRow,    setEditRow]    = useState(null);
   const [editForm,   setEditForm]   = useState({});
@@ -32,8 +45,10 @@ export default function AllProjects({ projects, updateProject, titleOverride, fi
   const [blockedRow, setBlockedRow] = useState(null);
   const [blockedReasons, setBlockedReasons] = useState([]);
 
-  const visible = filterFn ? projects.filter(filterFn) : projects;
-  const tableRows = visible.map(asTableRow);
+  const [createForm, setCreateForm] = useState(BLANK_CREATE);
+  const [createErr,  setCreateErr]  = useState({});
+
+  const tableRows = projects.map(asTableRow);
 
   // ── Open handlers ──────────────────────────────────────────────────────
   const openView = (row) => {
@@ -76,8 +91,8 @@ export default function AllProjects({ projects, updateProject, titleOverride, fi
     updateProject(full.id, {
       status:        "Delivered",
       progress:      100,
-      deliveredDate: new Date().toISOString().slice(0, 10),
-      lastUpdated:   new Date().toISOString().slice(0, 10),
+      deliveredDate: today(),
+      lastUpdated:   today(),
     });
   };
 
@@ -92,7 +107,7 @@ export default function AllProjects({ projects, updateProject, titleOverride, fi
       priority:     editForm.priority,
       status:       editForm.status,
       progress:     Math.max(0, Math.min(100, Number(editForm.progress) || 0)),
-      lastUpdated:  new Date().toISOString().slice(0, 10),
+      lastUpdated:  today(),
     });
     closeModal("mm-project-edit");
   };
@@ -102,7 +117,7 @@ export default function AllProjects({ projects, updateProject, titleOverride, fi
     updateProject(assignRow.id, {
       assignedTL:     tl.id,
       assignedTLName: tl.name,
-      lastUpdated:    new Date().toISOString().slice(0, 10),
+      lastUpdated:    today(),
     });
     closeModal("mm-project-assign");
   };
@@ -112,10 +127,66 @@ export default function AllProjects({ projects, updateProject, titleOverride, fi
     openEdit(blockedRow);
   };
 
+  // ── Create project ─────────────────────────────────────────────────────
+  const setCreateField = (k, v) => {
+    setCreateForm((f) => ({ ...f, [k]: v }));
+    if (createErr[k]) setCreateErr((e) => ({ ...e, [k]: "" }));
+  };
+
+  const submitCreate = () => {
+    const errs = {};
+    if (!createForm.name.trim())      errs.name       = "Project name is required.";
+    if (!createForm.clientId)         errs.clientId   = "Select a client.";
+    if (!createForm.driveLink.trim()) errs.driveLink  = "Drive link is mandatory per spec.";
+    if (!createForm.startDate)        errs.startDate  = "Start date is required.";
+    if (!createForm.deadline)         errs.deadline   = "Deadline is required.";
+    if (createForm.startDate && createForm.deadline && createForm.deadline < createForm.startDate)
+      errs.deadline = "Deadline must be on or after start date.";
+    if (!createForm.assignedTL)       errs.assignedTL = "Assign a Team Leader.";
+    if (Object.keys(errs).length) { setCreateErr(errs); return; }
+
+    const client = clientList.find((c) => c.id === createForm.clientId);
+    const tl     = teamLeaders.find((t) => t.id === createForm.assignedTL);
+    const nextId = `PRJ-${String(projects.length + 1).padStart(3, "0")}`;
+
+    addProject({
+      id:                nextId,
+      name:              createForm.name.trim(),
+      clientId:          client.id,
+      clientName:        client.name,
+      clientMobile:      client.mobile,
+      driveLink:         createForm.driveLink.trim(),
+      startDate:         createForm.startDate,
+      deadline:          createForm.deadline,
+      priority:          createForm.priority,
+      assignedTL:        tl.id,
+      assignedTLName:    tl.name,
+      assignedEmployees: [],
+      status:            "Not Started",
+      progress:          0,
+      handoverLink:      null,
+      deliveredDate:     null,
+      lastUpdated:       today(),
+    });
+
+    setCreateForm(BLANK_CREATE);
+    setCreateErr({});
+    closeModal("mm-project-create");
+  };
+
   return (
     <>
+      {/* ── Add Project button ─────────────────────────────────────────── */}
+      <div className="flex justify-end">
+        <Button
+          text="+ Add Project"
+          variant="primary"
+          onClick={() => openModal("mm-project-create")}
+        />
+      </div>
+
       <DataTable
-        title={titleOverride ?? "All Projects"}
+        title="All Projects"
         columns={PROJECT_COLS}
         rows={tableRows}
         size={12}
@@ -134,6 +205,114 @@ export default function AllProjects({ projects, updateProject, titleOverride, fi
           { icon: <CheckCircle2 size={15} />, tooltip: "Mark Delivered",  variant: "success", onClick: tryDeliver },
         ]}
       />
+
+      {/* ── Create modal ───────────────────────────────────────────────── */}
+      <Modal id="mm-project-create" title="Add New Project" size="lg">
+        <div className="flex flex-col gap-5">
+          <Grid cols={12} gap={3}>
+            <div className="col-span-12">
+              <DataField
+                label="Project Name *"
+                id="mm-create-name"
+                value={createForm.name}
+                onChange={(e) => setCreateField("name", e.target.value)}
+                placeholder="e.g. Acme Website Redesign"
+                size={12}
+              />
+              {createErr.name && <p className="text-xs text-rose-600 mt-1 px-1">{createErr.name}</p>}
+            </div>
+
+            <div className="col-span-12">
+              <SelectField
+                label="Client *"
+                id="mm-create-client"
+                value={createForm.clientId}
+                onChange={(e) => setCreateField("clientId", e.target.value)}
+                size={12}
+              >
+                <Option value="" label="-- Select client --" />
+                {clientList.map((c) => (
+                  <Option key={c.id} value={c.id} label={`${c.name} · ${c.mobile}`} />
+                ))}
+              </SelectField>
+              {createErr.clientId && <p className="text-xs text-rose-600 mt-1 px-1">{createErr.clientId}</p>}
+            </div>
+
+            <div className="col-span-12">
+              <DataField
+                label="Drive Link * (mandatory per spec)"
+                id="mm-create-drive"
+                value={createForm.driveLink}
+                onChange={(e) => setCreateField("driveLink", e.target.value)}
+                placeholder="https://drive.google.com/folder/..."
+                size={12}
+              />
+              {createErr.driveLink && <p className="text-xs text-rose-600 mt-1 px-1">{createErr.driveLink}</p>}
+            </div>
+
+            <div className="col-span-6">
+              <DataField
+                label="Start Date *"
+                id="mm-create-start"
+                type="date"
+                value={createForm.startDate}
+                onChange={(e) => setCreateField("startDate", e.target.value)}
+                size={12}
+              />
+              {createErr.startDate && <p className="text-xs text-rose-600 mt-1 px-1">{createErr.startDate}</p>}
+            </div>
+
+            <div className="col-span-6">
+              <DataField
+                label="Deadline *"
+                id="mm-create-deadline"
+                type="date"
+                value={createForm.deadline}
+                onChange={(e) => setCreateField("deadline", e.target.value)}
+                size={12}
+              />
+              {createErr.deadline && <p className="text-xs text-rose-600 mt-1 px-1">{createErr.deadline}</p>}
+            </div>
+
+            <div className="col-span-6">
+              <SelectField
+                label="Priority"
+                id="mm-create-priority"
+                value={createForm.priority}
+                onChange={(e) => setCreateField("priority", e.target.value)}
+                size={12}
+              >
+                {PROJECT_PRIORITIES.map((p) => <Option key={p} value={p} label={p} />)}
+              </SelectField>
+            </div>
+
+            <div className="col-span-6">
+              <SelectField
+                label="Team Leader *"
+                id="mm-create-tl"
+                value={createForm.assignedTL}
+                onChange={(e) => setCreateField("assignedTL", e.target.value)}
+                size={12}
+              >
+                <Option value="" label="-- Select Team Leader --" />
+                {teamLeaders.map((tl) => (
+                  <Option key={tl.id} value={tl.id} label={`${tl.name} · ${tl.region}`} />
+                ))}
+              </SelectField>
+              {createErr.assignedTL && <p className="text-xs text-rose-600 mt-1 px-1">{createErr.assignedTL}</p>}
+            </div>
+          </Grid>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button
+              text="Cancel"
+              variant="secondary"
+              onClick={() => { setCreateForm(BLANK_CREATE); setCreateErr({}); closeModal("mm-project-create"); }}
+            />
+            <Button text="Create Project" variant="primary" onClick={submitCreate} />
+          </div>
+        </div>
+      </Modal>
 
       {/* ── View modal ─────────────────────────────────────────────────── */}
       <Modal id="mm-project-view" title="Project Details" size="lg">

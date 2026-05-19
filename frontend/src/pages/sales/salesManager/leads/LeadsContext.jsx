@@ -29,8 +29,8 @@ export function LeadsProvider({ children }) {
   const [autoDistResult, setAutoDistResult] = useState([]);
 
   const mapAssignmentTarget = (target) => ({
-    _id: target.id,
-    id: target.id,
+    _id: String(target._id || target.id || ''),
+    id:  String(target._id || target.id || ''),
     name: target.name,
     email: target.email,
     role: target.role,

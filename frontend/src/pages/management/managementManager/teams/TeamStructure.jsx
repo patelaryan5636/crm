@@ -40,11 +40,7 @@ export default function TeamStructure({ employees, moveEmployeeToTL }) {
 
   return (
     <div className="space-y-6">
-      <Heading
-        primaryText="Team Structure"
-        secondaryText="View the org tree and move employees between team leaders."
-        size={12}
-      />
+      <Heading primaryText="Team" secondaryText="Structure" size={12} />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {groups.map(({ leader, members }) => (

@@ -26,11 +26,7 @@ export default function ManagementManagerClients() {
   return (
     <div>
       <Grid cols={12} gap={4}>
-        <Heading
-          primaryText="Clients"
-          secondaryText="Manage all clients and their projects"
-          size={12}
-        />
+        <Heading primaryText="Client" secondaryText="Directory" size={12} />
       </Grid>
 
       <Grid cols={12} gap={4}>

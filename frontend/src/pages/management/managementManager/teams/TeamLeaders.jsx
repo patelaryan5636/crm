@@ -72,7 +72,7 @@ export default function TeamLeaders({ employees, moveEmployee }) {
 
   return (
     <div className="space-y-6">
-      <Heading primaryText="Team Leaders" secondaryText="Team leader performance and current project load." size={12} />
+      <Heading primaryText="Team Leaders" secondaryText="Overview" size={12} />
 
       <DashGrid cols={12} gap={4}>
         <DashCard title="Team Leaders" value={kpis[0].value} icon={<UserCheck size={20} />} accentColor={kpis[0].accent} size={3} />

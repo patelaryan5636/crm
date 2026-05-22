@@ -694,6 +694,36 @@ exports.getAssignmentTargets = async (adminId, performer, targetRole = null) => 
     }
   }
 
+  // When targeting SALES_TL specifically (e.g. Sales Manager distributing leads),
+  // only return TLs who are the active leader of at least one team.
+  // This prevents assigning leads to TLs with no team (no one to pass them to).
+  if (roles.includes('SALES_TL') && roles.length === 1) {
+    const teamsWithLeaders = await Team.find({
+      admin: adminIdObj,
+      isDeleted: false,
+      isActive: true,
+      leader: { $ne: null },
+    }).select('leader').lean();
+
+    const tlsWithTeam = new Set(teamsWithLeaders.map(t => String(t.leader)));
+
+    if (tlsWithTeam.size > 0) {
+      // Intersect with any existing _id filter
+      const existingIds = query._id?.$in
+        ? query._id.$in.map(String)
+        : null;
+
+      const filteredIds = existingIds
+        ? existingIds.filter(id => tlsWithTeam.has(id))
+        : [...tlsWithTeam];
+
+      query._id = { $in: filteredIds };
+    } else {
+      // No teams exist yet — return empty
+      return { targets: [], allowedRoles };
+    }
+  }
+
   const users = await User.find(query).select('name email phone role leadDataLimit').sort({ name: 1 });
 
   const userIds = users.map((user) => user._id);

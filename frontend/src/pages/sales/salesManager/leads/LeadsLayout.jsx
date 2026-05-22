@@ -15,7 +15,7 @@ const TABS = [
 
 // Inner component so it can access context for badge counts
 function LeadsLayoutInner() {
-  const { leads, dumpData } = useLeads();
+  const { leads, dumpCount } = useLeads();
   const { pathname } = useLocation();
 
   return (
@@ -56,7 +56,7 @@ function LeadsLayoutInner() {
                       )}
                       {label === "Dump Data" && (
                         <span className={`px-1.5 py-0.5 rounded-full text-xs ${isActive ? "bg-white/20 text-white" : "bg-red-100 text-red-600"}`}>
-                          {dumpData.length}
+                          {dumpCount}
                         </span>
                       )}
                     </>

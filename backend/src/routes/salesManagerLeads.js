@@ -89,4 +89,17 @@ router.delete(
   bulkLeadUploadController.deleteLead
 );
 
+// ── Restore a dumped lead (un-dump) ──
+router.patch('/dump/:leadId/restore', requireUser, requireLeadAssigner, bulkLeadUploadController.restoreDumpLead);
+
+// ── Soft-delete a dumped lead ──
+router.delete('/dump/:leadId', requireUser, requireSalesManager, bulkLeadUploadController.softDeleteDumpLead);
+
+// ── Prospects (filled by TL / Executive under this admin) ──
+router.get('/prospects', requireUser, requireLeadAssigner, bulkLeadUploadController.getManagerProspects);
+router.patch('/prospects/:prospectId', requireUser, requireLeadAssigner, bulkLeadUploadController.updateManagerProspect);
+
+// ── Dump leads (dumped by TL / Executive under this admin) ──
+router.get('/dump', requireUser, requireLeadAssigner, bulkLeadUploadController.getManagerDumpLeads);
+
 module.exports = router;

@@ -294,6 +294,234 @@ exports.deleteLead = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * GET /api/sales-manager/leads/prospects
+ * Fetch all prospect forms filled by SALES_TL or SALES_EXECUTIVE under this admin.
+ * Scoped to admin tenant. No budget field returned.
+ */
+exports.getManagerProspects = catchAsync(async (req, res, next) => {
+  const { ProspectForm, User } = require('../models');
+
+  const adminId = req.admin._id;
+
+  // Find all TL + Executive users under this admin
+  const salesUsers = await User.find({
+    admin: adminId,
+    role: { $in: ['SALES_TL', 'SALES_EXECUTIVE'] },
+    isDeleted: false,
+  }).select('_id').lean();
+
+  const salesUserIds = salesUsers.map((u) => u._id);
+
+  const prospects = await ProspectForm.find({
+    admin: adminId,
+    filledBy: { $in: salesUserIds },
+  })
+    .populate('client', 'name email mobile companyName')
+    .populate('lead', 'status assignedTo assignedBy team')
+    .populate({ path: 'lead', populate: [
+      { path: 'assignedTo', select: 'name role' },
+      { path: 'assignedBy', select: 'name role' },
+      { path: 'team', select: 'name' },
+    ]})
+    .populate('filledBy', 'name role')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const formatted = prospects.map((p) => ({
+    id:            p._id,
+    name:          p.client?.name          || p.contactPerson || '',
+    email:         p.client?.email         || '',
+    mobile:        p.client?.mobile        || '',
+    company:       p.company               || p.client?.companyName || '',
+    service:       p.requirement           || '',
+    contactPerson: p.contactPerson         || '',
+    priority:      p.priority              || 'Medium',
+    stage:         p.stage                 || 'Interested',
+    probability:   p.probability           || 0,
+    expectedClose: p.expectedClose ? p.expectedClose.toISOString().slice(0, 10) : null,
+    notes:         p.notes                 || '',
+    status:        p.status                || 'OPEN',
+    assignedTL:    p.lead?.assignedTo?.name || '',
+    assignedTLId:  p.lead?.assignedTo?._id  || null,
+    assignedBy:    p.lead?.assignedBy?.name || '',
+    team:          p.lead?.team?.name       || '',
+    filledBy:      p.filledBy?.name         || '',
+    filledByRole:  p.filledBy?.role         || '',
+    leadId:        p.lead?._id              || null,
+    createdAt:     p.createdAt ? p.createdAt.toISOString().slice(0, 10) : '',
+  }));
+
+  res.status(200).json(new ApiResponse(200, formatted, 'Prospects retrieved successfully'));
+});
+
+/**
+ * PATCH /api/sales-manager/leads/prospects/:prospectId
+ * Update a prospect form (stage, priority, notes, status).
+ * Sales Manager can update any prospect under their admin.
+ * Budget field is intentionally excluded.
+ */
+exports.updateManagerProspect = catchAsync(async (req, res, next) => {
+  const { ProspectForm } = require('../models');
+  const { prospectId } = req.params;
+  const { stage, priority, notes, status, contactPerson, company, requirement, probability, expectedClose } = req.body;
+
+  const prospect = await ProspectForm.findOne({
+    _id: prospectId,
+    admin: req.admin._id,
+  });
+
+  if (!prospect) return next(new AppError('Prospect not found', 404));
+
+  // Apply only provided fields — never touch budget/value/finalAmount
+  if (stage         !== undefined) prospect.stage         = stage;
+  if (priority      !== undefined) prospect.priority      = priority;
+  if (notes         !== undefined) prospect.notes         = notes;
+  if (status        !== undefined) prospect.status        = status;
+  if (contactPerson !== undefined) prospect.contactPerson = contactPerson;
+  if (company       !== undefined) prospect.company       = company;
+  if (requirement   !== undefined) prospect.requirement   = requirement;
+  if (probability   !== undefined) prospect.probability   = Number(probability);
+  if (expectedClose !== undefined) prospect.expectedClose = expectedClose ? new Date(expectedClose) : null;
+
+  prospect.updatedBy = req.user._id;
+  await prospect.save();
+
+  res.status(200).json(new ApiResponse(200, { id: prospect._id }, 'Prospect updated successfully'));
+});
+
+/**
+ * GET /api/sales-manager/leads/dump
+ * Fetch all dumped leads from SALES_TL and SALES_EXECUTIVE under this admin.
+ * Scoped to admin tenant.
+ */
+exports.getManagerDumpLeads = catchAsync(async (req, res, next) => {
+  const { Lead, User } = require('../models');
+
+  const adminId = req.admin._id;
+
+  // Find all TL + Executive users under this admin
+  const salesUsers = await User.find({
+    admin: adminId,
+    role: { $in: ['SALES_TL', 'SALES_EXECUTIVE'] },
+    isDeleted: false,
+  }).select('_id').lean();
+
+  const salesUserIds = salesUsers.map((u) => u._id);
+
+  const dumpLeads = await Lead.find({
+    admin: adminId,
+    isDumped: true,
+    isDeleted: { $ne: true },
+    $or: [
+      { assignedTo: { $in: salesUserIds } },
+      { dumpedBy:   { $in: salesUserIds } },
+    ],
+  })
+    .populate('client', 'name email mobile companyName')
+    .populate('assignedTo', 'name role')
+    .populate('dumpedBy',   'name role')
+    .populate('assignedBy', 'name role')
+    .populate('team', 'name')
+    .sort({ dumpedAt: -1 })
+    .lean();
+
+  const formatted = dumpLeads.map((l) => ({
+    id:          l._id,
+    name:        l.client?.name   || '',
+    email:       l.client?.email  || '',
+    mobile:      l.client?.mobile || '',
+    company:     l.client?.companyName || '',
+    dumpReason:  l.dumpReason     || '',
+    dumpedBy:    l.dumpedBy?.name || l.assignedTo?.name || '',
+    dumpedByRole: l.dumpedBy?.role || '',
+    assignedTo:  l.assignedTo?.name || '',
+    team:        l.team?.name     || '',
+    dumpDate:    l.dumpedAt ? l.dumpedAt.toISOString().slice(0, 10) : (l.updatedAt ? l.updatedAt.toISOString().slice(0, 10) : ''),
+    status:      l.status,
+    notTalkCount: l.notTalkCount  || 0,
+  }));
+
+  res.status(200).json(new ApiResponse(200, formatted, 'Dump leads retrieved successfully'));
+});
+
+/**
+ * PATCH /api/sales-manager/leads/dump/:leadId/restore
+ * Restore a dumped lead — clears isDumped, dumpReason, dumpedAt, dumpedBy.
+ * Lead goes back to UNTOUCHED status, unassigned.
+ */
+exports.restoreDumpLead = catchAsync(async (req, res, next) => {
+  const { Lead, AuditLog } = require('../models');
+  const { leadId } = req.params;
+
+  const lead = await Lead.findOne({
+    _id: leadId,
+    admin: req.admin._id,
+    isDumped: true,
+    isDeleted: { $ne: true },
+  });
+
+  if (!lead) return next(new AppError('Dumped lead not found', 404));
+
+  // Restore
+  lead.isDumped    = false;
+  lead.dumpReason  = null;
+  lead.dumpedAt    = null;
+  lead.dumpedBy    = null;
+  lead.restoredAt  = new Date();
+  lead.restoredBy  = req.user._id;
+  lead.status      = 'UNTOUCHED';
+  lead.notTalkCount = 0;
+  await lead.save();
+
+  await AuditLog.create({
+    admin:        req.admin._id,
+    performedBy:  req.user._id,
+    performerType: 'USER',
+    action:       'LEAD_RESTORED',
+    targetModel:  'Lead',
+    targetId:     lead._id,
+    note:         'Lead restored from dump by Sales Manager',
+  });
+
+  res.status(200).json(new ApiResponse(200, { leadId: lead._id }, 'Lead restored successfully'));
+});
+
+/**
+ * DELETE /api/sales-manager/leads/dump/:leadId
+ * Soft-delete a dumped lead (isDeleted = true).
+ */
+exports.softDeleteDumpLead = catchAsync(async (req, res, next) => {
+  const { Lead, AuditLog } = require('../models');
+  const { leadId } = req.params;
+
+  const lead = await Lead.findOne({
+    _id: leadId,
+    admin: req.admin._id,
+    isDumped: true,
+    isDeleted: { $ne: true },
+  });
+
+  if (!lead) return next(new AppError('Dumped lead not found', 404));
+
+  lead.isDeleted = true;
+  lead.deletedAt = new Date();
+  lead.deletedBy = req.user._id;
+  await lead.save();
+
+  await AuditLog.create({
+    admin:        req.admin._id,
+    performedBy:  req.user._id,
+    performerType: 'USER',
+    action:       'LEAD_DUMPED',
+    targetModel:  'Lead',
+    targetId:     lead._id,
+    note:         'Dump lead soft-deleted by Sales Manager',
+  });
+
+  res.status(200).json(new ApiResponse(200, { leadId: lead._id }, 'Lead deleted successfully'));
+});
+
+/**
  * GET /api/sales-executive/leads
  * Fetch leads assigned to the current Sales Executive
  */

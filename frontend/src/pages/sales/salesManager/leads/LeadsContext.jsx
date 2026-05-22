@@ -127,6 +127,61 @@ export function LeadsProvider({ children }) {
     }
   };
 
+  // ── Prospects ─────────────────────────────────────────────────────────────
+  const fetchProspects = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/sales-manager/leads/prospects');
+      return response.data.data || [];
+    } catch (err) {
+      console.error('Failed to fetch prospects:', err);
+      return [];
+    }
+  }, []);
+
+  const updateProspect = useCallback(async (prospectId, payload) => {
+    try {
+      await apiClient.patch(`/sales-manager/leads/prospects/${prospectId}`, payload);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err?.message || 'Update failed' };
+    }
+  }, []);
+
+  // ── Dump leads ────────────────────────────────────────────────────────────
+  const [dumpCount, setDumpCount] = useState(0);
+
+  const fetchDumpLeads = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/sales-manager/leads/dump');
+      const data = response.data.data || [];
+      setDumpCount(data.length);
+      return data;
+    } catch (err) {
+      console.error('Failed to fetch dump leads:', err);
+      return [];
+    }
+  }, []);
+
+  // Restore one or many dump leads back to active
+  const restoreDumpLeads = useCallback(async (leadIds) => {
+    const ids = Array.isArray(leadIds) ? leadIds : [leadIds];
+    const results = await Promise.allSettled(
+      ids.map((id) => apiClient.patch(`/sales-manager/leads/dump/${id}/restore`))
+    );
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    return { success: failed === 0, restored: ids.length - failed, failed };
+  }, []);
+
+  // Soft-delete a single dump lead
+  const softDeleteDumpLead = useCallback(async (leadId) => {
+    try {
+      await apiClient.delete(`/sales-manager/leads/dump/${leadId}`);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err?.message || 'Delete failed' };
+    }
+  }, []);
+
   const updateLead = (updated) => {
     setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
   };
@@ -187,7 +242,10 @@ export function LeadsProvider({ children }) {
       uploadId, setUploadId,
       distLeads, distTLs, distTableRows, distWarning, setDistWarning,
       autoDistResult, setAutoDistResult,
-      fetchLeads, fetchAssignedLeads, fetchAssignmentTargets, assignBulkLeads, distributeLeads, loading, error,
+      fetchLeads, fetchAssignedLeads, fetchAssignmentTargets, assignBulkLeads, distributeLeads,
+      fetchProspects, updateProspect,
+      fetchDumpLeads, dumpCount, restoreDumpLeads, softDeleteDumpLead,
+      loading, error,
     }}>
       {children}
     </LeadsContext.Provider>

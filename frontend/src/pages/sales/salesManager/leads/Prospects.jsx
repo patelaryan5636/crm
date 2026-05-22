@@ -1,70 +1,139 @@
-import { useState } from "react";
+/**
+ * PROSPECTS — Sales Manager view
+ * Fetches prospect forms filled by SALES_TL and SALES_EXECUTIVE.
+ * No budget field. Full view + edit modals.
+ */
+import { useState, useEffect, useCallback } from "react";
 import {
   DataTable, Modal, Button, DataField, SelectField, Option,
   openModal, closeModal, ModalProfile, ModalData, ModalGrid, Grid,
 } from "../../../../components/shared/Common_Components";
-import { Eye, Pencil, BadgeCheck, IndianRupee, AlertTriangle, CheckCircle } from "lucide-react";
-import { DUMMY_PROSPECTS, TEAM_LEADERS } from "./leadsStore";
+import { Eye, Pencil, Loader2, AlertTriangle } from "lucide-react";
+import { useLeads } from "./LeadsContext";
+
+const STAGE_OPTIONS    = ["Interested", "Negotiating", "Proposal Sent", "Closing"];
+const PRIORITY_OPTIONS = ["High", "Medium", "Low"];
+const STATUS_OPTIONS   = ["OPEN", "IN_NEGOTIATION", "SENT_TO_FINANCE", "WON", "LOST"];
+
+const STATUS_LABEL = {
+  OPEN:             "Open",
+  IN_NEGOTIATION:   "Negotiating",
+  SENT_TO_FINANCE:  "Sent to Finance",
+  WON:              "Won",
+  LOST:             "Lost",
+};
+
+const PRIORITY_COLOR = {
+  High:   "text-rose-600 bg-rose-50 border-rose-200",
+  Medium: "text-amber-600 bg-amber-50 border-amber-200",
+  Low:    "text-emerald-600 bg-emerald-50 border-emerald-200",
+};
 
 export default function Prospects() {
-  const [prospects, setProspects] = useState(DUMMY_PROSPECTS);
+  const { fetchProspects, updateProspect } = useLeads();
 
-  // ── View modal ────────────────────────────────────────────────────────────
-  const [viewRow, setViewRow] = useState(null);
+  const [prospects,  setProspects]  = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState("");
 
-  // ── Edit modal ────────────────────────────────────────────────────────────
-  const [editRow, setEditRow] = useState(null);
+  const [viewRow,    setViewRow]    = useState(null);
+  const [editRow,    setEditRow]    = useState(null);
+  const [saving,     setSaving]     = useState(false);
+  const [saveError,  setSaveError]  = useState("");
 
-  // ── Send to Finance bulk result ───────────────────────────────────────────
-  const [financeResult, setFinanceResult] = useState([]);
+  // ── Load on mount ──────────────────────────────────────────────────────────
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    const data = await fetchProspects();
+    setProspects(data);
+    setLoading(false);
+  }, [fetchProspects]);
 
-  const sendToFinance = (rows) => {
-    setFinanceResult(rows);
-    openModal("pr-finance-modal");
-  };
+  useEffect(() => { load(); }, [load]);
 
-  const saveEdit = () => {
-    setProspects((prev) => prev.map((p) => (p.id === editRow.id ? editRow : p)));
+  // ── Save edit ──────────────────────────────────────────────────────────────
+  const saveEdit = async () => {
+    if (!editRow) return;
+    setSaving(true);
+    setSaveError("");
+    const result = await updateProspect(editRow.id, {
+      stage:         editRow.stage,
+      priority:      editRow.priority,
+      notes:         editRow.notes,
+      status:        editRow.status,
+      contactPerson: editRow.contactPerson,
+      company:       editRow.company,
+      requirement:   editRow.service,
+      probability:   editRow.probability,
+      expectedClose: editRow.expectedClose || null,
+    });
+    setSaving(false);
+    if (!result.success) {
+      setSaveError(result.error || "Failed to save changes.");
+      return;
+    }
+    // Update local state
+    setProspects((prev) =>
+      prev.map((p) => (p.id === editRow.id ? { ...p, ...editRow } : p))
+    );
     closeModal("pr-edit-modal");
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 size={24} className="animate-spin text-slate-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center gap-3 bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-xl text-sm">
+        <AlertTriangle size={16} /> {error}
+        <button onClick={load} className="ml-auto text-xs font-bold underline">Retry</button>
+      </div>
+    );
+  }
 
   return (
     <>
       <DataTable
         title="Prospects"
         columns={[
-          { key: "name",       label: "Name" },
-          { key: "service",    label: "Service" },
-          { key: "budget",     label: "Budget" },
+          { key: "name",       label: "Name"        },
+          { key: "service",    label: "Service"     },
           { key: "assignedTL", label: "Assigned TL" },
-          { key: "status",     label: "Status" },
+          { key: "priority",   label: "Priority"    },
+          { key: "stage",      label: "Stage"       },
+          { key: "status",     label: "Status"      },
+          { key: "createdAt",  label: "Date"        },
         ]}
-        rows={prospects}
+        rows={prospects.map((p) => ({
+          ...p,
+          status: STATUS_LABEL[p.status] || p.status,
+        }))}
         searchable
-        bulkAction
-        bulkActions={[
-          {
-            title: "Send to Finance",
-            icon: <IndianRupee size={14} />,
-            onClick: (selected) => sendToFinance(selected),
-          },
-        ]}
         filters={[
-          { title: "Status",      type: "toggle", key: "status",     options: ["Hot", "Warm", "Cold"] },
-          { title: "Assigned TL", type: "select", key: "assignedTL", options: TEAM_LEADERS.map((t) => t.name) },
+          { title: "Priority", type: "toggle", key: "priority", options: PRIORITY_OPTIONS },
+          { title: "Stage",    type: "toggle", key: "stage",    options: STAGE_OPTIONS    },
         ]}
         actions={[
           {
             icon: <Eye size={15} />, tooltip: "View", variant: "ghost",
-            onClick: (row) => { setViewRow(prospects.find((p) => p.id === row.id)); openModal("pr-view-modal"); },
+            onClick: (row) => {
+              setViewRow(prospects.find((p) => String(p.id) === String(row.id)));
+              openModal("pr-view-modal");
+            },
           },
           {
             icon: <Pencil size={15} />, tooltip: "Edit", variant: "ghost",
-            onClick: (row) => { setEditRow({ ...prospects.find((p) => p.id === row.id) }); openModal("pr-edit-modal"); },
-          },
-          {
-            icon: <BadgeCheck size={15} />, tooltip: "Send to Finance", variant: "primary",
-            onClick: (row) => sendToFinance([row]),
+            onClick: (row) => {
+              setEditRow({ ...prospects.find((p) => String(p.id) === String(row.id)) });
+              setSaveError("");
+              openModal("pr-edit-modal");
+            },
           },
         ]}
         size={12}
@@ -77,19 +146,29 @@ export default function Prospects() {
           <div className="space-y-4">
             <ModalProfile
               name={viewRow.name}
-              subtitle={`${viewRow.assignedTL} · ${viewRow.status}`}
-              meta={`ID: ${viewRow.id}`}
+              subtitle={`${viewRow.assignedTL || "—"} · ${viewRow.priority}`}
+              meta={viewRow.filledBy ? `Filed by: ${viewRow.filledBy} (${viewRow.filledByRole})` : ""}
             />
             <ModalGrid title="Contact Info" cols={2}>
-              <ModalData label="Mobile" value={viewRow.mobile} />
-              <ModalData label="Email"  value={viewRow.email} />
+              <ModalData label="Mobile"  value={viewRow.mobile}  />
+              <ModalData label="Email"   value={viewRow.email}   />
+              <ModalData label="Company" value={viewRow.company} />
             </ModalGrid>
             <ModalGrid title="Deal Info" cols={2}>
-              <ModalData label="Service"     value={viewRow.service} />
-              <ModalData label="Budget"      value={viewRow.budget} />
-              <ModalData label="Assigned TL" value={viewRow.assignedTL} />
-              <ModalData label="Status"      value={viewRow.status} />
+              <ModalData label="Service / Requirement" value={viewRow.service}      />
+              <ModalData label="Priority"              value={viewRow.priority}     />
+              <ModalData label="Stage"                 value={viewRow.stage}        />
+              <ModalData label="Probability"           value={`${viewRow.probability}%`} />
+              <ModalData label="Expected Close"        value={viewRow.expectedClose || "—"} />
+              <ModalData label="Status"                value={STATUS_LABEL[viewRow.status] || viewRow.status} />
+              <ModalData label="Assigned TL"           value={viewRow.assignedTL || "—"} />
+              <ModalData label="Team"                  value={viewRow.team || "—"} />
             </ModalGrid>
+            {viewRow.notes && (
+              <ModalGrid title="Notes" cols={1}>
+                <ModalData label="Notes" value={viewRow.notes} />
+              </ModalGrid>
+            )}
             <div className="flex justify-end pt-2">
               <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("pr-view-modal")} />
             </div>
@@ -102,57 +181,70 @@ export default function Prospects() {
         {editRow && (
           <div className="space-y-4">
             <Grid cols={12} gap={4}>
-              <DataField label="Name"    id="pr-name"    value={editRow.name}    size={6} onChange={(e) => setEditRow((p) => ({ ...p, name: e.target.value }))} />
-              <DataField label="Mobile"  id="pr-mobile"  value={editRow.mobile}  size={6} onChange={(e) => setEditRow((p) => ({ ...p, mobile: e.target.value }))} />
-              <DataField label="Email"   id="pr-email"   value={editRow.email}   size={12} type="email" onChange={(e) => setEditRow((p) => ({ ...p, email: e.target.value }))} />
-              <DataField label="Service" id="pr-service" value={editRow.service} size={6} onChange={(e) => setEditRow((p) => ({ ...p, service: e.target.value }))} />
-              <DataField label="Budget"  id="pr-budget"  value={editRow.budget}  size={6} onChange={(e) => setEditRow((p) => ({ ...p, budget: e.target.value }))} />
-              <SelectField label="Assigned TL" value={editRow.assignedTL} size={6} onChange={(e) => setEditRow((p) => ({ ...p, assignedTL: e.target.value }))}>
-                {TEAM_LEADERS.map((tl) => <Option key={tl.id} value={tl.name} label={tl.name} />)}
+              <DataField
+                label="Contact Person" id="pr-contact" value={editRow.contactPerson} size={6}
+                onChange={(e) => setEditRow((p) => ({ ...p, contactPerson: e.target.value }))}
+              />
+              <DataField
+                label="Company" id="pr-company" value={editRow.company} size={6}
+                onChange={(e) => setEditRow((p) => ({ ...p, company: e.target.value }))}
+              />
+              <DataField
+                label="Service / Requirement" id="pr-service" value={editRow.service} size={12}
+                onChange={(e) => setEditRow((p) => ({ ...p, service: e.target.value }))}
+              />
+              <SelectField
+                label="Priority" value={editRow.priority} size={6}
+                onChange={(e) => setEditRow((p) => ({ ...p, priority: e.target.value }))}
+              >
+                {PRIORITY_OPTIONS.map((o) => <Option key={o} value={o} label={o} />)}
               </SelectField>
-              <SelectField label="Status" value={editRow.status} size={6} onChange={(e) => setEditRow((p) => ({ ...p, status: e.target.value }))}>
-                {["Hot", "Warm", "Cold"].map((s) => <Option key={s} value={s} label={s} />)}
+              <SelectField
+                label="Stage" value={editRow.stage} size={6}
+                onChange={(e) => setEditRow((p) => ({ ...p, stage: e.target.value }))}
+              >
+                {STAGE_OPTIONS.map((o) => <Option key={o} value={o} label={o} />)}
               </SelectField>
-              <Button text="Save Changes" variant="primary"   size={6} onClick={saveEdit} />
-              <Button text="Cancel"       variant="secondary" size={6} onClick={() => closeModal("pr-edit-modal")} />
+              <DataField
+                label="Probability (%)" id="pr-prob" type="number" value={String(editRow.probability)} size={6}
+                onChange={(e) => setEditRow((p) => ({ ...p, probability: Number(e.target.value) }))}
+              />
+              <DataField
+                label="Expected Close" id="pr-close" type="date" value={editRow.expectedClose || ""} size={6}
+                onChange={(e) => setEditRow((p) => ({ ...p, expectedClose: e.target.value }))}
+              />
+              <SelectField
+                label="Status" value={editRow.status} size={12}
+                onChange={(e) => setEditRow((p) => ({ ...p, status: e.target.value }))}
+              >
+                {STATUS_OPTIONS.map((o) => <Option key={o} value={o} label={STATUS_LABEL[o] || o} />)}
+              </SelectField>
+              <DataField
+                label="Notes" id="pr-notes" type="textarea" rows={3} value={editRow.notes || ""} size={12}
+                onChange={(e) => setEditRow((p) => ({ ...p, notes: e.target.value }))}
+              />
             </Grid>
+
+            {saveError && (
+              <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 text-rose-700 text-sm px-4 py-3 rounded-xl">
+                <AlertTriangle size={14} /> {saveError}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                text={saving ? "Saving…" : "Save Changes"}
+                variant="primary" size={6}
+                onClick={saveEdit}
+                disabled={saving}
+              />
+              <Button
+                text="Cancel" variant="secondary" size={6}
+                onClick={() => { closeModal("pr-edit-modal"); setSaveError(""); }}
+              />
+            </div>
           </div>
         )}
-      </Modal>
-
-      {/* ── Send to Finance Result Modal ─────────────────────────────────────── */}
-      <Modal id="pr-finance-modal" title="Sent to Finance" size="md">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl">
-            <CheckCircle size={18} className="flex-shrink-0" />
-            <p className="text-sm font-semibold">
-              {financeResult.length} prospect{financeResult.length !== 1 ? "s" : ""} sent to Finance successfully.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gradient-to-r from-[#2a465a] to-[#3a5a7a]">
-                  <th className="py-3 px-4 text-left text-xs font-black text-white uppercase tracking-[0.2em]">Name</th>
-                  <th className="py-3 px-4 text-left text-xs font-black text-white uppercase tracking-[0.2em]">Service</th>
-                  <th className="py-3 px-4 text-left text-xs font-black text-white uppercase tracking-[0.2em]">Budget</th>
-                </tr>
-              </thead>
-              <tbody>
-                {financeResult.map((row, i) => (
-                  <tr key={row.id ?? i} className={`border-b border-slate-100 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`}>
-                    <td className="py-3 px-4 font-semibold text-[#2a465a]">{row.name}</td>
-                    <td className="py-3 px-4 text-slate-600">{row.service}</td>
-                    <td className="py-3 px-4 text-slate-600">{row.budget}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex justify-end">
-            <Button text="Close" variant="primary" size={3} onClick={() => closeModal("pr-finance-modal")} />
-          </div>
-        </div>
       </Modal>
     </>
   );

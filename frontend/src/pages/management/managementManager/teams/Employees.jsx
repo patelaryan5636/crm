@@ -40,7 +40,7 @@ export default function Employees({ employees, moveEmployee }) {
       teamLeader: leaderById.get(emp.teamLeaderId) ?? "Unassigned",
       status: emp.status,
       activeProjects: assignedProjects.filter((p) => ["In Progress", "Work Started", "Review Stage", "Finalization"].includes(p.status)).length,
-      completedProjects: assignedProjects.filter((p) => p.status === "Delivered").length,
+      completedProjects: assignedProjects.filter((p) => p.status === "Completed").length,
       delayedProjects: assignedProjects.filter((p) => p.status === "Delayed").length,
     };
   });
@@ -63,7 +63,7 @@ export default function Employees({ employees, moveEmployee }) {
 
   return (
     <div className="space-y-6">
-      <Heading primaryText="Employees" secondaryText="Employee assignments, current status, and project workload." size={12} />
+      <Heading primaryText="Team" secondaryText="Employees" size={12} />
 
       <DashGrid cols={12} gap={4}>
         <DashCard title={kpis[0].title} value={kpis[0].value} icon={<Users size={20} />} accentColor={kpis[0].accent} size={3} />

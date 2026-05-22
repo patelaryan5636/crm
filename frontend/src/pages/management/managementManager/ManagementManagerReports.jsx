@@ -18,11 +18,7 @@ export default function ManagementManagerReports() {
   return (
     <div className="flex flex-col gap-6">
       <Grid cols={12} gap={4}>
-        <Heading
-          primaryText="Reports"
-          secondaryText="Project, team, and delivery analytics"
-          size={12}
-        />
+        <Heading primaryText="Performance" secondaryText="Reports" size={12} />
       </Grid>
 
       {/* Pill Tab Navigation — matches ManagementManagerProjects style */}

@@ -62,16 +62,10 @@ const resolveUserTeam = async (adminId, userId, role) => {
     : { admin: adminIdObj, isDeleted: false, isActive: true, 'members.user': userIdObj };
 
   const team = await Team.findOne(query).select('_id name leader members department').lean();
-  if (!team) {
-    throw new AppError(
-      role === 'SALES_TL'
-        ? 'This sales team leader is not assigned to any active team.'
-        : 'This sales executive is not assigned to any active team.',
-      409
-    );
-  }
 
-  return team;
+  // Return null instead of throwing — a TL/Executive without a team can still
+  // receive lead assignments. The team field on the lead will simply be null.
+  return team || null;
 };
 
 const resolveCurrentAssignmentCount = async (adminId, userId) => {
@@ -155,13 +149,14 @@ const buildTargetPreview = async ({ adminId, user, team }) => {
   const currentAssigned = await resolveCurrentAssignmentCount(adminId, user._id);
 
   return {
-    _id: user._id,
+    id: String(user._id),       // always a plain string for frontend consumption
+    _id: String(user._id),
     name: user.name,
     email: user.email,
     role: user.role,
     phone: user.phone,
     team: team ? {
-      id: team._id,
+      id: String(team._id),
       name: team.name,
     } : null,
     currentAssigned,
@@ -246,10 +241,11 @@ const assignLeadsToUser = async ({
     ? await resolveUserTeam(adminId, performedBy._id, performedBy.role)
     : null;
 
-  if (performedBy.role === 'SALES_TL') {
-    const targetTeamId = String(targetTeam?._id || '');
-    const performerTeamId = String(performerTeam?._id || '');
-    if (!targetTeamId || !performerTeamId || targetTeamId !== performerTeamId) {
+  // TL cross-team guard: only enforce when both performer and target have teams
+  if (performedBy.role === 'SALES_TL' && performerTeam && targetTeam) {
+    const targetTeamId = String(targetTeam._id);
+    const performerTeamId = String(performerTeam._id);
+    if (targetTeamId !== performerTeamId) {
       throw new AppError('Sales TL can only assign leads to executives in the same team.', 403);
     }
   }
@@ -695,6 +691,36 @@ exports.getAssignmentTargets = async (adminId, performer, targetRole = null) => 
     if (team && team.members) {
       const memberIds = team.members.map(m => m.user).filter(Boolean);
       query._id = { $in: memberIds };
+    }
+  }
+
+  // When targeting SALES_TL specifically (e.g. Sales Manager distributing leads),
+  // only return TLs who are the active leader of at least one team.
+  // This prevents assigning leads to TLs with no team (no one to pass them to).
+  if (roles.includes('SALES_TL') && roles.length === 1) {
+    const teamsWithLeaders = await Team.find({
+      admin: adminIdObj,
+      isDeleted: false,
+      isActive: true,
+      leader: { $ne: null },
+    }).select('leader').lean();
+
+    const tlsWithTeam = new Set(teamsWithLeaders.map(t => String(t.leader)));
+
+    if (tlsWithTeam.size > 0) {
+      // Intersect with any existing _id filter
+      const existingIds = query._id?.$in
+        ? query._id.$in.map(String)
+        : null;
+
+      const filteredIds = existingIds
+        ? existingIds.filter(id => tlsWithTeam.has(id))
+        : [...tlsWithTeam];
+
+      query._id = { $in: filteredIds };
+    } else {
+      // No teams exist yet — return empty
+      return { targets: [], allowedRoles };
     }
   }
 

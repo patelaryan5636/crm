@@ -26,25 +26,25 @@ export default function AllLeads() {
     distributeLeads,
   } = useLeads();
 
-  // ─── Even distribution builder ────────────────────────────────────────────────
   const objectIdPattern = /^[0-9a-fA-F]{24}$/;
-  const resolveLeadId = (lead) => String(lead?.id || lead?._id || "").trim();
+  const resolveLeadId = (lead) => {
+    const raw = lead?.id ?? lead?._id ?? '';
+    return String(raw).trim();
+  };
 
   function buildDistRows(totalLeads, leaders = []) {
-    // Build eligible leaders with remaining capacity
     const eligible = leaders
       .map((tl) => ({
         ...tl,
-        tlId: tl._id || tl.id,
+        tlId: String(tl._id || tl.id || ''),
         capacity: Math.max(0, Number(tl.capacity ?? tl.remaining ?? 0)),
         currentLeads: Number(tl.currentLeads ?? 0),
         effectiveLimit: Number(tl.effectiveLimit ?? tl.limit ?? MAX_LEADS),
       }))
-      .filter((tl) => tl.capacity > 0);
+      .filter((tl) => tl.capacity > 0 && tl.tlId.length === 24);
 
     if (eligible.length === 0) return [];
 
-    // Default assignment is 0 for manual distribution control.
     return eligible.map((tl) => ({
       tlId: tl.tlId,
       tlName: tl.name,
@@ -247,6 +247,7 @@ export default function AllLeads() {
         .filter((id) => objectIdPattern.test(id));
 
       if (leadIds.length === 0) {
+        console.warn(`[distribute] No valid ObjectId lead IDs for TL ${r.tlName} — skipping`);
         continue;
       }
 
@@ -259,7 +260,7 @@ export default function AllLeads() {
     }
 
     if (assignments.length === 0) {
-      setDistError("No valid persisted lead IDs were found in your selection. Refresh leads and try again.");
+      setDistError("No valid lead IDs found. Make sure leads are saved (not just added locally) before distributing. Refresh the page and try again.");
       return;
     }
 

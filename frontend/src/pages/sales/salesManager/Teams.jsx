@@ -60,7 +60,7 @@ export default function SalesTeamLeaders() {
         const loadLeaders = async () => {
             setLoading(true);
             try {
-                const current = JSON.parse(localStorage.getItem('user') || localStorage.getItem('admin') || 'null');
+                const current = JSON.parse(sessionStorage.getItem('user') || sessionStorage.getItem('admin') || 'null');
                 const departmentId = current?.department?._id || current?.department || null;
                 if (!departmentId) return;
                 const res = await teamService.getAvailableLeaders(departmentId);
@@ -175,7 +175,7 @@ export default function SalesTeamLeaders() {
             if (teamForm.memberIds.size === 0) { setTeamError("Add at least one member."); return; }
 
             // Create team via API (department user route)
-            const current = JSON.parse(localStorage.getItem('user') || localStorage.getItem('admin') || 'null');
+            const current = JSON.parse(sessionStorage.getItem('user') || sessionStorage.getItem('admin') || 'null');
             const departmentId = current?.department?._id || current?.department || null;
             const createRes = await teamService.createTeam({ name: teamForm.name.trim(), department: departmentId, leader: teamForm.leaderId });
             const createdTeam = createRes.data?.team || createRes.team;

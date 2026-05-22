@@ -2458,79 +2458,76 @@ export const DashCard = ({
   }, [value, fitText]);
 
   return (
-  <div
-    ref={containerRef}
-    className={`col-span-12 md:col-span-6 lg:col-span-${size} rounded-2xl flex items-center relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group cursor-pointer`}
-    style={{
-      background: "#ffffff",
-      border: "1px solid #e2e8f0",
-      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
-      padding: "20px",
-      gap: "14px",
-      minHeight: "110px",
-      alignItems: "center",
-    }}
-  >
-    {/* Accent glow */}
     <div
-      className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full blur-2xl opacity-10 pointer-events-none transition-opacity duration-300 group-hover:opacity-20"
-      style={{ background: accentColor }}
-    />
-
-    {/* Icon */}
-    {icon && (
+      ref={containerRef}
+      className={`col-span-12 md:col-span-6 lg:col-span-${size} rounded-2xl flex items-center relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group cursor-pointer`}
+      style={{
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)",
+        padding: "20px",
+        gap: "16px",
+      }}
+    >
+      {/* Accent glow */}
       <div
-        ref={iconBoxRef}
-        className="flex items-center justify-center rounded-xl flex-shrink-0"
-        style={{
-          width: "52px",
-          height: "52px",
-          minWidth: "52px",
-          background: "#f8fafc",
-          border: "1px solid #f1f5f9",
-          color: accentColor,
-        }}
-      >
-        {icon}
+        className="absolute -right-4 -bottom-4 w-20 h-20 rounded-full blur-2xl opacity-10 pointer-events-none transition-opacity duration-300 group-hover:opacity-20"
+        style={{ background: accentColor }}
+      />
+
+      {/* Icon box */}
+      {icon && (
+        <div
+          ref={iconBoxRef}
+          className="flex-shrink-0 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-105"
+          style={{
+            width: "48px",
+            height: "48px",
+            background: "#f8fafc",
+            border: "1px solid #f1f5f9",
+            color: accentColor,
+          }}
+        >
+          {icon}
+        </div>
+      )}
+
+      {/* Text */}
+      <div className="flex flex-col justify-center min-w-0 w-full">
+        <h3
+          ref={titleRef}
+          className="whitespace-nowrap"
+          style={{
+            color: "#64748b",
+            fontSize: "12px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            marginBottom: "2px",
+            overflow: "visible",
+          }}
+        >
+          {title}
+        </h3>
+        <span
+          ref={valueRef}
+          className="whitespace-nowrap"
+          style={{
+            color: "#0f172a",
+            fontSize: "28px",
+            fontWeight: 800,
+            letterSpacing: "-0.01em",
+            lineHeight: "1",
+            overflow: "visible",
+          }}
+        >
+          {value}
+        </span>
       </div>
-    )}
-
-    {/* Content */}
-    <div className="flex flex-col justify-center flex-1 min-w-0 overflow-hidden">
-      <h3
-        ref={titleRef}
-        style={{
-          color: "#64748b",
-          fontSize: "13px",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-          marginBottom: "6px",
-          whiteSpace: "normal",
-          overflow: "visible",
-          textOverflow: "unset",
-        }}
-      >
-        {title}
-      </h3>
-
-      <span
-        ref={valueRef}
-        style={{
-          color: "#0f172a",
-          fontSize: "30px",
-          fontWeight: 800,
-          lineHeight: "1.1",
-          whiteSpace: "nowrap",
-          overflow: "visible",
-        }}
-      >
-        {value}
-      </span>
     </div>
-  </div>
-);
-};/*
+  );
+};;
+/*
   ── HOW TO USE DashCard ─────────────────────────────────────────────────────
 
   import { Users, TrendingDown } from "lucide-react";

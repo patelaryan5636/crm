@@ -77,7 +77,7 @@ export default function DeliveryReports() {
     <div className="flex flex-col gap-6">
 
       {/* KPI CARDS */}
-      <Grid cols={12} gap={6}>
+      <Grid cols={12} gap={5}>
 
         <div className="col-span-12 md:col-span-3">
           <DashCard

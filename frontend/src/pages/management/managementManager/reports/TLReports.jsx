@@ -13,21 +13,6 @@ export default function TLReports() {
 
   const [filter, setFilter] = useState("Today");
 
-  const totalProjects = tlReports.reduce(
-    (acc, item) => acc + item.totalProjects,
-    0
-  );
-
-  const totalCompleted = tlReports.reduce(
-    (acc, item) => acc + item.completed,
-    0
-  );
-
-  const totalDelayed = tlReports.reduce(
-    (acc, item) => acc + item.delayed,
-    0
-  );
-
   /* DYNAMIC FILTER DATA */
   const dataMap = {
     Today: tlReports.map((tl) => ({
@@ -82,41 +67,6 @@ export default function TLReports() {
 
   return (
     <div className="flex flex-col gap-6">
-
-      {/* SUMMARY CARDS */}
-      <Grid cols={12} gap={6}>
-
-        <div className="col-span-12 md:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <p className="text-sm text-slate-500 font-medium">
-            Total Projects
-          </p>
-
-          <h2 className="text-3xl font-bold text-[#2a465a] mt-2">
-            {totalProjects}
-          </h2>
-        </div>
-
-        <div className="col-span-12 md:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <p className="text-sm text-slate-500 font-medium">
-            Completed Projects
-          </p>
-
-          <h2 className="text-3xl font-bold text-emerald-600 mt-2">
-            {totalCompleted}
-          </h2>
-        </div>
-
-        <div className="col-span-12 md:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <p className="text-sm text-slate-500 font-medium">
-            Delayed Projects
-          </p>
-
-          <h2 className="text-3xl font-bold text-red-500 mt-2">
-            {totalDelayed}
-          </h2>
-        </div>
-
-      </Grid>
 
       {/* CHARTS */}
       <Grid cols={12} gap={6}>

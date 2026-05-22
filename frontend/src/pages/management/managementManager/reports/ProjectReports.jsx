@@ -45,21 +45,6 @@ export default function ProjectReports() {
 
   const chartData = dataMap[filter];
 
-  const totalDelivered = chartData.reduce(
-    (acc, item) => acc + item.delivered,
-    0
-  );
-
-  const totalInProgress = chartData.reduce(
-    (acc, item) => acc + item.inProgress,
-    0
-  );
-
-  const totalDelayed = chartData.reduce(
-    (acc, item) => acc + item.delayed,
-    0
-  );
-
   /* FILTER BUTTONS */
   const FilterButtons = () => (
     <div className="flex gap-2 flex-wrap">
@@ -81,41 +66,6 @@ export default function ProjectReports() {
 
   return (
     <div className="flex flex-col gap-6">
-
-      {/* SUMMARY CARDS */}
-      <Grid cols={12} gap={6}>
-
-        <div className="col-span-12 md:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            Total Completed
-          </p>
-
-          <h2 className="text-3xl font-bold text-emerald-600 mt-2">
-            {totalDelivered}
-          </h2>
-        </div>
-
-        <div className="col-span-12 md:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            In Progress
-          </p>
-
-          <h2 className="text-3xl font-bold text-amber-500 mt-2">
-            {totalInProgress}
-          </h2>
-        </div>
-
-        <div className="col-span-12 md:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            Delayed Projects
-          </p>
-
-          <h2 className="text-3xl font-bold text-red-500 mt-2">
-            {totalDelayed}
-          </h2>
-        </div>
-
-      </Grid>
 
       {/* CHARTS */}
       <Grid cols={12} gap={6}>

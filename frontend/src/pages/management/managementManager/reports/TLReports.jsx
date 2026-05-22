@@ -31,63 +31,49 @@ export default function TLReports() {
   }));
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
+
       {/* Summary Cards */}
       <Grid cols={12} gap={4}>
-        <div className="col-span-12 md:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div className="col-span-12 md:col-span-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
           <p className="text-sm text-slate-500 font-medium">
             Total Projects
           </p>
-
-          <h2 className="text-3xl font-bold text-[#2a465a] mt-2">
+          <h2 className="text-2xl font-bold text-[#2a465a] mt-1">
             {totalProjects}
           </h2>
         </div>
 
-        <div className="col-span-12 md:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div className="col-span-12 md:col-span-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
           <p className="text-sm text-slate-500 font-medium">
             Completed Projects
           </p>
-
-          <h2 className="text-3xl font-bold text-emerald-600 mt-2">
+          <h2 className="text-2xl font-bold text-emerald-600 mt-1">
             {totalCompleted}
           </h2>
         </div>
 
-        <div className="col-span-12 md:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div className="col-span-12 md:col-span-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
           <p className="text-sm text-slate-500 font-medium">
             Delayed Projects
           </p>
-
-          <h2 className="text-3xl font-bold text-red-500 mt-2">
+          <h2 className="text-2xl font-bold text-red-500 mt-1">
             {totalDelayed}
           </h2>
         </div>
       </Grid>
 
-      {/* Charts */}
-      <Grid cols={12} gap={6}>
+      {/* Charts (COMPACT FIXED) */}
+      <Grid cols={12} gap={4}>
         <GColumnChart
           data={chartData}
           bars={[
-            {
-              key: "completed",
-              label: "Completed",
-              color: "#10b981",
-            },
-            {
-              key: "inProgress",
-              label: "In Progress",
-              color: "#f59e0b",
-            },
-            {
-              key: "delayed",
-              label: "Delayed",
-              color: "#ef4444",
-            },
+            { key: "completed", label: "Completed", color: "#10b981" },
+            { key: "inProgress", label: "In Progress", color: "#f59e0b" },
+            { key: "delayed", label: "Delayed", color: "#ef4444" },
           ]}
           title="TL Performance Overview"
-          height={320}
+          height={240}
           size={12}
         />
 
@@ -101,7 +87,7 @@ export default function TLReports() {
             },
           ]}
           title="Completion Analysis"
-          height={300}
+          height={240}
           size={6}
         />
 
@@ -115,7 +101,7 @@ export default function TLReports() {
             },
           ]}
           title="Delay Analysis"
-          height={300}
+          height={240}
           size={6}
         />
       </Grid>
@@ -140,6 +126,7 @@ export default function TLReports() {
           exportFileName="tl_reports_export"
         />
       </Grid>
+
     </div>
   );
 }

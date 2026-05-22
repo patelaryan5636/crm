@@ -1,6 +1,5 @@
 import {
   Grid,
-  DashGrid,
   DashCard,
   GColumnChart,
   GLineChart,
@@ -15,7 +14,6 @@ import {
   TrendingUp,
   CheckCircle,
   AlertCircle,
-  QrCode,
 } from "lucide-react";
 
 export default function DeliveryReports() {
@@ -28,44 +26,46 @@ export default function DeliveryReports() {
   return (
     <div className="flex flex-col gap-6">
 
-      <Grid cols={12} gap={4}>
-        <DashGrid cols={12} gap={8}>
-
+      {/* KPI CARDS */}
+      <Grid cols={12} gap={6}>
+        <div className="col-span-12 md:col-span-3">
           <DashCard
             title="Total Delivered"
             value={deliveryMetrics.totalDelivered}
             icon={<CheckCircle size={20} />}
             accentColor="#10b981"
-            size={12}
           />
+        </div>
 
+        <div className="col-span-12 md:col-span-3">
           <DashCard
             title="On-Time Delivery %"
             value={`${deliveryMetrics.onTimePercentage.toFixed(1)}%`}
             icon={<TrendingUp size={20} />}
             accentColor="#3b82f6"
-            size={12}
           />
+        </div>
 
+        <div className="col-span-12 md:col-span-3">
           <DashCard
             title="Delayed Deliveries"
             value={deliveryMetrics.delayedDelivered}
             icon={<AlertCircle size={20} />}
             accentColor="#ef4444"
-            size={12}
           />
+        </div>
 
+        <div className="col-span-12 md:col-span-3">
           <DashCard
             title="Avg Delay Days"
             value={deliveryMetrics.avgDelayDays}
             icon={<AlertCircle size={20} />}
             accentColor="#f59e0b"
-            size={12}
           />
-
-        </DashGrid>
+        </div>
       </Grid>
 
+      {/* CHARTS */}
       <Grid cols={12} gap={6}>
         <GColumnChart
           data={chartData}

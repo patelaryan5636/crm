@@ -10,7 +10,6 @@ import {
 import { teamReports } from "../reportsStore";
 
 export default function TeamReports() {
-
   const [filter, setFilter] = useState("Today");
 
   /* FILTER DATA */
@@ -67,13 +66,10 @@ export default function TeamReports() {
 
   return (
     <div className="flex flex-col gap-6">
-
       {/* CHARTS */}
       <Grid cols={12} gap={6}>
-
         {/* COMPLETION TREND */}
         <div className="col-span-12 md:col-span-6 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-[#2a465a]">
               Completed Projects by Team
@@ -94,12 +90,10 @@ export default function TeamReports() {
             height={260}
             size={12}
           />
-
         </div>
 
         {/* DELAY TREND */}
         <div className="col-span-12 md:col-span-6 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-[#2a465a]">
               Delayed Projects by Team
@@ -120,12 +114,10 @@ export default function TeamReports() {
             height={260}
             size={12}
           />
-
         </div>
 
         {/* TEAM PERFORMANCE */}
         <div className="col-span-12 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-[#2a465a]">
               Team Performance Analytics
@@ -156,14 +148,11 @@ export default function TeamReports() {
             height={320}
             size={12}
           />
-
         </div>
-
       </Grid>
 
       {/* TABLE */}
       <Grid cols={12} gap={4}>
-
         <DataTable
           title="Team Performance Report"
           columns={[
@@ -181,9 +170,7 @@ export default function TeamReports() {
           exportable
           exportFileName="team_reports_export"
         />
-
       </Grid>
-
     </div>
   );
 }

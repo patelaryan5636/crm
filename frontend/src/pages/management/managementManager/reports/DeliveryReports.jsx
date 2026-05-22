@@ -7,7 +7,6 @@ import {
 } from "../../../../components/shared/Common_Components";
 
 export default function DeliveryReports() {
-
   const [filter, setFilter] = useState("Today");
 
   /* DYNAMIC REPORT DATA */
@@ -67,10 +66,8 @@ export default function DeliveryReports() {
 
       {/* CHARTS */}
       <Grid cols={12} gap={6}>
-
         {/* DELIVERY GROWTH */}
         <div className="col-span-12 md:col-span-6 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-[#2a465a]">
               Delivery Growth Analysis
@@ -91,12 +88,10 @@ export default function DeliveryReports() {
             height={260}
             size={12}
           />
-
         </div>
 
         {/* DELAY TREND */}
         <div className="col-span-12 md:col-span-6 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-[#2a465a]">
               Delay Trend Analysis
@@ -117,12 +112,10 @@ export default function DeliveryReports() {
             height={260}
             size={12}
           />
-
         </div>
 
         {/* MONTHLY DELIVERY TREND */}
         <div className="col-span-12 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-[#2a465a]">
               Monthly Delivery Trend
@@ -148,11 +141,8 @@ export default function DeliveryReports() {
             height={320}
             size={12}
           />
-
         </div>
-
       </Grid>
-
     </div>
   );
 }

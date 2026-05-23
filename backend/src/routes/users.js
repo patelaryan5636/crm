@@ -1,6 +1,6 @@
 const express = require('express');
 const userController = require('../controllers/user.controller');
-const { createUserSchema, departmentLoginSchema, setupAccountSchema } = require('../validators/user.validator');
+const { createUserSchema, departmentLoginSchema, setupAccountSchema, updateBankDetailsSchema } = require('../validators/user.validator');
 const validate = require('../middleware/validate');
 const { requireAdmin, requireAuth, requireUser } = require('../middleware/auth');
 
@@ -17,5 +17,8 @@ router.post('/', requireAdmin, validate(createUserSchema, 'body'), userControlle
 
 // Account setup (password update) for department users
 router.patch('/setup-account', requireUser, validate(setupAccountSchema, 'body'), userController.setupAccount);
+
+// Bank details setup for department users
+router.patch('/update-bank-details', requireUser, validate(updateBankDetailsSchema, 'body'), userController.updateBankDetails);
 
 module.exports = router;

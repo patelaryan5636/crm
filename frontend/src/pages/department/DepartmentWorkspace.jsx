@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
 import { DataField, Button } from "../../components/shared/Common_Components";
+import { userService } from "../../services/userService";
 
 // ─── Floating background ──────────────────────────────────────────────────────
 const FloatingBackground = () => (
@@ -84,6 +85,29 @@ export default function DepartmentWorkspace() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    // Redirect if already completed setup
+    try {
+      const user = JSON.parse(sessionStorage.getItem("user") || "{}");
+      if (user.isProfileComplete && !user.mustChangePassword) {
+        // Find role-based route
+        const role = user.role;
+        let route = "/department";
+        if (role === 'SALES_MANAGER') route = '/sales-manager';
+        else if (role === 'SALES_TL') route = '/sales-team-leader';
+        else if (role === 'SALES_EXECUTIVE') route = '/sales-executive';
+        else if (role === 'FINANCE_MANAGER' || role === 'FINANCE_EXECUTIVE') route = '/finance';
+        else if (role === 'MANAGEMENT_MANAGER') route = '/management-manager';
+        else if (role === 'MANAGEMENT_TL') route = '/management-team-leader';
+        else if (role === 'MANAGEMENT_EMPLOYEE') route = '/management-employee';
+        
+        navigate(route);
+      }
+    } catch (err) {
+      console.error("Session parse error:", err);
+    }
+  }, [navigate]);
+
+  useEffect(() => {
     if (!status.type) return;
     const t = setTimeout(() => setStatus({ type: "", message: "" }), 4000);
     return () => clearTimeout(t);
@@ -108,16 +132,45 @@ export default function DepartmentWorkspace() {
   const validateBank = () => {
     const e = {};
     if (!bankName.trim())                                        e.bankName             = "Bank name is required.";
-    if (!/^\d{9,18}$/.test(accountNumber.trim()))               e.accountNumber        = "Enter a valid account number (9–18 digits).";
+    if (!/^\d{9,16}$/.test(accountNumber.trim()))               e.accountNumber        = "Enter a valid account number (9–16 digits).";
     if (accountNumber !== confirmAccountNumber)                  e.confirmAccountNumber = "Account numbers do not match.";
     if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode.trim().toUpperCase())) e.ifscCode = "Enter a valid IFSC code (e.g. SBIN0001234).";
     setErrors(e);
     return !Object.keys(e).length;
   };
 
-  const nextStep = () => {
-    if (step === 0 && !validatePassword()) { setStatus({ type: "alert", message: "Please fix the errors before continuing." }); return; }
-    if (step === 1 && !validateBank())     { setStatus({ type: "alert", message: "Please fix the errors before continuing." }); return; }
+  const nextStep = async () => {
+    if (step === 0) {
+      if (!validatePassword()) {
+        setStatus({ type: "alert", message: "Please fix the errors before continuing." });
+        return;
+      }
+      try {
+        setIsSubmitting(true);
+        setStatus({ type: "info", message: "Updating password..." });
+        await userService.setupAccount({ newPassword: password, confirmPassword });
+        setStatus({ type: "success", message: "Password updated! Now provide your bank details." });
+        setErrors({});
+        setStep(1);
+      } catch (err) {
+        setStatus({ type: "error", message: err?.response?.data?.message || "Failed to update password." });
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    if (step === 1) {
+      if (!validateBank()) {
+        setStatus({ type: "alert", message: "Please fix the errors before continuing." });
+        return;
+      }
+      setErrors({});
+      setStatus({ type: "", message: "" });
+      setStep(2);
+      return;
+    }
+
     setErrors({});
     setStatus({ type: "", message: "" });
     setStep((s) => s + 1);
@@ -131,11 +184,31 @@ export default function DepartmentWorkspace() {
     try {
       setIsSubmitting(true);
       setStatus({ type: "info", message: "Saving your details…" });
-      await new Promise((r) => setTimeout(r, 1000)); // TODO: replace with real API
+      
+      const response = await userService.updateBankDetails({
+        bankName,
+        accountNumber,
+        confirmAccountNumber,
+        ifscCode
+      });
+
       setStatus({ type: "success", message: "Setup complete! Redirecting to your dashboard…" });
-      setTimeout(() => navigate("/sales-manager"), 1200);
+      
+      // Update local storage user data
+      const user = JSON.parse(sessionStorage.getItem("user") || "{}");
+      const updatedUser = { 
+        ...user, 
+        isProfileComplete: true, 
+        mustChangePassword: false 
+      };
+      sessionStorage.setItem("user", JSON.stringify(updatedUser));
+
+      setTimeout(() => {
+        const nextRoute = response.data?.nextRoute || "/department";
+        navigate(nextRoute);
+      }, 1500);
     } catch (err) {
-      setStatus({ type: "error", message: err?.message || "Something went wrong. Please try again." });
+      setStatus({ type: "error", message: err?.response?.data?.message || "Something went wrong. Please try again." });
     } finally {
       setIsSubmitting(false);
     }
@@ -354,13 +427,20 @@ export default function DepartmentWorkspace() {
               <div className={`flex gap-3 pt-2 ${step < 2 ? "justify-between" : "justify-end"}`}>
                 {/* Step 0: Back to Login link | Step 1: Back to previous step */}
                 {step === 0 && (
-                  <Button text="← Back to Login" variant="secondary" size={5} type="button" onClick={() => navigate("/login")} />
+                  <Button text="← Back to Login" variant="secondary" size={5} type="button" onClick={() => navigate("/login")} disabled={isSubmitting} />
                 )}
                 {step > 0 && step < 2 && (
-                  <Button text="← Back" variant="secondary" size={4} type="button" onClick={prevStep} />
+                  <Button text="← Back" variant="secondary" size={4} type="button" onClick={prevStep} disabled={isSubmitting} />
                 )}
                 {step < 2 ? (
-                  <Button text="Continue →" variant="primary" size={step === 0 ? 7 : 8} type="button" onClick={nextStep} />
+                  <Button 
+                    text={isSubmitting ? "Processing..." : "Continue →"} 
+                    variant="primary" 
+                    size={step === 0 ? 7 : 8} 
+                    type="button" 
+                    onClick={nextStep} 
+                    disabled={isSubmitting}
+                  />
                 ) : (
                   <Button
                     text={isSubmitting ? "Saving…" : "Finish & Go to Dashboard →"}

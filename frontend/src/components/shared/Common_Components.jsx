@@ -1802,7 +1802,8 @@ export const DataTable = ({
                           className={`py-3 px-4 text-[#2a465a] font-medium whitespace-nowrap ${col.align === "center" ? "text-center" : col.align === "right" ? "text-right" : "text-left"}`}
                         >
                           {(() => {
-                            const raw = row[col.key] ?? "—";
+                            const rendered = col.render ? col.render(row[col.key], row) : row[col.key] ?? "—";
+                            const raw = col.render ? rendered : row[col.key] ?? "—";
                             const text = (() => {
                               if (!ellipse || typeof raw !== "string") return raw;
                               const words = raw.trim().split(/\s+/);
@@ -1812,7 +1813,7 @@ export const DataTable = ({
                             })();
 
                             // ── userProfile avatar prefix ──
-                            if (userProfile && col.key === userProfile) {
+                            if (userProfile && col.key === userProfile && !col.render) {
                               const photoUrl = row.photoUrl ?? null;
                               return (
                                 <div className="flex items-center gap-2.5">
@@ -1831,7 +1832,7 @@ export const DataTable = ({
                               );
                             }
 
-                            return text;
+                            return rendered;
                           })()}
                         </td>
                       );

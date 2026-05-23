@@ -63,6 +63,15 @@ const calcDiscountAmount = (total, mode, value) => {
   return 0;
 };
 
+const calcAdvAmount = (netPayable, mode, value) => {
+  const v = parseFloat(value) || 0;
+  if (mode === "Percentage") return Math.round((netPayable * Math.min(v, 100)) / 100);
+  if (mode === "Rupees") return Math.min(v, netPayable);
+  return 0;
+};
+
+const blankAdv = () => ({ id: Date.now(), mode: "Percentage", value: "", method: "UPI" });
+
 const blankReq = () => ({ id: Date.now(), title: "", cost: "", description: "" });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,6 +89,10 @@ export default function WorkOrders() {
   // States for requirement drafting inside Edit Modal
   const [reqDraft, setReqDraft]         = useState(blankReq());
   const [editingReqId, setEditingReqId] = useState(null);
+
+  // States for advance payment drafting inside Edit Modal
+  const [advDraft, setAdvDraft]         = useState(blankAdv());
+  const [editingAdvId, setEditingAdvId] = useState(null);
 
   // States for email/PDF modal
   const [editEmail, setEditEmail] = useState("");
@@ -118,7 +131,8 @@ export default function WorkOrders() {
   const totalCost     = calcTotalCost(editForm.requirements || []);
   const discountAmt   = calcDiscountAmount(totalCost, editForm.discountMode || "None", editForm.discountValue || "");
   const netPayable    = Math.max(0, totalCost - discountAmt);
-  const advancePaid   = parseFloat(editForm.advanceAmount || 0) || 0;
+  const advancePayments = editForm.advancePayments || [];
+  const advancePaid   = Math.min(netPayable, advancePayments.reduce((sum, p) => sum + calcAdvAmount(netPayable, p.mode, p.value), 0));
   const remaining     = Math.max(0, netPayable - advancePaid);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
@@ -126,6 +140,17 @@ export default function WorkOrders() {
   
   const openEdit = (row) => {
     setSelected(row);
+    let advancePaymentsList = row.advancePayments || [];
+    if (advancePaymentsList.length === 0 && row.advanceAmount && parseFloat(row.advanceAmount) > 0) {
+      advancePaymentsList = [
+        {
+          id: Date.now(),
+          mode: "Rupees",
+          value: String(row.advanceAmount),
+          method: "UPI",
+        }
+      ];
+    }
     setEditForm({
       deliveryDate:  row.deliveryDate  || "",
       terms:         row.terms         || "",
@@ -137,9 +162,12 @@ export default function WorkOrders() {
       discountValue: row.discountValue || "",
       paymentStatus: row.paymentStatus || "Unpaid",
       advanceAmount: row.advanceAmount || "",
+      advancePayments: advancePaymentsList,
     });
     setReqDraft(blankReq());
     setEditingReqId(null);
+    setAdvDraft(blankAdv());
+    setEditingAdvId(null);
     openModal("wo-edit");
   };
 
@@ -181,11 +209,49 @@ export default function WorkOrders() {
     setReqDraft(blankReq());
   };
 
+  // ── Advance Payment CRUD inside editForm ─────────────────────────────────
+  const handleAddAdv = () => {
+    if (!advDraft.value || parseFloat(advDraft.value) <= 0) return;
+
+    const currentPayments = editForm.advancePayments || [];
+    if (editingAdvId !== null) {
+      ef("advancePayments",
+        currentPayments.map((p) =>
+          p.id === editingAdvId ? { ...advDraft, id: editingAdvId } : p
+        )
+      );
+      setEditingAdvId(null);
+    } else {
+      ef("advancePayments", [...currentPayments, { ...advDraft, id: Date.now() }]);
+    }
+    setAdvDraft(blankAdv());
+  };
+
+  const handleEditAdv = (adv) => {
+    setAdvDraft({ ...adv });
+    setEditingAdvId(adv.id);
+  };
+
+  const handleDeleteAdv = (id) => {
+    ef("advancePayments", (editForm.advancePayments || []).filter((p) => p.id !== id));
+    if (editingAdvId === id) {
+      setEditingAdvId(null);
+      setAdvDraft(blankAdv());
+    }
+  };
+
+  const handleCancelEditAdv = () => {
+    setEditingAdvId(null);
+    setAdvDraft(blankAdv());
+  };
+
   // ── Save edit changes ─────────────────────────────────────────────────────
   const saveEdit = () => {
     const totalCostVal   = calcTotalCost(editForm.requirements || []);
     const discountAmtVal = calcDiscountAmount(totalCostVal, editForm.discountMode || "None", editForm.discountValue || "");
     const netPayableVal  = Math.max(0, totalCostVal - discountAmtVal);
+    const advancePaymentsVal = editForm.advancePayments || [];
+    const advancePaidVal = advancePaymentsVal.reduce((sum, p) => sum + calcAdvAmount(netPayableVal, p.mode, p.value), 0);
 
     setWos((prev) =>
       prev.map((w) =>
@@ -196,6 +262,8 @@ export default function WorkOrders() {
               totalCost: totalCostVal,
               discountAmt: discountAmtVal,
               netPayable: netPayableVal,
+              advanceAmount: String(advancePaidVal),
+              advancePayments: advancePaymentsVal,
             }
           : w
       )
@@ -651,6 +719,24 @@ export default function WorkOrders() {
                     <>
                       <ModalData label="Advance Paid"  value={fmt(selected.advanceAmount)} />
                       <ModalData label="Remaining"     value={fmt(remainingVal)}           />
+                      {selected.advancePayments && selected.advancePayments.length > 0 && (
+                        <div className="col-span-2 mt-3 pt-3 border-t border-slate-100 flex flex-col gap-1.5">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Transaction History</p>
+                          <div className="flex flex-col gap-1 text-xs">
+                            {selected.advancePayments.map((p, pIdx) => (
+                              <div key={p.id || pIdx} className="flex justify-between items-center text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                <span className="font-semibold">{p.method}</span>
+                                <span className="text-[10px] bg-slate-200/60 px-1.5 py-0.5 rounded text-slate-500 font-bold uppercase">
+                                  {p.mode === "Percentage" ? `${p.value}%` : "Flat"}
+                                </span>
+                                <span className="font-black text-emerald-600">
+                                  {fmt(calcAdvAmount(selected.netPayable ?? selected.totalCost, p.mode, p.value))}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                 </ModalGrid>
@@ -979,7 +1065,10 @@ export default function WorkOrders() {
                     value={editForm.paymentStatus}
                     onChange={(e) => {
                       ef("paymentStatus", e.target.value);
-                      if (e.target.value !== "Advance") ef("advanceAmount", "");
+                      if (e.target.value !== "Advance") {
+                        ef("advanceAmount", "");
+                        ef("advancePayments", []);
+                      }
                     }}
                   >
                     <Option value="Paid"    label="Paid"    />
@@ -988,25 +1077,159 @@ export default function WorkOrders() {
                   </SelectField>
 
                   {editForm.paymentStatus === "Advance" && (
-                    <DataField
-                      label={`Advance Amount (max ${fmt(netPayable)})`}
-                      id="edit-adv-amount"
-                      type="number"
-                      placeholder="Amount paid in advance"
-                      value={editForm.advanceAmount}
-                      onChange={(e) => {
-                        const v = Math.min(
-                          parseFloat(e.target.value) || 0,
-                          netPayable
-                        );
-                        ef("advanceAmount", String(v || ""));
-                      }}
-                      size={12}
-                    />
+                    <div className="hidden sm:block" />
                   )}
                 </div>
 
-                {/* Advance payment breakdown */}
+                {/* ── Advance Payment Transaction Builder ── */}
+                {editForm.paymentStatus === "Advance" && (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/30 p-4 flex flex-col gap-4">
+                    <p className="text-xs font-bold text-slate-500">
+                      {editingAdvId !== null ? "✏️ Editing Advance Payment" : "Add Advance Payment"}
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <SelectField
+                        label="Payment Method"
+                        id="edit-adv-method"
+                        value={advDraft.method}
+                        onChange={(e) => setAdvDraft((p) => ({ ...p, method: e.target.value }))}
+                      >
+                        <Option value="UPI"          label="UPI"          />
+                        <Option value="Cash"         label="Cash"         />
+                        <Option value="Card"         label="Card"         />
+                        <Option value="Net Banking"  label="Net Banking"  />
+                      </SelectField>
+
+                      <SelectField
+                        label="Payment Type"
+                        id="edit-adv-mode"
+                        value={advDraft.mode}
+                        onChange={(e) => setAdvDraft((p) => ({ ...p, mode: e.target.value, value: "" }))}
+                      >
+                        <Option value="Percentage" label="Percentage (%)" />
+                        <Option value="Rupees"     label="Rupees (₹)"     />
+                      </SelectField>
+
+                      {(() => {
+                        const paidOther = (editForm.advancePayments || [])
+                          .filter((p) => p.id !== editingAdvId)
+                          .reduce((sum, p) => sum + calcAdvAmount(netPayable, p.mode, p.value), 0);
+                        const maxAllowedRupees = Math.max(0, netPayable - paidOther);
+                        const maxAllowedPercent = netPayable > 0 
+                          ? Math.max(0, Math.min(100, (maxAllowedRupees / netPayable) * 100))
+                          : 0;
+                        const labelText = advDraft.mode === "Percentage"
+                          ? `Value % (max ${maxAllowedPercent.toFixed(1)}%)`
+                          : `Amount ₹ (max ${fmt(maxAllowedRupees)})`;
+                        
+                        return (
+                          <DataField
+                            label={labelText}
+                            id="edit-adv-val"
+                            type="number"
+                            placeholder={advDraft.mode === "Percentage" ? "e.g. 25" : "e.g. 2500"}
+                            value={advDraft.value}
+                            onChange={(e) => {
+                              let v = parseFloat(e.target.value) || 0;
+                              if (advDraft.mode === "Percentage") {
+                                v = Math.min(v, maxAllowedPercent);
+                              } else {
+                                v = Math.min(v, maxAllowedRupees);
+                              }
+                              setAdvDraft((p) => ({ ...p, value: String(v || "") }));
+                            }}
+                            size={12}
+                          />
+                        );
+                      })()}
+                    </div>
+
+                    {advDraft.value && (
+                      <div className="text-xs font-bold text-[#2a465a] bg-white border border-slate-100 rounded-xl px-3 py-2 flex justify-between items-center">
+                        <span>Calculated Transaction Amount:</span>
+                        <span className="text-sm font-black text-emerald-600">
+                          {fmt(calcAdvAmount(netPayable, advDraft.mode, advDraft.value))}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAddAdv}
+                        disabled={!advDraft.value || parseFloat(advDraft.value) <= 0}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2a465a] text-white text-xs font-bold
+                          disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#1e3a52] transition active:scale-95"
+                      >
+                        {editingAdvId !== null ? (
+                          <><PenLine size={13} /> Save Edit</>
+                        ) : (
+                          <><Plus size={13} /> Add Payment</>
+                        )}
+                      </button>
+                      {editingAdvId !== null && (
+                        <button
+                          type="button"
+                          onClick={handleCancelEditAdv}
+                          className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600
+                            hover:bg-slate-50 transition active:scale-95"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Advance Transactions List ── */}
+                {editForm.paymentStatus === "Advance" && editForm.advancePayments?.length > 0 && (
+                  <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="grid grid-cols-[1fr_140px_auto] gap-2 px-4 py-2 bg-[#2a465a]/5 border-b border-slate-100">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Method</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Amount</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Actions</span>
+                    </div>
+
+                    {editForm.advancePayments.map((p, idx) => (
+                      <div
+                        key={p.id}
+                        className={`grid grid-cols-[1fr_140px_auto] gap-2 px-4 py-3 items-center
+                          ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"}
+                          ${editingAdvId === p.id ? "ring-2 ring-inset ring-[#2a465a]/30" : ""}
+                          border-b border-slate-100 last:border-0`}
+                      >
+                        <span className="text-sm font-bold text-[#2a465a]">{p.method}</span>
+                        <span className="text-sm font-black text-emerald-600 text-right">
+                          {p.mode === "Percentage" ? `${p.value}% (${fmt(calcAdvAmount(netPayable, p.mode, p.value))})` : fmt(p.value)}
+                        </span>
+
+                        <div className="flex gap-1.5 justify-center">
+                          <button
+                            type="button"
+                            onClick={() => handleEditAdv(p)}
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-[#2a465a] hover:text-white
+                              flex items-center justify-center transition active:scale-95 text-slate-500"
+                            title="Edit"
+                          >
+                            <PenLine size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAdv(p.id)}
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-rose-500 hover:text-white
+                              flex items-center justify-center transition active:scale-95 text-slate-500"
+                            title="Delete"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Advance payment breakdown cards */}
                 {editForm.paymentStatus === "Advance" && advancePaid > 0 && (
                   <div className="rounded-2xl border border-slate-200 overflow-hidden">
                     <div className="grid grid-cols-3 divide-x divide-slate-100">
@@ -1101,7 +1324,7 @@ export default function WorkOrders() {
                     <span>GST (18% Included)</span>
                     <span className="font-semibold text-[#2a465a]">{fmt(Math.round(totalCost * 18 / 118))}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-bold text-[#2a465a] pt-1">
+                   <div className="flex justify-between text-sm font-bold text-[#2a465a] pt-1">
                     <span>Total Cost (Inclusive of GST)</span>
                     <span>{fmt(totalCost)}</span>
                   </div>
@@ -1111,10 +1334,28 @@ export default function WorkOrders() {
                       <span>- {fmt(discountAmt)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center bg-[#2a465a]/5 rounded-xl px-3.5 py-3 border border-[#2a465a]/10 mt-1">
-                    <span className="text-sm font-bold text-[#2a465a]">Final Net Payable</span>
-                    <span className="text-lg font-black text-[#2a465a]">{fmt(netPayable)}</span>
-                  </div>
+
+                  {advancePaid > 0 ? (
+                    <>
+                      <div className="flex justify-between text-sm font-bold text-[#2a465a] pt-2 pb-1">
+                        <span>Final Net Payable</span>
+                        <span>{fmt(netPayable)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-semibold text-emerald-600 border-b border-slate-100 pb-2.5">
+                        <span>Advance Paid</span>
+                        <span>- {fmt(advancePaid)}</span>
+                      </div>
+                      <div className="flex justify-between items-center bg-[#2a465a]/5 rounded-xl px-3.5 py-3 border border-[#2a465a]/10 mt-1">
+                        <span className="text-sm font-bold text-[#2a465a]">Remaining Payment</span>
+                        <span className="text-lg font-black text-[#2a465a]">{fmt(remaining)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center bg-[#2a465a]/5 rounded-xl px-3.5 py-3 border border-[#2a465a]/10 mt-1">
+                      <span className="text-sm font-bold text-[#2a465a]">Final Net Payable</span>
+                      <span className="text-lg font-black text-[#2a465a]">{fmt(netPayable)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

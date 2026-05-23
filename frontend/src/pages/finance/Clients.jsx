@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import {
   Heading,
   DashGrid,
@@ -701,29 +701,29 @@ export default function Clients() {
                         <Option value="Rupees"     label="Rupees (₹)"     />
                       </SelectField>
 
-                      {actionForm.discountMode !== "None" && (
-                        <div className="flex flex-col gap-1">
-                          <DataField
-                            label={
-                              actionForm.discountMode === "Percentage"
-                                ? "Discount % (max 99)"
-                                : `Discount ₹ (max ${fmt(totalCost)})`
-                            }
-                            id="disc-val"
-                            type="number"
-                            placeholder={
-                              actionForm.discountMode === "Percentage" ? "e.g. 10" : "e.g. 5000"
-                            }
-                            value={actionForm.discountValue}
-                            onChange={(e) => {
-                              let v = parseFloat(e.target.value) || 0;
-                              if (actionForm.discountMode === "Percentage") v = Math.min(v, 99);
-                              else v = Math.min(v, totalCost);
-                              af("discountValue", String(v || ""));
-                            }}
-                            size={12}
-                          />
-                        </div>
+                      {actionForm.discountMode !== "None" ? (
+                        <DataField
+                          label={
+                            actionForm.discountMode === "Percentage"
+                              ? "Discount % (max 99)"
+                              : `Discount ₹ (max ${fmt(totalCost)})`
+                          }
+                          id="disc-val"
+                          type="number"
+                          placeholder={
+                            actionForm.discountMode === "Percentage" ? "e.g. 10" : "e.g. 5000"
+                          }
+                          value={actionForm.discountValue}
+                          onChange={(e) => {
+                            let v = parseFloat(e.target.value) || 0;
+                            if (actionForm.discountMode === "Percentage") v = Math.min(v, 99);
+                            else v = Math.min(v, totalCost);
+                            af("discountValue", String(v || ""));
+                          }}
+                          size={12}
+                        />
+                      ) : (
+                        <div className="hidden sm:block" />
                       )}
                     </div>
 
@@ -754,6 +754,20 @@ export default function Clients() {
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* ── GST section ── */}
+                {actionForm.requirements.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <DataField
+                      label="GST"
+                      id="client-gst"
+                      value="18% Included"
+                      readOnly
+                      disabled
+                      size={12}
+                    />
                   </div>
                 )}
 
@@ -836,6 +850,40 @@ export default function Clients() {
                     )}
                   </div>
                 )}
+
+                {/* ── Cost Breakdown Summary ── */}
+                {actionForm.requirements.length > 0 && (
+                  <div className="flex flex-col gap-3 mt-4">
+                    <p className="text-xs font-black text-[#2a465a] uppercase tracking-[0.18em]">
+                      Cost Breakdown
+                    </p>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-col gap-2.5">
+                      <div className="flex justify-between text-sm text-slate-600">
+                        <span>Requirements (Base Cost)</span>
+                        <span className="font-semibold text-[#2a465a]">{fmt(totalCost - Math.round(totalCost * 18 / 118))}</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-slate-600 border-b border-slate-100 pb-2.5">
+                        <span>GST (18% Included)</span>
+                        <span className="font-semibold text-[#2a465a]">{fmt(Math.round(totalCost * 18 / 118))}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-bold text-[#2a465a] pt-1">
+                        <span>Total Cost (Inclusive of GST)</span>
+                        <span>{fmt(totalCost)}</span>
+                      </div>
+                      {discountAmt > 0 && (
+                        <div className="flex justify-between text-sm font-semibold text-rose-600 border-b border-slate-100 pb-2.5">
+                          <span>Discount (Applied)</span>
+                          <span>- {fmt(discountAmt)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center bg-[#2a465a]/5 rounded-xl px-3.5 py-3 border border-[#2a465a]/10 mt-1">
+                        <span className="text-sm font-bold text-[#2a465a]">Final Net Payable</span>
+                        <span className="text-lg font-black text-[#2a465a]">{fmt(netPayable)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
               </div>
             )}
 

@@ -53,4 +53,12 @@ export const userService = {
     const response = await apiClient.get('/users/stats', { params });
     return response.data;
   },
+  setupAccount: async (setupData) => {
+    const response = await apiClient.patch('/users/setup-account', setupData);
+    return response.data;
+  },
+  updateBankDetails: async (bankData) => {
+    const response = await apiClient.patch('/users/update-bank-details', bankData);
+    return response.data;
+  },
 };

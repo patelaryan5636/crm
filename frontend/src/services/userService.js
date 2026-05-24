@@ -1,6 +1,10 @@
 import apiClient from './apiClient';
 
 export const userService = {
+  getMe: async () => {
+    const response = await apiClient.get('/users/me');
+    return response.data;
+  },
   getRoleDepartmentMap: async () => {
     const response = await apiClient.get('/users/meta/role-department-map');
     return response.data;
@@ -51,6 +55,14 @@ export const userService = {
   },
   getUserStats: async (params = {}) => {
     const response = await apiClient.get('/users/stats', { params });
+    return response.data;
+  },
+  setupAccount: async (data) => {
+    const response = await apiClient.patch('/users/setup-account', data);
+    return response.data;
+  },
+  saveBankDetails: async (data) => {
+    const response = await apiClient.patch('/users/bank-details', data);
     return response.data;
   },
 };

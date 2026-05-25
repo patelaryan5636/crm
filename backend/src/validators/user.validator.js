@@ -67,6 +67,15 @@ const setupBankDetailsSchema = Joi.object({
   upiId: Joi.string().trim().allow('', null).optional(),
 });
 
+const updateBankDetailsSchema = Joi.object({
+  beneficiaryName: Joi.string().trim().required().messages({ 'string.empty': 'Beneficiary name is required' }),
+  bankName: Joi.string().trim().required().messages({ 'string.empty': 'Bank name is required' }),
+  accountNumber: Joi.string().trim().required().messages({ 'string.empty': 'Account number is required' }),
+  ifscCode: Joi.string().trim().required().messages({ 'string.empty': 'IFSC code is required' }),
+  branch: Joi.string().trim().allow('', null).optional(),
+  upiId: Joi.string().trim().allow('', null).optional(),
+});
+
 module.exports = {
   createUserSchema,
   departmentLoginSchema,
@@ -74,3 +83,4 @@ module.exports = {
   setupBankDetailsSchema,
   updateBankDetailsSchema,
 };
+

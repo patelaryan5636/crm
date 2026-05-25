@@ -434,6 +434,33 @@ const MENUS = {
       },
     ],
   },
+  "management-employee": {
+    title: "Management Employee",
+    initials: "ME",
+    sections: [
+      {
+        label: "Overview",
+        items: [
+          {
+            name: "Dashboard",
+            path: "/management-employee",
+            icon: LayoutDashboard,
+            end: true,
+          },
+        ],
+      },
+      {
+        label: "Work",
+        items: [
+          {
+            name: "My Projects",
+            path: "/management-employee/my-projects",
+            icon: FolderOpen,
+          },
+        ],
+      },
+    ],
+  },
   "management-team-leader": {
     title: "Management Team Leader",
     initials: "ML",

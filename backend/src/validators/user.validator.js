@@ -58,30 +58,19 @@ const setupAccountSchema = Joi.object({
   }),
 });
 
-const updateBankDetailsSchema = Joi.object({
-  bankName: Joi.string().trim().required().messages({
-    'string.empty': 'Bank name is required',
-  }),
-  accountNumber: Joi.string().trim().pattern(/^\d{9,16}$/).required().messages({
-    'string.empty': 'Account number is required',
-    'string.pattern.base': 'Account number must be between 9 and 16 digits',
-  }),
-  confirmAccountNumber: Joi.any().valid(Joi.ref('accountNumber')).required().messages({
-    'any.only': 'Account numbers do not match',
-    'any.required': 'Please confirm your account number',
-  }),
-  ifscCode: Joi.string().trim().uppercase().pattern(/^[A-Z]{4}0[A-Z0-9]{6}$/).required().messages({
-    'string.empty': 'IFSC code is required',
-    'string.pattern.base': 'Invalid IFSC code format (e.g., SBIN0012345)',
-  }),
-  upiId: Joi.string().trim().optional().allow('', null),
-  branch: Joi.string().trim().optional().allow('', null),
-  beneficiaryName: Joi.string().trim().optional().allow('', null),
+const setupBankDetailsSchema = Joi.object({
+  beneficiaryName: Joi.string().trim().required().messages({ 'string.empty': 'Beneficiary name is required' }),
+  bankName: Joi.string().trim().required().messages({ 'string.empty': 'Bank name is required' }),
+  accountNumber: Joi.string().trim().required().messages({ 'string.empty': 'Account number is required' }),
+  ifscCode: Joi.string().trim().required().messages({ 'string.empty': 'IFSC code is required' }),
+  branch: Joi.string().trim().allow('', null).optional(),
+  upiId: Joi.string().trim().allow('', null).optional(),
 });
 
 module.exports = {
   createUserSchema,
   departmentLoginSchema,
   setupAccountSchema,
+  setupBankDetailsSchema,
   updateBankDetailsSchema,
 };

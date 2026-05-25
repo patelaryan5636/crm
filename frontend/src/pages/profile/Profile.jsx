@@ -199,6 +199,7 @@ export default function Profile({
   email,
   phone,
   employeeId,
+  clientId,
   role,
   department,
   isActive = true,
@@ -208,13 +209,14 @@ export default function Profile({
   const initialProfile = useMemo(
     () => ({
       ...defaultProfile,
-      avatarUrl: photo ?? defaultProfile.avatarUrl,
-      fullName: name ?? defaultProfile.fullName,
-      email: email ?? defaultProfile.email,
-      phone: phone ?? defaultProfile.phone,
-      employeeId: employeeId ?? defaultProfile.employeeId,
-      role: role ?? defaultProfile.role,
-      department: department ?? defaultProfile.department,
+      avatarUrl: photo !== undefined ? photo : defaultProfile.avatarUrl,
+      fullName: name !== undefined ? name : defaultProfile.fullName,
+      email: email !== undefined ? email : defaultProfile.email,
+      phone: phone !== undefined ? phone : defaultProfile.phone,
+      employeeId: employeeId !== undefined ? employeeId : null,
+      clientId: clientId !== undefined ? clientId : null,
+      role: role !== undefined ? role : null,
+      department: department !== undefined ? department : null,
       isActive,
       bankDetails: {
         accountHolderName:
@@ -227,7 +229,7 @@ export default function Profile({
         upiId: bankDetails?.upiId ?? defaultProfile.bankDetails.upiId,
       },
     }),
-    [photo, name, email, phone, employeeId, role, department, isActive, bankDetails],
+    [photo, name, email, phone, employeeId, clientId, role, department, isActive, bankDetails],
   );
 
   const showBank = Boolean(bankDetails);
@@ -617,38 +619,54 @@ export default function Profile({
             disabled
           />
 
-          {/* Employee ID — read-only */}
-          <DataField
-            label="Employee ID"
-            id="empId"
-            size={6}
-            icon={BadgeCheck}
-            value={form.employeeId}
-            readOnly
-            disabled
-          />
+          {/* Employee ID or Client ID — read-only */}
+          {form.clientId ? (
+            <DataField
+              label="Client ID"
+              id="clientId"
+              size={6}
+              icon={BadgeCheck}
+              value={form.clientId}
+              readOnly
+              disabled
+            />
+          ) : form.employeeId ? (
+            <DataField
+              label="Employee ID"
+              id="empId"
+              size={6}
+              icon={BadgeCheck}
+              value={form.employeeId}
+              readOnly
+              disabled
+            />
+          ) : null}
 
           {/* Role — read-only */}
-          <DataField
-            label="Role"
-            id="role"
-            size={6}
-            icon={Briefcase}
-            value={form.role}
-            readOnly
-            disabled
-          />
+          {form.role ? (
+            <DataField
+              label="Role"
+              id="role"
+              size={6}
+              icon={Briefcase}
+              value={form.role}
+              readOnly
+              disabled
+            />
+          ) : null}
 
           {/* Department — read-only */}
-          <DataField
-            label="Department"
-            id="dept"
-            size={6}
-            icon={Building2}
-            value={form.department}
-            readOnly
-            disabled
-          />
+          {form.department ? (
+            <DataField
+              label="Department"
+              id="dept"
+              size={6}
+              icon={Building2}
+              value={form.department}
+              readOnly
+              disabled
+            />
+          ) : null}
         </Grid>
       </ProfileSection>
 

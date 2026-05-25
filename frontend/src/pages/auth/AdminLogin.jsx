@@ -16,45 +16,54 @@ import {
 } from "lucide-react";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
 import { loginAdmin } from "../../services/authService";
-import {
-  DataField,
-  Button,
-} from "../../components/shared/Common_Components";
+import { DataField, Button } from "../../components/shared/Common_Components";
 
 const FloatingBackground = () => (
-  <div className="absolute inset-0 z-0 overflow-hidden opacity-5 pointer-events-none">
-    <Layers3
-      className="w-20 h-20 text-slate-900 absolute top-10 left-10 animate-[spin_25s_linear_infinite]"
-      strokeWidth={1}
+  <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+    {/* Grid Background */}
+    <div
+      className="absolute inset-0"
+      style={{
+        backgroundColor: "#063d66",
+        opacity: "0.1",
+        backgroundImage:
+          "linear-gradient(#063d66 1.2px, transparent 1.2px), linear-gradient(90deg, #063d66 1.2px, transparent 1.2px), linear-gradient(#063d66 0.6px, transparent 0.6px), linear-gradient(90deg, #063d66 0.6px, #ffffff 0.6px)",
+        backgroundSize: "30px 30px, 30px 30px, 6px 6px, 6px 6px",
+        backgroundPosition:
+          "-1.2px -1.2px, -1.2px -1.2px, -0.6px -0.6px, -0.6px -0.6px",
+      }}
     />
-    <Activity
-      className="w-24 h-24 text-slate-900 absolute top-20 right-20 animate-[pulse_4s_ease-in-out_infinite]"
-      strokeWidth={1}
-    />
-    <User
-      className="w-16 h-16 text-slate-900 absolute bottom-32 left-40 animate-[spin_22s_linear_infinite]"
-      strokeWidth={1}
-    />
-    <BriefcaseBusiness
-      className="w-20 h-20 text-slate-900 absolute -bottom-10 right-40 animate-[pulse_5s_ease-in-out_infinite]"
-      strokeWidth={1}
-    />
-    <Mail
-      className="w-28 h-28 text-slate-900 absolute top-[40%] left-[20%] animate-[spin_18s_linear_infinite]"
-      strokeWidth={1}
-    />
-    <ShieldCheck
-      className="w-18 h-18 text-slate-900 absolute top-28 left-[45%] animate-[spin_30s_linear_infinite]"
-      strokeWidth={1}
-    />
-    <Zap
-      className="w-16 h-16 text-slate-900 absolute bottom-20 right-28 animate-[pulse_3s_ease-in-out_infinite]"
-      strokeWidth={1}
-    />
-    <CalendarDays
-      className="w-24 h-24 text-slate-900 absolute top-[55%] right-10 animate-[spin_28s_linear_infinite]"
-      strokeWidth={1}
-    />
+    {/* Floating Icons */}
+    <div className="absolute inset-0 opacity-50">
+      <Layers3
+        className="w-20 h-20 text-slate-900 absolute top-10 left-10 animate-[spin_25s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <Activity
+        className="w-24 h-24 text-slate-900 absolute top-20 right-20 animate-[pulse_4s_ease-in-out_infinite]"
+        strokeWidth={1}
+      />
+      <User
+        className="w-16 h-16 text-slate-900 absolute bottom-20 left-20 animate-[spin_22s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <Mail
+        className="w-28 h-28 text-slate-900 absolute top-[40%] left-[20%] animate-[spin_18s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <ShieldCheck
+        className="w-24 h-24 text-slate-900 absolute top-[45%] left-[5%] animate-[spin_30s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <Zap
+        className="w-24 h-24 text-slate-900 absolute bottom-20 right-20 animate-[pulse_3s_ease-in-out_infinite]"
+        strokeWidth={1}
+      />
+      <CalendarDays
+        className="w-24 h-24 text-slate-900 absolute top-[45%] right-10 animate-[spin_28s_linear_infinite]"
+        strokeWidth={1}
+      />
+    </div>
   </div>
 );
 
@@ -132,12 +141,16 @@ const AdminLogin = () => {
 
     if (!valid) {
       setStatusType(
-        email.trim() === "" || password.trim() === "" || captchaInput.trim() === ""
+        email.trim() === "" ||
+          password.trim() === "" ||
+          captchaInput.trim() === ""
           ? "alert"
           : "error",
       );
       setStatusMessage(
-        email.trim() === "" || password.trim() === "" || captchaInput.trim() === ""
+        email.trim() === "" ||
+          password.trim() === "" ||
+          captchaInput.trim() === ""
           ? "Please fill in all fields before signing in."
           : "There are issues with your information. Please correct them and try again.",
       );
@@ -160,7 +173,10 @@ const AdminLogin = () => {
         };
 
         const fallbackTimer = setTimeout(() => {
-          finish(reject, new Error("Location request timed out. Please try again."));
+          finish(
+            reject,
+            new Error("Location request timed out. Please try again."),
+          );
         }, 12000);
 
         navigator.geolocation.getCurrentPosition(
@@ -171,7 +187,10 @@ const AdminLogin = () => {
             });
           },
           () => {
-            finish(reject, new Error("Location access is required to sign in."));
+            finish(
+              reject,
+              new Error("Location access is required to sign in."),
+            );
           },
           { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
         );
@@ -203,7 +222,9 @@ const AdminLogin = () => {
       }, 900);
     } catch (error) {
       setStatusType("error");
-      setStatusMessage(error?.message || "Unable to sign in. Please try again.");
+      setStatusMessage(
+        error?.message || "Unable to sign in. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -311,7 +332,9 @@ const AdminLogin = () => {
                   }}
                 />
                 {emailError && (
-                  <p className="text-xs text-rose-600 mt-1 px-1">{emailError}</p>
+                  <p className="text-xs text-rose-600 mt-1 px-1">
+                    {emailError}
+                  </p>
                 )}
               </div>
 
@@ -349,7 +372,9 @@ const AdminLogin = () => {
                   </div>
                 </div>
                 {passwordError && (
-                  <p className="text-xs text-rose-600 mt-1 px-1">{passwordError}</p>
+                  <p className="text-xs text-rose-600 mt-1 px-1">
+                    {passwordError}
+                  </p>
                 )}
               </div>
 
@@ -399,7 +424,9 @@ const AdminLogin = () => {
                     className="text-center tracking-[0.25em] font-semibold"
                   />
                   {captchaError && (
-                    <p className="text-xs text-rose-600 mt-1 px-1">{captchaError}</p>
+                    <p className="text-xs text-rose-600 mt-1 px-1">
+                      {captchaError}
+                    </p>
                   )}
                   <p className="text-xs text-slate-400 mt-1">
                     Enter the 4-digit number shown above

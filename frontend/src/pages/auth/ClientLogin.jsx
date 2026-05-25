@@ -1,19 +1,21 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Shield,
-  Globe,
-  Server,
-  Database,
-  Lock,
-  BarChart3,
+  Building2,
+  ClipboardList,
   Users,
-  Mail,
+  Bell,
+  TrendingUp,
+  FileText,
+  Briefcase,
   Eye,
   EyeOff,
+  Mail,
+  ShieldCheck,
+  Hash,
 } from "lucide-react";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
-import { loginSuperAdmin } from "../../services/authService";
+import { DataField, Button } from "../../components/shared/Common_Components";
 
 const FloatingBackground = () => (
   <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
@@ -32,32 +34,28 @@ const FloatingBackground = () => (
     />
     {/* Floating Icons */}
     <div className="absolute inset-0 opacity-50">
-      <Shield
-        className="w-20 h-20 text-slate-900 absolute top-20 left-20 animate-[spin_25s_linear_infinite]"
+      <Building2
+        className="w-20 h-20 text-slate-900 absolute top-10 left-10 animate-[spin_25s_linear_infinite]"
         strokeWidth={1}
       />
-      <Globe
-        className="w-24 h-24 text-slate-900 absolute top-20 right-20 animate-[spin_18s_linear_infinite]"
-        strokeWidth={1}
-      />
-      <Server
-        className="w-16 h-16 text-slate-900 absolute bottom-32 left-20 animate-[spin_22s_linear_infinite]"
-        strokeWidth={1}
-      />
-      <Database
-        className="w-20 h-20 text-slate-900 absolute top-[45%] left-[9%] animate-[pulse_5s_ease-in-out_infinite]"
-        strokeWidth={1}
-      />
-      <Lock
-        className="w-20 h-20 text-slate-900 absolute top-[45%] right-[9%] animate-[spin_18s_linear_infinite]"
-        strokeWidth={1}
-      />
-      <BarChart3
-        className="w-18 h-18 text-slate-900 absolute top-28 left-[45%] animate-[spin_30s_linear_infinite]"
+      <ClipboardList
+        className="w-24 h-24 text-slate-900 absolute top-20 right-20 animate-[pulse_4s_ease-in-out_infinite]"
         strokeWidth={1}
       />
       <Users
-        className="w-16 h-16 text-slate-900 absolute bottom-20 right-20 animate-[pulse_3s_ease-in-out_infinite]"
+        className="w-16 h-16 text-slate-900 absolute bottom-20 left-20 animate-[spin_22s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <TrendingUp
+        className="w-20 h-20 text-slate-900 absolute top-[43%] left-[5%] animate-[spin_18s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <FileText
+        className="w-16 h-16 text-slate-900 absolute top-[45%] right-[5%] animate-[spin_30s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <Briefcase
+        className="w-16 h-16 text-slate-900 absolute bottom-20 right-28 animate-[pulse_3s_ease-in-out_infinite]"
         strokeWidth={1}
       />
     </div>
@@ -68,8 +66,9 @@ function generateCaptcha() {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
-const SuperAdminLogin = () => {
+const ClientLogin = () => {
   const navigate = useNavigate();
+
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -81,6 +80,7 @@ const SuperAdminLogin = () => {
   const [captchaInput, setCaptchaInput] = useState("");
   const [captchaError, setCaptchaError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const refreshCaptcha = () => {
     setCaptchaCode(generateCaptcha());
@@ -88,19 +88,20 @@ const SuperAdminLogin = () => {
     setCaptchaError("");
   };
 
-  const validateEmail = (value) => /^\S+@\S+\.\S+$/.test(value);
+  const validateEmail = (v) => /^\S+@\S+\.\S+$/.test(v);
 
+  // Auto-clear status banner after 4 s
   useEffect(() => {
     if (!statusType) return;
-    const timeout = setTimeout(() => {
+    const t = setTimeout(() => {
       setStatusType("");
       setStatusMessage("");
     }, 4000);
-    return () => clearTimeout(timeout);
+    return () => clearTimeout(t);
   }, [statusType]);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     let valid = true;
 
     if (!email.trim()) {
@@ -127,19 +128,9 @@ const SuperAdminLogin = () => {
     } else setCaptchaError("");
 
     if (!valid) {
-      setStatusType(
-        email.trim() === "" ||
-          password.trim() === "" ||
-          captchaInput.trim() === ""
-          ? "alert"
-          : "error",
-      );
+      setStatusType("alert");
       setStatusMessage(
-        email.trim() === "" ||
-          password.trim() === "" ||
-          captchaInput.trim() === ""
-          ? "Please fill in all fields before signing in."
-          : "There are issues with your information. Please correct them and try again.",
+        "Please fill in all fields correctly before signing in.",
       );
       return;
     }
@@ -147,13 +138,18 @@ const SuperAdminLogin = () => {
     try {
       setIsSubmitting(true);
       setStatusType("info");
-      setStatusMessage("Signing you in securely...");
+      setStatusMessage("Verifying your credentials...");
 
-      await loginSuperAdmin({ email, password });
+      // Simulate auth api request delay
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      // Mock user save
+      sessionStorage.setItem("accessToken", "mock-client-access-token");
+      sessionStorage.setItem("user", JSON.stringify({ email, role: "client" }));
 
       setStatusType("success");
-      setStatusMessage("Sign in successful. Redirecting...");
-      setTimeout(() => navigate("/super-admin"), 900);
+      setStatusMessage("Sign in successful. Loading your workspace...");
+      setTimeout(() => navigate("/client"), 900);
     } catch (error) {
       setStatusType("error");
       setStatusMessage(
@@ -169,32 +165,33 @@ const SuperAdminLogin = () => {
       <FloatingBackground />
 
       <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl flex overflow-hidden z-10 min-h-[600px]">
-        {/* Left Panel */}
+        {/* ── Left Panel ── */}
         <div className="hidden lg:flex w-5/12 bg-slate-50 p-12 flex-col justify-between border-r border-slate-100">
           <div>
             <div className="mb-10">
               <img src={GraphuraLogo} alt="Graphura Logo" className="h-20" />
             </div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-500 text-[11px] font-bold tracking-widest mb-6">
-              <Shield size={11} />
-              SUPER ADMIN PORTAL
+              <Briefcase size={11} />
+              CLIENT PORTAL
             </div>
             <h2
               className="text-3xl font-extrabold text-[#2a465a] leading-tight mb-4"
               style={{ fontFamily: "'Gugi', cursive" }}
             >
-              Platform Control. <br /> Global Oversight. <br />
-              Full Authority.
+              Your Projects. <br /> Your Progress. <br />
+              Your Partnership.
             </h2>
             <p className="text-slate-500 text-sm leading-relaxed">
-              Manage all companies, admins, and platform-wide settings from one
-              centralized control panel. Access is restricted and fully audited.
+              Sign in with your registered credentials to access your client
+              dashboard. Track work orders, view invoices, download reports, and
+              connect with your account manager.
             </p>
             <div className="mt-8 space-y-3">
               {[
-                { icon: Shield, text: "Full platform authority" },
-                { icon: Database, text: "Global data oversight" },
-                { icon: Lock, text: "Restricted & fully audited access" },
+                { icon: Briefcase, text: "Track project milestones" },
+                { icon: TrendingUp, text: "Monitor progress & updates" },
+                { icon: ShieldCheck, text: "Secure client workspace" },
               ].map(({ icon: Icon, text }) => (
                 <div
                   key={text}
@@ -218,25 +215,28 @@ const SuperAdminLogin = () => {
           </div>
         </div>
 
-        {/* Right Panel */}
+        {/* ── Right Panel ── */}
         <div className="w-full lg:w-7/12 p-8 md:p-16 flex flex-col justify-center">
           <div className="max-w-md mx-auto w-full">
+            {/* Mobile logo */}
             <div className="lg:hidden mb-8 mx-auto">
               <img
                 src={GraphuraLogo}
                 alt="Graphura Logo"
-                className="w-40 h-15 mx-auto"
+                className="w-40 mx-auto"
               />
             </div>
+
             <h1
               className="text-3xl font-black text-crm-navy mb-8 text-center tracking-tight"
               style={{ fontFamily: "'Gugi', cursive" }}
             >
-              Super Admin Access 🛡️
+              Client Sign In 🔑
             </h1>
 
             <form className="space-y-5" onSubmit={handleSubmit}>
-              {statusType ? (
+              {/* Status banner */}
+              {statusType && (
                 <div
                   className={`rounded-2xl px-4 py-3 text-sm ${
                     statusType === "success"
@@ -250,81 +250,65 @@ const SuperAdminLogin = () => {
                 >
                   {statusMessage}
                 </div>
-              ) : null}
+              )}
 
               {/* Email */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="sa_email"
-                  className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]"
-                >
-                  Super Admin Email
-                </label>
-                <div className="relative rounded-2xl border border-slate-200 bg-slate-50/90 focus-within:ring-2 focus-within:ring-crm-blue/20 mt-1 transition">
-                  <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
-                    <Mail size={18} />
-                  </div>
-                  <input
-                    type="email"
-                    id="sa_email"
-                    placeholder="superadmin@graphura.com"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (emailError) setEmailError("");
-                    }}
-                    className="w-full rounded-2xl bg-transparent py-4 pl-12 pr-4 text-crm-navy placeholder:text-slate-400 focus:outline-none"
-                  />
-                </div>
-                {emailError ? (
-                  <p className="text-xs text-rose-600">{emailError}</p>
-                ) : null}
+              <div className="space-y-1">
+                <DataField
+                  id="client_email"
+                  label="Email Address"
+                  type="email"
+                  placeholder="client@example.com"
+                  icon={Mail}
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) setEmailError("");
+                  }}
+                  size={12}
+                />
+                {emailError && (
+                  <p className="text-xs text-rose-600 px-1">{emailError}</p>
+                )}
               </div>
 
               {/* Password */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="sa_password"
-                  className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]"
-                >
-                  Master Password
-                </label>
-                <div className="relative mt-1 rounded-2xl border border-slate-200 bg-slate-50/90 focus-within:ring-2 focus-within:ring-crm-blue/20 transition">
-                  <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
-                    <Lock size={18} />
-                  </div>
-                  <input
+              <div className="space-y-1">
+                <div className="relative">
+                  <DataField
+                    id="client_password"
+                    label="Password"
                     type={showPassword ? "text" : "password"}
-                    id="sa_password"
-                    placeholder="Enter master password"
+                    placeholder="Enter your password"
+                    icon={ShieldCheck}
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
                       if (passwordError) setPasswordError("");
                     }}
-                    className="w-full rounded-2xl bg-transparent py-4 pl-12 pr-14 text-crm-navy placeholder:text-slate-400 focus:outline-none"
+                    size={12}
                   />
+                  {/* Show / hide toggle — sits at the bottom-right of the input */}
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-crm-navy transition"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-4 bottom-3.5 text-slate-400 hover:text-crm-navy transition z-10"
                   >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
-                {passwordError ? (
-                  <p className="text-xs text-rose-600">{passwordError}</p>
-                ) : null}
+                {passwordError && (
+                  <p className="text-xs text-rose-600 px-1">{passwordError}</p>
+                )}
               </div>
 
               {/* CAPTCHA */}
               <div className="space-y-3">
-                <label
-                  htmlFor="sa_captcha"
-                  className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]"
-                >
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">
                   Security Verification
                 </label>
+
+                {/* CAPTCHA display + refresh */}
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-2 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="flex-1 rounded-xl border border-dashed border-slate-300 bg-white py-2 text-center shadow-sm">
@@ -354,40 +338,55 @@ const SuperAdminLogin = () => {
                     </button>
                   </div>
                 </div>
-                <div className="relative rounded-2xl border border-slate-200 bg-slate-50/90 focus-within:ring-2 focus-within:ring-crm-blue/20 transition">
-                  <input
+
+                {/* CAPTCHA input */}
+                <div className="space-y-1">
+                  <DataField
+                    id="client_captcha"
+                    label="Enter Code"
                     type="text"
-                    id="sa_captcha"
                     placeholder="Enter the 4-digit number above"
+                    icon={Hash}
                     value={captchaInput}
                     onChange={(e) => {
                       setCaptchaInput(e.target.value);
                       if (captchaError) setCaptchaError("");
                     }}
-                    maxLength="4"
-                    className="w-full rounded-2xl bg-transparent py-4 px-4 text-crm-navy placeholder:text-slate-400 focus:outline-none text-center tracking-[0.25em] text-md font-semibold"
+                    size={12}
                   />
+                  {captchaError && (
+                    <p className="text-xs text-rose-600 px-1">{captchaError}</p>
+                  )}
+                  <p className="text-xs text-slate-400 px-1">
+                    Enter the 4-digit number shown above
+                  </p>
                 </div>
-                {captchaError ? (
-                  <p className="text-xs text-rose-600">{captchaError}</p>
-                ) : null}
-              </div>
 
-              {/* Forgot */}
-              <div className="flex justify-end text-xs font-bold pt-2">
-                <a href="#" className="text-crm-navy hover:underline">
-                  Forgot password?
-                </a>
+                <div className="flex items-center justify-between text-xs font-bold pt-2">
+                  <label className="flex items-center gap-2 text-slate-500 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 accent-crm-navy"
+                    />
+                    Remember me
+                  </label>
+                </div>
               </div>
 
               {/* Submit */}
-              <button
+              <Button
                 type="submit"
+                text={
+                  isSubmitting
+                    ? "Verifying credentials..."
+                    : "Access Client Dashboard →"
+                }
+                variant="primary"
+                size={12}
                 disabled={isSubmitting}
-                className="w-full mt-4 py-4 bg-[#2a465a] text-white font-bold rounded-2xl shadow-xl shadow-crm-navy/20 transition duration-300 ease-out transform hover:bg-gradient-to-r hover:from-[#1e3a52] hover:to-[#2b5a7a] hover:shadow-2xl hover:-translate-y-0.5 active:scale-95"
-              >
-                {isSubmitting ? "Signing in..." : "Sign in →"}
-              </button>
+              />
             </form>
           </div>
         </div>
@@ -396,4 +395,4 @@ const SuperAdminLogin = () => {
   );
 };
 
-export default SuperAdminLogin;
+export default ClientLogin;

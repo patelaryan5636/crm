@@ -18,37 +18,48 @@ import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
 import { DataField, Button } from "../../components/shared/Common_Components";
 import { loginDepartment } from "../../services/authService";
 
-// ── Floating background icons ─────────────────────────────────────────────────
 const FloatingBackground = () => (
-  <div className="absolute inset-0 z-0 overflow-hidden opacity-5 pointer-events-none">
-    <Building2
-      className="w-20 h-20 text-slate-900 absolute top-10 left-10 animate-[spin_25s_linear_infinite]"
-      strokeWidth={1}
+  <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+    {/* Grid Background */}
+    <div
+      className="absolute inset-0"
+      style={{
+        backgroundColor: "#063d66",
+        opacity: "0.1",
+        backgroundImage:
+          "linear-gradient(#063d66 1.2px, transparent 1.2px), linear-gradient(90deg, #063d66 1.2px, transparent 1.2px), linear-gradient(#063d66 0.6px, transparent 0.6px), linear-gradient(90deg, #063d66 0.6px, #ffffff 0.6px)",
+        backgroundSize: "30px 30px, 30px 30px, 6px 6px, 6px 6px",
+        backgroundPosition:
+          "-1.2px -1.2px, -1.2px -1.2px, -0.6px -0.6px, -0.6px -0.6px",
+      }}
     />
-    <ClipboardList
-      className="w-24 h-24 text-slate-900 absolute top-20 right-20 animate-[pulse_4s_ease-in-out_infinite]"
-      strokeWidth={1}
-    />
-    <Users
-      className="w-16 h-16 text-slate-900 absolute bottom-32 left-40 animate-[spin_22s_linear_infinite]"
-      strokeWidth={1}
-    />
-    <Bell
-      className="w-20 h-20 text-slate-900 absolute -bottom-10 right-40 animate-[pulse_5s_ease-in-out_infinite]"
-      strokeWidth={1}
-    />
-    <TrendingUp
-      className="w-28 h-28 text-slate-900 absolute top-[40%] left-[20%] animate-[spin_18s_linear_infinite]"
-      strokeWidth={1}
-    />
-    <FileText
-      className="w-18 h-18 text-slate-900 absolute top-28 left-[45%] animate-[spin_30s_linear_infinite]"
-      strokeWidth={1}
-    />
-    <Briefcase
-      className="w-16 h-16 text-slate-900 absolute bottom-20 right-28 animate-[pulse_3s_ease-in-out_infinite]"
-      strokeWidth={1}
-    />
+    {/* Floating Icons */}
+    <div className="absolute inset-0 opacity-50">
+      <Building2
+        className="w-20 h-20 text-slate-900 absolute top-10 left-10 animate-[spin_25s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <ClipboardList
+        className="w-24 h-24 text-slate-900 absolute top-20 right-20 animate-[pulse_4s_ease-in-out_infinite]"
+        strokeWidth={1}
+      />
+      <Users
+        className="w-16 h-16 text-slate-900 absolute bottom-20 left-20 animate-[spin_22s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <TrendingUp
+        className="w-20 h-20 text-slate-900 absolute top-[43%] left-[5%] animate-[spin_18s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <FileText
+        className="w-16 h-16 text-slate-900 absolute top-[45%] right-[5%] animate-[spin_30s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <Briefcase
+        className="w-16 h-16 text-slate-900 absolute bottom-20 right-28 animate-[pulse_3s_ease-in-out_infinite]"
+        strokeWidth={1}
+      />
+    </div>
   </div>
 );
 

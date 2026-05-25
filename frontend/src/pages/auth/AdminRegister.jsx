@@ -16,50 +16,52 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
-import {
-  sendOTP,
-  verifyOTP,
-  registerAdmin,
-} from "../../services/authService";
-import {
-  DataField,
-} from "../../components/shared/Common_Components";
+import { sendOTP, verifyOTP, registerAdmin } from "../../services/authService";
+import { DataField } from "../../components/shared/Common_Components";
 
 // ─── Floating Background (identical to Login) ────────────────────────────────
 const FloatingBackground = () => (
-  <div className="absolute inset-0 z-0 overflow-hidden opacity-5 pointer-events-none">
-    <Layers3
-      className="w-20 h-20 text-slate-900 absolute top-10 left-10 animate-[spin_25s_linear_infinite]"
-      strokeWidth={1}
+  <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+    {/* Grid Background */}
+    <div
+      className="absolute inset-0"
+      style={{
+        backgroundColor: "#063d66",
+        opacity: "0.1",
+        backgroundImage:
+          "linear-gradient(#063d66 1.2px, transparent 1.2px), linear-gradient(90deg, #063d66 1.2px, transparent 1.2px), linear-gradient(#063d66 0.6px, transparent 0.6px), linear-gradient(90deg, #063d66 0.6px, #ffffff 0.6px)",
+        backgroundSize: "30px 30px, 30px 30px, 6px 6px, 6px 6px",
+        backgroundPosition:
+          "-1.2px -1.2px, -1.2px -1.2px, -0.6px -0.6px, -0.6px -0.6px",
+      }}
     />
-    <Activity
-      className="w-24 h-24 text-slate-900 absolute top-20 right-20 animate-[pulse_4s_ease-in-out_infinite]"
-      strokeWidth={1}
-    />
-    <User
-      className="w-16 h-16 text-slate-900 absolute bottom-32 left-40 animate-[spin_22s_linear_infinite]"
-      strokeWidth={1}
-    />
-    <BriefcaseBusiness
-      className="w-20 h-20 text-slate-900 absolute -bottom-10 right-40 animate-[pulse_5s_ease-in-out_infinite]"
-      strokeWidth={1}
-    />
-    <Mail
-      className="w-28 h-28 text-slate-900 absolute top-[40%] left-[20%] animate-[spin_18s_linear_infinite]"
-      strokeWidth={1}
-    />
-    <ShieldCheck
-      className="w-18 h-18 text-slate-900 absolute top-28 left-[45%] animate-[spin_30s_linear_infinite]"
-      strokeWidth={1}
-    />
-    <Zap
-      className="w-16 h-16 text-slate-900 absolute bottom-20 right-28 animate-[pulse_3s_ease-in-out_infinite]"
-      strokeWidth={1}
-    />
-    <CalendarDays
-      className="w-24 h-24 text-slate-900 absolute top-[55%] right-10 animate-[spin_28s_linear_infinite]"
-      strokeWidth={1}
-    />
+    {/* Floating Icons */}
+    <div className="absolute inset-0 opacity-50">
+      <Building2
+        className="w-20 h-20 text-slate-900 absolute top-10 left-10 animate-[spin_25s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <ClipboardList
+        className="w-24 h-24 text-slate-900 absolute top-20 right-20 animate-[pulse_4s_ease-in-out_infinite]"
+        strokeWidth={1}
+      />
+      <Users
+        className="w-16 h-16 text-slate-900 absolute bottom-32 left-40 animate-[spin_22s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <TrendingUp
+        className="w-28 h-28 text-slate-900 absolute top-[40%] left-[5%] animate-[spin_18s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <FileText
+        className="w-16 h-16 text-slate-900 absolute top-[45%] right-[5%] animate-[spin_30s_linear_infinite]"
+        strokeWidth={1}
+      />
+      <Briefcase
+        className="w-16 h-16 text-slate-900 absolute bottom-20 right-28 animate-[pulse_3s_ease-in-out_infinite]"
+        strokeWidth={1}
+      />
+    </div>
   </div>
 );
 
@@ -353,7 +355,10 @@ const AdminRegister = () => {
               <img src={GraphuraLogo} alt="Graphura Logo" className="h-20" />
             </div>
 
-            <h2 className="text-3xl font-extrabold text-[#2a465a] leading-tight mb-4" style={{ fontFamily: "'Gugi', cursive" }}>
+            <h2
+              className="text-3xl font-extrabold text-[#2a465a] leading-tight mb-4"
+              style={{ fontFamily: "'Gugi', cursive" }}
+            >
               Start Your Journey with Graphura.
             </h2>
             <p className="text-slate-500 text-sm leading-relaxed">
@@ -394,7 +399,10 @@ const AdminRegister = () => {
         {/* ── Right Panel ── */}
         <div className="w-full lg:w-7/12 p-8 md:p-14 flex flex-col justify-center">
           <div className="max-w-md mx-auto w-full">
-            <h1 className="text-3xl font-black text-[#2a465a] mb-2 text-center tracking-tight" style={{ fontFamily: "'Gugi', cursive" }}>
+            <h1
+              className="text-3xl font-black text-[#2a465a] mb-2 text-center tracking-tight"
+              style={{ fontFamily: "'Gugi', cursive" }}
+            >
               Register your Company 🏢
             </h1>
             <p className="text-center text-slate-400 text-sm mb-6">
@@ -459,7 +467,9 @@ const AdminRegister = () => {
                       <button
                         type="button"
                         onClick={handleSendOTP}
-                        disabled={isSubmitting || otpCooldown > 0 || otpVerified}
+                        disabled={
+                          isSubmitting || otpCooldown > 0 || otpVerified
+                        }
                         className={`whitespace-nowrap px-4 rounded-2xl text-xs font-bold transition ${
                           otpVerified
                             ? "bg-emerald-100 text-emerald-700 border border-emerald-300 cursor-default"
@@ -625,7 +635,11 @@ const AdminRegister = () => {
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#2a465a] transition"
                         >
-                          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                          {showPassword ? (
+                            <EyeOff size={20} />
+                          ) : (
+                            <Eye size={20} />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -681,7 +695,10 @@ const AdminRegister = () => {
                           onChange={(e) => {
                             setConfirmPassword(e.target.value);
                             if (errors.confirmPassword)
-                              setErrors((er) => ({ ...er, confirmPassword: "" }));
+                              setErrors((er) => ({
+                                ...er,
+                                confirmPassword: "",
+                              }));
                           }}
                           className="w-full rounded-2xl bg-transparent py-3.5 pl-12 pr-14 text-[#2a465a] placeholder:text-slate-400 text-sm font-medium focus:outline-none"
                         />
@@ -690,7 +707,11 @@ const AdminRegister = () => {
                           onClick={() => setShowConfirm(!showConfirm)}
                           className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#2a465a] transition"
                         >
-                          {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
+                          {showConfirm ? (
+                            <EyeOff size={20} />
+                          ) : (
+                            <Eye size={20} />
+                          )}
                         </button>
                       </div>
                     </div>

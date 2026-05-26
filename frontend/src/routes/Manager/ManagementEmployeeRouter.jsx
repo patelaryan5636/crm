@@ -19,10 +19,10 @@ import CompletedProjects             from "../../pages/management/managementEmpl
 // ── Packet 3 (TODO — owned by teammate) ─────────────────────────────────
 // Uncomment the imports + route block below once Packet 3 ships
 // (TEAM_GUIDE.md Section 8 → Packet 3 — Deadlines + Reminders + Performance).
-//
-// import ManagementEmployeeDeadlines   from "../../pages/management/managementEmployee/ManagementEmployeeDeadlines";
-// import ManagementEmployeeReminders   from "../../pages/management/managementEmployee/ManagementEmployeeReminders";
-// import ManagementEmployeePerformance from "../../pages/management/managementEmployee/ManagementEmployeePerformance";
+
+ import ManagementEmployeeDeadlines   from "../../pages/management/managementEmployee/ManagementEmployeeDeadlines";
+ import ManagementEmployeeReminders   from "../../pages/management/managementEmployee/ManagementEmployeeReminders";
+ import ManagementEmployeePerformance from "../../pages/management/managementEmployee/ManagementEmployeePerformance";
 
 // ── Packet 4 (DONE) ─────────────────────────────────────────────────────
 import HRMPage                       from "../../pages/management/managementEmployee/hrm/HRMPage";
@@ -52,12 +52,12 @@ function ManagementEmployeeRoutes() {
         </Route>
         */}
 
-        {/* Packet 3 — Deadlines + Reminders + Performance (TODO). Uncomment when
-            the three page files land. Each is a single page (no nested routes).
+        {/*Packet 3 — Deadlines + Reminders + Performance (TODO). Uncomment when
+            the three page files land. Each is a single page (no nested routes).*/}
         <Route path="deadlines"   element={<ManagementEmployeeDeadlines />} />
         <Route path="reminders"   element={<ManagementEmployeeReminders />} />
         <Route path="performance" element={<ManagementEmployeePerformance />} />
-        */}
+        
 
         {/* Packet 4 */}
         <Route path="hrm"         element={<HRMPage />} />

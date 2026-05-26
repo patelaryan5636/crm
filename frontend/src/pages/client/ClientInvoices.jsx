@@ -490,9 +490,7 @@ support@graphura.in`;
         )}
       </Modal>
 
-      <div className="text-center py-4">
-        <p className="text-[11px] text-slate-400">Graphura India Private Limited · Client Project Tracking Portal</p>
-      </div>
+
     </main>
   );
 }

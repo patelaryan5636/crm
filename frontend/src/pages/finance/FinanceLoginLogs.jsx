@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Heading, DashGrid, DashCard, DataTable,
+  Heading, DashGrid, EnhancedDashCard, DataTable,
   openModal, closeModal, Modal, ModalData, ModalProfile, ModalGrid, Button,
 } from "../../components/shared/Common_Components";
 import { LogIn, UserCheck, ShieldAlert, AlertTriangle, Eye } from "lucide-react";
@@ -37,7 +37,7 @@ export default function FinanceLoginLogs() {
       <DashGrid cols={12} gap={4}>
         <Heading primaryText="Login Logs" size={12} />
         {kpi.map((k) => (
-          <DashCard key={k.title} title={k.title} value={k.value}
+          <EnhancedDashCard key={k.title} title={k.title} value={k.value}
             icon={k.icon} accentColor={k.accent} size={3} />
         ))}
       </DashGrid>

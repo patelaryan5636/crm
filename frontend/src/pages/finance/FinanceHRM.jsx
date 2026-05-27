@@ -43,9 +43,9 @@ const LEAVE_COLS = [
       return words.length > 4 ? words.slice(0, 4).join(" ") + "…" : v;
     }
   },
-  { key: "from",   label: "From"       },
-  { key: "to",     label: "To"         },
+  { key: "dateRange",   label: "Date Range"       },
   { key: "days",   label: "Days"       },
+  { key: "appliedOn",   label: "Applied On"       },
   { key: "status", label: "Status"     },
 ];
 

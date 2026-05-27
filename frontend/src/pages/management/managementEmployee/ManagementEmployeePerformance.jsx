@@ -55,12 +55,12 @@ export default function ManagementEmployeePerformance() {
   const [filter, setFilter] = useState("week");
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen space-y-6">
+    <div className="p-6 bg-[#f4f7fb] min-h-screen space-y-6">
 
       {/* HEADER */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-800">
+          <h1 className="text-2xl font-semibold text-[#2a465a]">
             Performance Dashboard
           </h1>
           <p className="text-sm text-gray-500">
@@ -76,7 +76,7 @@ export default function ManagementEmployeePerformance() {
               onClick={() => setFilter(type)}
               className={`px-3 py-1 rounded-lg text-sm border transition ${
                 filter === type
-                  ? "bg-black text-white"
+                  ? "bg-[#2a465a] text-white"
                   : "bg-white text-gray-600"
               }`}
             >
@@ -125,7 +125,7 @@ export default function ManagementEmployeePerformance() {
               <Line
                 type="monotone"
                 dataKey="score"
-                stroke="#000"
+                stroke="#2a465a"
                 strokeWidth={2}
               />
             </LineChart>
@@ -134,7 +134,7 @@ export default function ManagementEmployeePerformance() {
 
         {/* PIE CHART */}
         <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <h3 className="font-medium text-gray-700 mb-4">
+          <h3 className="font-medium text-[#2a465a] mb-4">
             Project Status Mix
           </h3>
 

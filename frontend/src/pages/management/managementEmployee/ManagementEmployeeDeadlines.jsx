@@ -61,11 +61,11 @@ export default function ManagementEmployeeDeadlines() {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-[#f4f7fb] min-h-screen">
 
       {/* HEADER */}
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">
+        <h1 className="text-2xl font-semibold text-[#2a465a]">
           Upcoming Deadlines
         </h1>
 
@@ -88,7 +88,7 @@ export default function ManagementEmployeeDeadlines() {
 
           <button
             onClick={handleExport}
-            className="px-4 py-2 text-sm bg-black text-white rounded-lg hover:opacity-90 transition"
+            className="px-4 py-2 text-sm bg-[#2a465a] text-white rounded-lg hover:opacity-90 transition"
           >
             Export
           </button>
@@ -113,7 +113,7 @@ export default function ManagementEmployeeDeadlines() {
               {data.map((item, index) => (
                 <tr
                   key={index}
-                  className="border-t hover:bg-gray-50 transition"
+                  className="border-t hover:bg-[#f5f9fc] transition"
                 >
 
                   <td className="p-3 font-medium">
@@ -136,7 +136,7 @@ export default function ManagementEmployeeDeadlines() {
                   <td className="p-3">
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className="bg-black h-2 rounded-full"
+                        className="bg-[#2a465a] h-2 rounded-full"
                         style={{ width: `${item.progress}%` }}
                       ></div>
                     </div>

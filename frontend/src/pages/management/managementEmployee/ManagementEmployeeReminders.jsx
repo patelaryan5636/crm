@@ -53,11 +53,11 @@ export default function ManagementEmployeeReminders() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-[#f4f7fb] p-6">
 
       {/* HEADER */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">
+        <h1 className="text-3xl font-bold text-[#2a465a]">
           Reminders
         </h1>
 
@@ -76,12 +76,12 @@ export default function ManagementEmployeeReminders() {
             placeholder="Enter reminder..."
             value={newReminder}
             onChange={(e) => setNewReminder(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-black"
+            className="flex-1 border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#2a465a]"
           />
 
           <button
             onClick={handleAddReminder}
-            className="bg-black text-white px-6 py-3 rounded-xl font-medium hover:opacity-90 transition"
+            className="bg-[#2a465a] text-white px-6 py-3 rounded-xl font-medium hover:opacity-90 transition"
           >
             + Add Reminder
           </button>
@@ -126,7 +126,7 @@ export default function ManagementEmployeeReminders() {
 
                 <button
                   onClick={() => handleToggleStatus(item.id)}
-                  className="px-4 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 transition"
+                  className="px-4 py-2 rounded-lg text-sm bg-[#2a465a] text-white hover:bg-[#1d3444] transition"
                 >
                   {item.status === "Pending"
                     ? "Mark Done"

@@ -50,6 +50,7 @@ const LEAVE_TYPES = [
   "Paternity Leave",
   "Bereavement Leave",
   "Unpaid Leave",
+  "Half Day",
   "Other",
 ];
 
@@ -162,10 +163,22 @@ export default function FinanceHRM() {
     try {
       const res = await hrmService.getMyLeaves();
       if (res.success && res.data) {
+        const LEAVE_MAP = {
+          'SICK': 'Sick Leave',
+          'CASUAL': 'Casual Leave',
+          'EARNED': 'Earned Leave',
+          'MATERNITY': 'Maternity Leave',
+          'PATERNITY': 'Paternity Leave',
+          'BEREAVEMENT': 'Bereavement Leave',
+          'UNPAID': 'Unpaid Leave',
+          'HALF_DAY': 'Half Day',
+          'OTHER': 'Other',
+        };
+
         const rows = res.data.map(l => ({
           ...l,
           id: l._id,
-          type: l.leaveType,
+          type: LEAVE_MAP[l.leaveType] || l.leaveType,
           range: `${new Date(l.fromDate).toLocaleDateString()} – ${new Date(l.toDate).toLocaleDateString()}`,
           appliedOn: new Date(l.createdAt).toLocaleDateString(),
           status: l.status.charAt(0).toUpperCase() + l.status.slice(1).toLowerCase(),

@@ -1,17 +1,21 @@
 import React, { useState } from "react";
 import {
+  Heading,
+  DashCard,
+  GPieChart,
+} from "../../../components/shared/Common_Components";
+
+import {
+  ResponsiveContainer,
   LineChart,
   Line,
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
+  CartesianGrid,
 } from "recharts";
 
-/* ---------------- MOCK DATA ---------------- */
+/* ---------------- PERFORMANCE DATA ---------------- */
 
 const allData = {
   week: [
@@ -42,14 +46,19 @@ const allData = {
 };
 
 const pieData = [
-  { name: "Completed", value: 40 },
-  { name: "In Progress", value: 35 },
-  { name: "Pending", value: 25 },
+  {
+    name: "Completed",
+    value: 40,
+  },
+  {
+    name: "In Progress",
+    value: 35,
+  },
+  {
+    name: "Pending",
+    value: 25,
+  },
 ];
-
-const COLORS = ["#22c55e", "#f59e0b", "#ef4444"];
-
-/* ---------------- COMPONENT ---------------- */
 
 export default function ManagementEmployeePerformance() {
   const [filter, setFilter] = useState("week");
@@ -58,26 +67,22 @@ export default function ManagementEmployeePerformance() {
     <div className="p-6 bg-[#f4f7fb] min-h-screen space-y-6">
 
       {/* HEADER */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold text-[#2a465a]">
-            Performance Dashboard
-          </h1>
-          <p className="text-sm text-gray-500">
-            Track performance with time filters
-          </p>
-        </div>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 
-        {/* FILTER BUTTONS */}
-        <div className="flex gap-2">
+        <Heading
+          title="My Performance"
+          subtitle="Track your work performance and analytics"
+        />
+
+        <div className="flex gap-2 flex-wrap">
           {["week", "month", "year"].map((type) => (
             <button
               key={type}
               onClick={() => setFilter(type)}
-              className={`px-3 py-1 rounded-lg text-sm border transition ${
+              className={`px-4 py-2 rounded-lg text-sm transition ${
                 filter === type
                   ? "bg-[#2a465a] text-white"
-                  : "bg-white text-gray-600"
+                  : "bg-white border text-gray-600"
               }`}
             >
               {type === "week"
@@ -90,70 +95,90 @@ export default function ManagementEmployeePerformance() {
         </div>
       </div>
 
-      {/* TOP STATS */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <p className="text-sm text-gray-500">Avg Score</p>
-          <h2 className="text-xl font-semibold">76%</h2>
-        </div>
+      {/* KPI CARDS */}
+      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
 
-        <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <p className="text-sm text-gray-500">Projects Completed</p>
-          <h2 className="text-xl font-semibold">12</h2>
-        </div>
+        <DashCard
+          title="Total Assigned"
+          value="18"
+        />
 
-        <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <p className="text-sm text-gray-500">Efficiency</p>
-          <h2 className="text-xl font-semibold">Good</h2>
-        </div>
+        <DashCard
+          title="Completed"
+          value="12"
+        />
+
+        <DashCard
+          title="Active Projects"
+          value="4"
+        />
+
+        <DashCard
+          title="On-Time %"
+          value="76%"
+        />
+
       </div>
 
-      {/* CHARTS */}
+      {/* CHART SECTION */}
       <div className="grid lg:grid-cols-2 gap-6">
 
         {/* LINE CHART */}
-        <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <h3 className="font-medium text-gray-700 mb-4">
-            Performance ({filter})
-          </h3>
+        <div className="bg-white rounded-2xl border shadow-sm p-5">
 
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={allData[filter]}>
-              <XAxis dataKey="label" />
-              <YAxis />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="score"
-                stroke="#2a465a"
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <h2 className="text-lg font-semibold text-[#2a465a] mb-4">
+            Performance Overview
+          </h2>
+
+          <div className="h-[320px]">
+
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={allData[filter]}>
+
+                <CartesianGrid strokeDasharray="3 3" />
+
+                <XAxis dataKey="label" />
+
+                <YAxis />
+
+                <Tooltip />
+
+                <Line
+                  type="monotone"
+                  dataKey="score"
+                  stroke="#2a465a"
+                  strokeWidth={3}
+                />
+
+              </LineChart>
+            </ResponsiveContainer>
+
+          </div>
         </div>
 
         {/* PIE CHART */}
-        <div className="bg-white p-4 rounded-xl border shadow-sm">
-          <h3 className="font-medium text-[#2a465a] mb-4">
-            Project Status Mix
-          </h3>
+        <div className="bg-white rounded-2xl border shadow-sm p-5">
 
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey="value"
-                outerRadius={90}
-                label
-              >
-                {pieData.map((entry, index) => (
-                  <Cell key={index} fill={COLORS[index]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          <h2 className="text-lg font-semibold text-[#2a465a] mb-4">
+            Project Status Mix
+          </h2>
+
+          <div className="h-[320px]">
+
+            <GPieChart
+              data={pieData}
+              dataKey="value"
+              nameKey="name"
+              colors={[
+                "#22c55e",
+                "#f59e0b",
+                "#ef4444",
+              ]}
+            />
+
+          </div>
         </div>
+
       </div>
     </div>
   );

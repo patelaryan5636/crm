@@ -1,4 +1,8 @@
 import React, { useState } from "react";
+import {
+  Heading,
+  DataField,
+} from "../../../components/shared/Common_Components";
 
 export default function ManagementEmployeeReminders() {
   const [reminders, setReminders] = useState([
@@ -17,6 +21,7 @@ export default function ManagementEmployeeReminders() {
   ]);
 
   const [newReminder, setNewReminder] = useState("");
+  const [showForm, setShowForm] = useState(false);
 
   const handleAddReminder = () => {
     if (!newReminder.trim()) return;
@@ -30,10 +35,13 @@ export default function ManagementEmployeeReminders() {
 
     setReminders([reminder, ...reminders]);
     setNewReminder("");
+    setShowForm(false);
   };
 
   const handleDelete = (id) => {
-    setReminders(reminders.filter((item) => item.id !== id));
+    setReminders(
+      reminders.filter((item) => item.id !== id)
+    );
   };
 
   const handleToggleStatus = (id) => {
@@ -54,55 +62,63 @@ export default function ManagementEmployeeReminders() {
 
   return (
     <div className="min-h-screen bg-[#f4f7fb] p-6">
+      <Heading
+        title="Reminders"
+        subtitle="Manage your personal reminders and tasks"
+      />
 
-      {/* HEADER */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-[#2a465a]">
-          Reminders
-        </h1>
-
-        <p className="text-gray-500 mt-1">
-          Manage your important reminders and tasks
-        </p>
+      {/* ADD BUTTON */}
+      <div className="flex justify-end mt-6 mb-6">
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="bg-[#2a465a] text-white px-5 py-2 rounded-lg hover:bg-[#1d3444] transition"
+        >
+          + Add Reminder
+        </button>
       </div>
 
-      {/* ADD REMINDER CARD */}
-      <div className="bg-white rounded-2xl shadow-sm border p-5 mb-6">
+      {/* ADD FORM */}
+      {showForm && (
+        <div className="bg-white rounded-2xl shadow-sm border p-5 mb-6">
+          <div className="space-y-4">
+            <DataField
+              label="Reminder"
+              placeholder="Enter reminder..."
+              value={newReminder}
+              onChange={(e) =>
+                setNewReminder(e.target.value)
+              }
+            />
 
-        <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowForm(false)}
+                className="border px-5 py-2 rounded-lg"
+              >
+                Cancel
+              </button>
 
-          <input
-            type="text"
-            placeholder="Enter reminder..."
-            value={newReminder}
-            onChange={(e) => setNewReminder(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#2a465a]"
-          />
-
-          <button
-            onClick={handleAddReminder}
-            className="bg-[#2a465a] text-white px-6 py-3 rounded-xl font-medium hover:opacity-90 transition"
-          >
-            + Add Reminder
-          </button>
-
+              <button
+                onClick={handleAddReminder}
+                className="bg-[#2a465a] text-white px-5 py-2 rounded-lg hover:bg-[#1d3444] transition"
+              >
+                Save Reminder
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* REMINDER LIST */}
       <div className="grid gap-4">
-
         {reminders.map((item) => (
           <div
             key={item.id}
-            className="bg-white border rounded-2xl shadow-sm p-5 hover:shadow-md transition"
+            className="bg-white border rounded-2xl shadow-sm p-5"
           >
-
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-
-              {/* LEFT */}
               <div>
-                <h2 className="text-lg font-semibold text-gray-800">
+                <h2 className="text-lg font-semibold text-[#2a465a]">
                   {item.title}
                 </h2>
 
@@ -111,9 +127,7 @@ export default function ManagementEmployeeReminders() {
                 </p>
               </div>
 
-              {/* RIGHT */}
               <div className="flex items-center gap-3 flex-wrap">
-
                 <span
                   className={`px-3 py-1 text-xs font-medium rounded-full ${
                     item.status === "Completed"
@@ -125,8 +139,10 @@ export default function ManagementEmployeeReminders() {
                 </span>
 
                 <button
-                  onClick={() => handleToggleStatus(item.id)}
-                  className="px-4 py-2 rounded-lg text-sm bg-[#2a465a] text-white hover:bg-[#1d3444] transition"
+                  onClick={() =>
+                    handleToggleStatus(item.id)
+                  }
+                  className="bg-[#2a465a] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#1d3444] transition"
                 >
                   {item.status === "Pending"
                     ? "Mark Done"
@@ -134,17 +150,17 @@ export default function ManagementEmployeeReminders() {
                 </button>
 
                 <button
-                  onClick={() => handleDelete(item.id)}
+                  onClick={() =>
+                    handleDelete(item.id)
+                  }
                   className="px-4 py-2 rounded-lg text-sm bg-red-600 text-white hover:bg-red-700 transition"
                 >
                   Delete
                 </button>
-
               </div>
             </div>
           </div>
         ))}
-
       </div>
     </div>
   );

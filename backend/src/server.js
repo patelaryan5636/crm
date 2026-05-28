@@ -36,6 +36,7 @@ const salesExecutiveDashboardRoutes = require('./routes/salesExecutiveDashboard'
 const ticketRoutes = require('./routes/tickets');
 const notificationRoutes = require('./routes/notifications');
 const logsRoutes = require('./routes/logs');
+const adminRoutes = require('./routes/admin');
 const apiConfigRoutes = require('./routes/apiConfig');
 
 dotenv.config();
@@ -126,6 +127,8 @@ try {
 	console.log('✓ /api/logs routes registered');
 	app.use('/api/api-config', apiConfigRoutes);
 	console.log('✓ /api/api-config routes registered');
+  app.use('/api/admin', adminRoutes);
+  console.log('✓ /api/admin routes registered');
 } catch (error) {
 	console.error('❌ Error registering routes:', error);
 }

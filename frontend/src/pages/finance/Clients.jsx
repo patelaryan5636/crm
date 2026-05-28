@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import apiClient from "../../services/apiClient";
 import {
   Heading,
   DashGrid,
@@ -50,129 +51,8 @@ const SERVICE_OPTIONS = [
   "Consulting",
 ];
 
-// ── Initial dummy data ─────────────────────────────────────────────────────────
-const initialClients = [
-  {
-    id: "CLT-001",
-    client: "Arjun Mehta",
-    mobile: "9876543210",
-    email: "arjun@example.com",
-    suggestedServices: "SEO, Social Media",
-    suggestedAmount: 85000,
-    discountType: "Flat",
-    discount: 5000,
-    finalAmount: 80000,
-    status: "Interested",
-    salesExec: "Rahul Singh",
-    finalServices: "SEO, Social Media",
-    notes: "Client wants monthly reports.",
-    requirements: [],
-    selectedService: "",
-    discountMode: "None",
-    discountValue: "",
-    paymentStatus: "Unpaid",
-    advanceAmount: "",
-    notInterestedReason: "",
-    conversationNotes: "",
-    notTalkReason: "",
-  },
-  {
-    id: "CLT-002",
-    client: "Priya Sharma",
-    mobile: "9823456789",
-    email: "priya@example.com",
-    suggestedServices: "Website Development",
-    suggestedAmount: 150000,
-    discountType: "Percentage",
-    discount: 10,
-    finalAmount: 135000,
-    status: "Talk",
-    salesExec: "Aarti Verma",
-    finalServices: "Website Development, Maintenance",
-    notes: "Includes 1 year support.",
-    requirements: [],
-    selectedService: "",
-    discountMode: "None",
-    discountValue: "",
-    paymentStatus: "Unpaid",
-    advanceAmount: "",
-    notInterestedReason: "",
-    conversationNotes: "",
-    notTalkReason: "",
-  },
-  {
-    id: "CLT-003",
-    client: "TechNova Pvt Ltd",
-    mobile: "9988776655",
-    email: "contact@technova.in",
-    suggestedServices: "ERP Integration",
-    suggestedAmount: 320000,
-    discountType: "Flat",
-    discount: 20000,
-    finalAmount: 300000,
-    status: "Not Interested",
-    salesExec: "Suresh Patel",
-    finalServices: "ERP Integration",
-    notes: "Q3 delivery required.",
-    requirements: [],
-    selectedService: "",
-    discountMode: "None",
-    discountValue: "",
-    paymentStatus: "Unpaid",
-    advanceAmount: "",
-    notInterestedReason: "Client chose an in-house team for implementation.",
-    conversationNotes: "",
-    notTalkReason: "",
-  },
-  {
-    id: "CLT-004",
-    client: "Kavya Nair",
-    mobile: "9012345678",
-    email: "kavya@nair.com",
-    suggestedServices: "Brand Design",
-    suggestedAmount: 45000,
-    discountType: "None",
-    discount: 0,
-    finalAmount: 45000,
-    status: "Not Talk",
-    salesExec: "Rahul Singh",
-    finalServices: "Brand Design, Logo",
-    notes: "Rush delivery.",
-    requirements: [],
-    selectedService: "",
-    discountMode: "None",
-    discountValue: "",
-    paymentStatus: "Unpaid",
-    advanceAmount: "",
-    notInterestedReason: "",
-    conversationNotes: "",
-    notTalkReason: "Prospect was not available at the scheduled time.",
-  },
-  {
-    id: "CLT-005",
-    client: "Rohan Gupta",
-    mobile: "9812398123",
-    email: "rohan@gupta.com",
-    suggestedServices: "Google Ads, Meta Ads",
-    suggestedAmount: 60000,
-    discountType: "Percentage",
-    discount: 5,
-    finalAmount: 57000,
-    status: "Interested",
-    salesExec: "Aarti Verma",
-    finalServices: "Google Ads, Meta Ads",
-    notes: "Budget capped at ₹57k.",
-    requirements: [],
-    selectedService: "",
-    discountMode: "None",
-    discountValue: "",
-    paymentStatus: "Unpaid",
-    advanceAmount: "",
-    notInterestedReason: "",
-    conversationNotes: "",
-    notTalkReason: "",
-  },
-];
+// Start with empty list; data will be fetched from backend
+const initialClients = [];
 
 const statusOptions = ["Interested", "Not Interested", "Talk", "Not Talk"];
 
@@ -262,6 +142,44 @@ export default function Clients() {
   const remaining     = Math.max(0, netPayable - advancePaid);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+
+  // Fetch prospects filled by Sales Executives for this admin (finance view)
+  useEffect(() => {
+    let mounted = true;
+    const fetchProspects = async () => {
+      try {
+        const resp = await apiClient.get('/finance/prospects');
+        const data = resp?.data?.data || {};
+        const prospects = data.prospects || [];
+
+        const mapped = prospects.map((p) => ({
+          id: p.id,
+          client: p.client,
+          mobile: p.mobile,
+          email: p.email,
+          suggestedServices: p.suggestedServices,
+          suggestedAmount: p.suggestedAmount,
+          status: p.status,
+          salesExec: p.salesExec,
+          notes: p.requirement || '',
+          requirements: [],
+          selectedService: '',
+          discountMode: 'None',
+          discountValue: '',
+          paymentStatus: 'Unpaid',
+          advanceAmount: '',
+          advancePayments: [],
+        }));
+
+        if (mounted) setClients(mapped);
+      } catch (err) {
+        console.warn('Failed to fetch finance prospects', err);
+      }
+    };
+
+    fetchProspects();
+    return () => { mounted = false; };
+  }, []);
   const af = (field, value) =>
     setActionForm((prev) => ({ ...prev, [field]: value }));
 

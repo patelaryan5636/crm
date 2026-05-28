@@ -882,6 +882,16 @@ const ProspectFormSchema = new Schema({
     _id: false,
   }],
 
+  sentToClientAt: { type: Date, default: null },
+  sentToClientBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  clientEmailStatus: {
+    type: String,
+    enum: ['PENDING', 'SENT', 'FAILED'],
+    default: 'PENDING',
+  },
+  clientEmailMessageId: { type: String, default: null },
+  clientEmailError: { type: String, default: null },
+
   totalAmount: { type: Number, default: 0 },
   discount: { type: Number, default: 0 },
   finalAmount: { type: Number, default: 0 },

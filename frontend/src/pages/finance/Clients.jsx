@@ -29,7 +29,6 @@ import {
   Plus,
   IndianRupee,
 } from "lucide-react";
-import { workOrderStore } from "./Workorderstore";
 
 // ── Service catalogue ─────────────────────────────────────────────────────────
 const SERVICE_OPTIONS = [
@@ -106,6 +105,8 @@ const blankReq = () => ({ id: Date.now(), title: "", cost: "", description: "" }
 export default function Clients() {
   const [clients, setClients]   = useState(initialClients);
   const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   // ── Action-form state (lives outside the form so the modal can read it) ──
   const [actionForm, setActionForm] = useState({
@@ -147,6 +148,8 @@ export default function Clients() {
   useEffect(() => {
     let mounted = true;
     const fetchProspects = async () => {
+      setLoading(true);
+      setError("");
       try {
         const resp = await apiClient.get('/finance/prospects');
         const data = resp?.data?.data || {};
@@ -158,22 +161,31 @@ export default function Clients() {
           mobile: p.mobile,
           email: p.email,
           suggestedServices: p.suggestedServices,
-          suggestedAmount: p.suggestedAmount,
+          suggestedAmount: p.suggestedAmount || p.netPayable || p.totalCost || 0,
           status: p.status,
           salesExec: p.salesExec,
-          notes: p.requirement || '',
-          requirements: [],
-          selectedService: '',
-          discountMode: 'None',
-          discountValue: '',
-          paymentStatus: 'Unpaid',
-          advanceAmount: '',
-          advancePayments: [],
+          notes: p.termsAndConditions || p.requirement || '',
+          requirements: p.requirements || [],
+          selectedService: p.selectedService || '',
+          discountMode: p.discountMode || 'None',
+          discountValue: p.discountValue || '',
+          paymentStatus: p.paymentStatus || 'Unpaid',
+          advanceAmount: p.advanceAmount || '',
+          advancePayments: p.advancePayments || [],
+          termsAndConditions: p.termsAndConditions || '',
+          totalCost: p.totalCost || p.suggestedAmount || 0,
+          netPayable: p.netPayable || p.suggestedAmount || 0,
+          clientEmailStatus: p.clientEmailStatus || 'PENDING',
+          sentToClientAt: p.sentToClientAt || null,
+          clientEmailMessageId: p.clientEmailMessageId || null,
         }));
 
         if (mounted) setClients(mapped);
       } catch (err) {
         console.warn('Failed to fetch finance prospects', err);
+        if (mounted) setError(err?.message || 'Failed to load finance prospects');
+      } finally {
+        if (mounted) setLoading(false);
       }
     };
 
@@ -207,7 +219,7 @@ export default function Clients() {
       status:             row.status          || "Interested",
       selectedService:    row.selectedService || "",
       requirements:       row.requirements    || [],
-      termsAndConditions: row.termsAndConditions || "",
+      termsAndConditions: row.termsAndConditions || row.notes || "",
       discountMode:       row.discountMode    || "None",
       discountValue:      row.discountValue   || "",
       paymentStatus:      row.paymentStatus   || "Unpaid",
@@ -298,7 +310,7 @@ export default function Clients() {
   };
 
   // ── Save entire action form ───────────────────────────────────────────────
-  const saveActionForm = () => {
+  const saveActionForm = async () => {
     if (!selected) return;
 
     const totalCostVal   = calcTotalCost(actionForm.requirements || []);
@@ -307,48 +319,42 @@ export default function Clients() {
     const advancePaymentsVal = actionForm.advancePayments || [];
     const advancePaidVal = advancePaymentsVal.reduce((sum, p) => sum + calcAdvAmount(netPayableVal, p.mode, p.value), 0);
 
-    const updatedClient = {
-      ...actionForm,
-      advanceAmount: String(advancePaidVal),
-      advancePayments: advancePaymentsVal,
-    };
-
-    setClients((prev) =>
-      prev.map((c) =>
-        c.id !== selected.id
-          ? c
-          : { ...c, ...updatedClient }
-      )
-    );
-
-    if (actionForm.status === "Interested") {
-      const newWO = {
-        id: `WO-${Date.now()}`,
-        clientId: selected.id,
-        client: selected.client,
-        clientEmail: selected.email,
-        clientMobile: selected.mobile,
-        salesExec: selected.salesExec,
-        service: actionForm.selectedService,
+    try {
+      const response = await apiClient.post(`/finance/prospects/${selected.id}/send`, {
+        status: actionForm.status,
+        selectedService: actionForm.selectedService,
         requirements: actionForm.requirements,
-        totalCost: totalCostVal,
+        termsAndConditions: actionForm.termsAndConditions,
         discountMode: actionForm.discountMode,
         discountValue: actionForm.discountValue,
-        discountAmt: discountAmtVal,
-        netPayable: netPayableVal,
         paymentStatus: actionForm.paymentStatus,
         advanceAmount: String(advancePaidVal),
         advancePayments: advancePaymentsVal,
-        terms: actionForm.termsAndConditions,
-        generatedDate: new Date().toISOString().split("T")[0],
-        signedStatus: "Unsigned",
-        approvalStatus: "Pending",
-        approvalComment: "",
-      };
-      workOrderStore.push(newWO);
-    }
+        notInterestedReason: actionForm.notInterestedReason,
+        conversationNotes: actionForm.conversationNotes,
+        notTalkReason: actionForm.notTalkReason,
+      });
 
-    closeModal("client-action");
+      const updatedProspect = response?.data?.data?.prospect;
+      if (updatedProspect) {
+        setClients((prev) =>
+          prev.map((c) =>
+            c.id !== selected.id
+              ? c
+              : {
+                  ...c,
+                  ...updatedProspect,
+                  advanceAmount: String(advancePaidVal),
+                  advancePayments: advancePaymentsVal,
+                }
+          )
+        );
+      }
+
+      closeModal("client-action");
+    } catch (saveError) {
+      setError(saveError?.message || 'Failed to send quotation to client');
+    }
   };
 
   // ── Table columns ─────────────────────────────────────────────────────────
@@ -385,6 +391,12 @@ export default function Clients() {
   return (
     <div>
       <DashGrid cols={12} gap={4}>
+        {error && (
+          <div className="col-span-12 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+            {error}
+          </div>
+        )}
+
         {/* ── Heading ── */}
         <Heading
           primaryText="Clients"
@@ -444,6 +456,11 @@ export default function Clients() {
             },
           ]}
         />
+        {loading && (
+          <div className="col-span-12 py-2 text-center text-sm font-medium text-slate-400">
+            Loading finance prospects...
+          </div>
+        )}
       </DashGrid>
 
       {/* ════════════════════════════════════════════════════════════════════

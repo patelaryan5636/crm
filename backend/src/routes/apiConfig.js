@@ -9,5 +9,6 @@ router.use(requireAdmin);
 
 router.get('/razorpay', apiConfigController.getRazorpayConfig);
 router.post('/razorpay', apiConfigController.updateRazorpayConfig);
+router.post('/razorpay/generate-secret', apiConfigController.generateRazorpaySecret);
 
 module.exports = router;

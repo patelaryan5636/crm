@@ -11,6 +11,18 @@ const AppError = require('../utils/appError');
 const ApiResponse = require('../utils/apiResponse');
 const { Announcement, Team, Notification, User } = require('../models/index');
 
+const RECEIVER_ROLES = [
+  'SALES_TL',
+  'SALES_EXECUTIVE',
+  'FINANCE_MANAGER',
+  'FINANCE_EXECUTIVE',
+  'MANAGEMENT_MANAGER',
+  'MANAGEMENT_TL',
+  'MANAGEMENT_EMPLOYEE',
+  'ADMIN',
+  'SUPER_ADMIN',
+];
+
 // ─────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────
@@ -81,7 +93,7 @@ exports.getMyAnnouncements = catchAsync(async (req, res, next) => {
   }
 
   // Only TL and Executive receive announcement notifications
-  const allowedRoles = ['SALES_TL', 'SALES_EXECUTIVE'];
+  const allowedRoles = RECEIVER_ROLES;
   if (!allowedRoles.includes(user.role)) {
     return next(new AppError('This endpoint is for Sales TL and Sales Executive only', 403));
   }
@@ -267,7 +279,7 @@ exports.getUnreadCount = catchAsync(async (req, res, next) => {
     return next(new AppError('Authentication required', 401));
   }
 
-  const allowedRoles = ['SALES_TL', 'SALES_EXECUTIVE'];
+  const allowedRoles = RECEIVER_ROLES;
   if (!allowedRoles.includes(user.role)) {
     return res.status(200).json(new ApiResponse(200, { unreadCount: 0 }, 'OK'));
   }

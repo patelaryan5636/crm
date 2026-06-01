@@ -39,7 +39,6 @@ function AppRoutes() {
         <Route path="/sales-manager/*" element={<SalesManagerRoutes />} />
         <Route path="/sales-team-leader" element={<SalesTeamLeaderRoutes />} />
         <Route path="/sales-team-leader/*" element={<SalesTeamLeaderRoutes />} />
-        <Route path="/sales-executive" element={<SalesExecutiveRoutes />} />
         <Route path="/sales-executive/*" element={<SalesExecutiveRoutes />} />
         {/* Management Routes */}
         <Route path="/management-manager" element={<ManagementManagerRoutes />} />

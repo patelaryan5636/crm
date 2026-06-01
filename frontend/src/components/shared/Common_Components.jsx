@@ -873,9 +873,11 @@ function ActionButton({ action, row, isIconOnly, actionVariantCls }) {
   const btnRef = useRef(null);
 
   const isHidden = action.show && !action.show(row);
+  const resolvedLabel = typeof action.label === "function" ? action.label(row) : action.label;
+  const resolvedTooltip = typeof action.tooltip === "function" ? action.tooltip(row) : action.tooltip;
 
   const showTip = () => {
-    if (isHidden || !isIconOnly || !action.tooltip) return;
+    if (isHidden || !isIconOnly || !resolvedTooltip) return;
     const rect = btnRef.current?.getBoundingClientRect();
     if (rect) setTipPos({ top: rect.top - 8, left: rect.left + rect.width / 2 });
   };
@@ -901,17 +903,17 @@ function ActionButton({ action, row, isIconOnly, actionVariantCls }) {
         `}
       >
         {action.icon && <span className={isIconOnly ? "w-4 h-4" : "w-3.5 h-3.5"}>{action.icon}</span>}
-        {action.label && <span className="text-xs font-bold">{action.label}</span>}
+        {resolvedLabel && <span className="text-xs font-bold">{resolvedLabel}</span>}
       </button>
 
       {/* Portal tooltip — fixed to viewport, never clipped by overflow */}
-      {isIconOnly && action.tooltip && tipPos && createPortal(
+      {isIconOnly && resolvedTooltip && tipPos && createPortal(
         <div
           className="pointer-events-none fixed z-[9999] -translate-x-1/2 -translate-y-full"
           style={{ top: tipPos.top, left: tipPos.left }}
         >
           <div className="bg-[#1e293b] text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
-            {action.tooltip}
+            {resolvedTooltip}
           </div>
           <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1e293b]" />
         </div>,

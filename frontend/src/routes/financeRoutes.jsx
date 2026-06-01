@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import FinanceDashboard    from "../pages/finance/FinanceDashboard";
 import Payments            from "../pages/finance/Payments";
@@ -17,6 +17,7 @@ function FinanceRoutes() {
     <Routes>
       <Route element={<MainLayout />}>
         <Route index                  element={<FinanceDashboard />}     />
+        <Route path="dashboard"         element={<Navigate to="/finance" replace />} />
         <Route path="clients"           element={<Clients />}                />
         <Route path="payments"        element={<Payments />}             />
         <Route path="work-orders"     element={<WorkOrders />}           />
@@ -27,6 +28,7 @@ function FinanceRoutes() {
         <Route path="logs"            element={<FinanceLoginLogs />}     />
         <Route path="hrm"             element={<FinanceHRM />}           />
         <Route path="profile"         element={<FinanceProfile />}              />
+        <Route path="*"                 element={<Navigate to="/finance" replace />} />
       </Route>
     </Routes>
   );

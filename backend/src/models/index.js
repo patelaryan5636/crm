@@ -590,6 +590,7 @@ const WebhookLogSchema = new Schema({
   source: { type: String, enum: WEBHOOK_SOURCE, required: true },
   event: { type: String, required: true },   // 'payment.captured', 'payment.failed'
   payload: { type: Schema.Types.Mixed },        // raw webhook body
+  rawBody: { type: String },                    // raw request body as received (for signature debugging)
   signature: String,
   isVerified: { type: Boolean, default: false },
   isProcessed: { type: Boolean, default: false },
@@ -891,10 +892,50 @@ const ProspectFormSchema = new Schema({
   },
   clientEmailMessageId: { type: String, default: null },
   clientEmailError: { type: String, default: null },
+  // Razorpay / Payment tracking
+  razorpayOrderId: { type: String, default: null },
+  razorpayPaymentId: { type: String, default: null },
+  razorpayLinkUrl: { type: String, default: null },
+  razorpayLinkStatus: { type: String, enum: ['PENDING','SENT','EXPIRED'], default: 'PENDING' },
+  paymentStatus: { type: String, enum: ['PENDING','SUCCESS','FAILED'], default: 'PENDING' },
+  paymentMethod: { type: String, default: null },
+  paymentVerifiedAt: { type: Date, default: null },
+  paymentNote: { type: String, default: null },
 
   totalAmount: { type: Number, default: 0 },
   discount: { type: Number, default: 0 },
   finalAmount: { type: Number, default: 0 },
+
+  paymentStatus: {
+    type: String,
+    enum: ['PENDING', 'SUCCESS', 'FAILED'],
+    default: 'PENDING',
+  },
+  paymentType: {
+    type: String,
+    enum: ['FULL', 'PARTIAL'],
+    default: 'FULL',
+  },
+  paymentMethod: { type: String, default: null },
+  paymentVerifiedAt: { type: Date, default: null },
+  paymentFailedAt: { type: Date, default: null },
+  paymentFailureReason: { type: String, default: null },
+
+  razorpayLinkToken: { type: String, default: null },
+  razorpayLinkUrl: { type: String, default: null },
+  razorpayOrderId: { type: String, default: null },
+  razorpayPaymentId: { type: String, default: null },
+  razorpaySignature: { type: String, default: null },
+  razorpayPaymentLinkId: { type: String, default: null },
+  razorpayLinkStatus: {
+    type: String,
+    enum: ['PENDING', 'SENT', 'FAILED'],
+    default: 'PENDING',
+  },
+  razorpayLinkSentAt: { type: Date, default: null },
+
+  // Payments attached to this prospect (references Payment documents)
+  payments: [{ type: Schema.Types.ObjectId, ref: 'Payment' }],
 
   status: {
     type: String,
@@ -1080,12 +1121,24 @@ ProjectUpdateSchema.index({ admin: 1, project: 1, createdAt: -1 });
 // ════════════════════════════════════════════════════════════
 const PaymentSchema = new Schema({
   admin: { type: Schema.Types.ObjectId, ref: 'Admin', required: true },
-  project: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
+  project: { type: Schema.Types.ObjectId, ref: 'Project', default: null },
+  prospectForm: { type: Schema.Types.ObjectId, ref: 'ProspectForm', default: null },
   client: { type: Schema.Types.ObjectId, ref: 'Client', required: true },
 
+  // Provider fields (Razorpay)
   razorpayOrderId: { type: String, default: null },
   razorpayPaymentId: { type: String, default: null },
   razorpaySignature: { type: String, default: null },
+
+  // Payment link metadata
+  paymentProvider: { type: String, enum: ['RAZORPAY', 'PAYTM', 'OTHER'], default: 'RAZORPAY' },
+  paymentLinkId: { type: String, default: null },
+  paymentLinkUrl: { type: String, default: null },
+  paymentLinkStatus: { type: String, enum: ['PENDING','SENT','EXPIRED','FAILED'], default: 'PENDING' },
+
+  // Raw response from payment provider and email message id
+  rawResponse: { type: Schema.Types.Mixed, default: null },
+  emailMessageId: { type: String, default: null },
 
   amount: { type: Number, required: true, min: 1 },
   paymentType: { type: String, enum: ['FULL', 'PARTIAL'], required: true },
@@ -1095,6 +1148,8 @@ const PaymentSchema = new Schema({
   signatureVerified: { type: Boolean, default: false },
   webhookVerified: { type: Boolean, default: false },
 
+  sentAt: { type: Date, default: null },
+  sentBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   paidAt: { type: Date, default: null },
   retryCount: { type: Number, default: 0 },
   verifiedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
@@ -1110,6 +1165,8 @@ PaymentSchema.index({ admin: 1, client: 1 });
 PaymentSchema.index({ razorpayOrderId: 1 });
 PaymentSchema.index({ admin: 1, status: 1 });
 PaymentSchema.index({ admin: 1, createdAt: -1 });
+PaymentSchema.index({ prospectForm: 1 });
+PaymentSchema.index({ paymentLinkId: 1 });
 
 
 // ════════════════════════════════════════════════════════════

@@ -385,8 +385,8 @@ const SalesExecutiveDashboard = () => {
       key:    "status",
       label:  "Status",
       render: (row) => (
-        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_BADGE[row.status] || "bg-slate-100 text-slate-600"}`}>
-          {row.status}
+        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_BADGE[row?.status] || "bg-slate-100 text-slate-600"}`}>
+          {row?.status}
         </span>
       ),
     },
@@ -395,21 +395,21 @@ const SalesExecutiveDashboard = () => {
     {
       key:    "nextReminder",
       label:  "Next Reminder",
-      render: (row) => row.nextReminder || <span className="text-slate-400 text-xs">—</span>,
+      render: (row) => (row?.nextReminder ? row.nextReminder : <span className="text-slate-400 text-xs">—</span>),
     },
     {
       key:    "priority",
       label:  "Priority",
       render: (row) => (
-        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${PRIORITY_BADGE[row.priority] || "bg-slate-100 text-slate-600"}`}>
-          {row.priority}
+        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${PRIORITY_BADGE[row?.priority] || "bg-slate-100 text-slate-600"}`}>
+          {row?.priority}
         </span>
       ),
     },
   ];
 
-  // ── Map API prospect rows → table rows ──
-  const tableRows = prospects.map((p) => ({
+  // ── Map API prospect rows → table rows (skip null/invalid entries)
+  const tableRows = (prospects || []).filter(Boolean).map((p) => ({
     id:           p.id,
     name:         p.name,
     status:       p.status,

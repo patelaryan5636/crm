@@ -6,6 +6,12 @@
 const axios = require('axios');
 const logger = require('../utils/logger');
 
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+const getSender = () => ({
+  name: process.env.BREVO_SENDER_NAME || 'Graphura CRM',
+  email: process.env.BREVO_SENDER_EMAIL || 'noreply@graphura.com',
+});
+
 /**
  * Send OTP Email via Brevo API
  * @param {string} email - Recipient email
@@ -271,6 +277,9 @@ const sendProspectQuotationEmail = async (payload) => {
     if (!process.env.BREVO_API_KEY) {
       throw new Error('BREVO_API_KEY is not configured');
     }
+    if (!isValidEmail(payload.email)) {
+      throw new Error('Client email is missing or invalid');
+    }
 
     const requirementsRows = (payload.requirements || [])
       .map((item) => `
@@ -284,10 +293,7 @@ const sendProspectQuotationEmail = async (payload) => {
     const response = await axios.post(
       'https://api.brevo.com/v3/smtp/email',
       {
-        sender: {
-          name: 'Graphura CRM Finance',
-          email: process.env.BREVO_SENDER_EMAIL || 'noreply@graphura.com',
-        },
+        sender: getSender(),
         to: [{ email: payload.email, name: payload.clientName || 'Client' }],
         subject: `${payload.companyName || payload.clientName || 'Your'} quotation from Graphura CRM`,
         htmlContent: `
@@ -342,11 +348,74 @@ const sendProspectQuotationEmail = async (payload) => {
       }
     );
 
-    logger.info(`Prospect quotation email sent to ${payload.email}`);
-    return { success: true, messageId: response.data.messageId };
+    const messageId = response.data.messageId || response.data.id || null;
+    logger.info(`Prospect quotation email sent to ${payload.email} (${messageId || 'no message id'})`);
+    return { success: true, messageId };
   } catch (error) {
-    logger.error('Failed to send prospect quotation email', error.response?.data?.message || error.message);
-    throw new Error('Unable to send prospect quotation email. Please try again.');
+    const details = error.response?.data?.message || error.response?.data || error.message;
+    logger.error('Failed to send prospect quotation email', details);
+    throw new Error(typeof details === 'string' ? details : 'Unable to send prospect quotation email. Please try again.');
+  }
+};
+
+/**
+ * Send Razorpay Payment Link Email
+ * @param {object} payload
+ * @param {string} payload.email
+ * @param {string} payload.clientName
+ * @param {string} payload.companyName
+ * @param {string} payload.linkUrl
+ * @param {number} payload.amount
+ * @param {string} payload.referenceId
+ */
+const sendRazorpayLinkEmail = async (payload) => {
+  try {
+    if (!process.env.BREVO_API_KEY) {
+      throw new Error('BREVO_API_KEY is not configured');
+    }
+    if (!isValidEmail(payload.email)) {
+      throw new Error('Client email is missing or invalid');
+    }
+
+    const response = await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: getSender(),
+        to: [{ email: payload.email, name: payload.clientName || 'Client' }],
+        subject: `Payment link for ${payload.companyName || payload.clientName || 'your project'}`,
+        htmlContent: `
+          <div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px;color:#1f2937;">
+            <div style="background:#0f172a;color:#fff;padding:20px 24px;border-radius:14px 14px 0 0;">
+              <h2 style="margin:0;font-size:22px;">Your payment link is ready</h2>
+              <p style="margin:8px 0 0;color:#cbd5e1;">Reference: ${payload.referenceId || 'N/A'}</p>
+            </div>
+            <div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 14px 14px;padding:24px;background:#fff;">
+              <p style="margin:0 0 12px;">Hi ${payload.clientName || 'there'},</p>
+              <p style="margin:0 0 16px;line-height:1.6;">Please use the secure Razorpay link below to complete the payment for ${payload.companyName || 'your project'}.</p>
+              <div style="margin:24px 0;text-align:center;">
+                <a href="${payload.linkUrl}" style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:700;display:inline-block;">Pay ${Number(payload.amount || 0).toLocaleString('en-IN')}</a>
+              </div>
+              <p style="margin:0;color:#64748b;font-size:13px;line-height:1.6;">If the button doesn't work, copy this link: ${payload.linkUrl}</p>
+            </div>
+          </div>
+        `,
+      },
+      {
+        headers: {
+          'api-key': process.env.BREVO_API_KEY.trim(),
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      }
+    );
+
+    const messageId = response.data.messageId || response.data.id || null;
+    logger.info(`Razorpay link email sent to ${payload.email} (${messageId || 'no message id'})`);
+    return { success: true, messageId };
+  } catch (error) {
+    const details = error.response?.data?.message || error.response?.data || error.message;
+    logger.error('Failed to send Razorpay link email', details);
+    throw new Error(typeof details === 'string' ? details : 'Unable to send Razorpay payment link email. Please try again.');
   }
 };
 
@@ -356,4 +425,5 @@ module.exports = {
   sendPasswordResetEmail,
   sendPasswordResetConfirmationEmail,
   sendProspectQuotationEmail,
+  sendRazorpayLinkEmail,
 };

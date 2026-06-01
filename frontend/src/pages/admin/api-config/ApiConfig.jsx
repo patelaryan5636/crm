@@ -47,12 +47,15 @@ export default function ApiConfig() {
     webhookSecret: '',
     mode: 'test'
   });
-  const webhookEndpointUrl = `${window.location.origin}/api/webhook/razorpay`;
+  const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+  const webhookEndpointUrl = `${apiBaseUrl.replace(/\/api$/, '')}/api/payments/webhook/razorpay`;
 
   // ── Visibility toggles ──
   const [showKeyId, setShowKeyId] = useState(false);
   const [showKeySecret, setShowKeySecret] = useState(false);
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
+  const [generatedSecret, setGeneratedSecret] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // ── Has Changes check ──
   const hasChanges = 
@@ -122,6 +125,27 @@ export default function ApiConfig() {
       toast.error(error.message || 'Failed to save configuration');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGenerateSecret = async () => {
+    setIsGenerating(true);
+    try {
+      const resp = await apiConfigService.generateRazorpaySecret();
+      if (resp && resp.data && resp.data.secret) {
+        const s = resp.data.secret;
+        setGeneratedSecret(s);
+        setWebhookSecretVal(s);
+        // Open modal to show secret (one-time)
+        openModal('webhook-secret-modal');
+      } else {
+        toast.error('Failed to generate secret');
+      }
+    } catch (err) {
+      console.error('Generate secret error', err);
+      toast.error('Failed to generate secret');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -442,6 +466,14 @@ export default function ApiConfig() {
                 >
                   {copiedField === 'whSecret' ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Copy size={16} />}
                 </button>
+                <button
+                  onClick={handleGenerateSecret}
+                  disabled={isGenerating}
+                  className="ml-2 flex items-center gap-1 px-3 py-2 rounded-xl bg-white text-[#2a465a] text-sm font-bold border border-slate-200 hover:bg-slate-50 transition-all duration-200 active:scale-95"
+                  title="Generate"
+                >
+                  {isGenerating ? 'Generating...' : 'Generate'}
+                </button>
               </div>
             </div>
 
@@ -497,6 +529,19 @@ export default function ApiConfig() {
           </div>
         </div>
       </Grid>
+
+        <Modal id="webhook-secret-modal" title="Webhook Secret (copy now)" size="md">
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">This secret will be shown only once. Copy it now and paste it into the Razorpay webhook settings.</p>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 font-mono text-sm bg-slate-50 p-3 rounded-xl border border-slate-100">{generatedSecret}</div>
+              <button onClick={() => { copyToClipboard(generatedSecret, 'generated'); toast.success('Copied'); }} className="px-3 py-2 rounded-xl bg-[#2a465a] text-white">Copy</button>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" text="Close" onClick={() => closeModal('webhook-secret-modal')} />
+            </div>
+          </div>
+        </Modal>
 
       {/* ─── 4. Setup Guide + Connection Status ─── */}
       <Grid cols={12} gap={6}>

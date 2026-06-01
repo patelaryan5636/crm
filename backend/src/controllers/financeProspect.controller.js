@@ -225,6 +225,9 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
   prospect.totalAmount = baseCost;
   prospect.discount = discountAmount;
   prospect.finalAmount = finalAmount;
+  prospect.paymentType = Number(advanceAmount || 0) > 0 || advancePayments.length > 0 ? 'PARTIAL' : 'FULL';
+  prospect.paymentStatus = 'PENDING';
+  prospect.paymentMethod = null;
   prospect.stage = normalizedStatus;
   prospect.priority = prospect.priority || 'Medium';
   prospect.notes = termsAndConditions?.trim() || prospect.notes || '';
@@ -246,25 +249,28 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
 
   let emailResult = null;
   try {
-    if (prospect.client?.email) {
-      emailResult = await sendProspectQuotationEmail({
-        email: prospect.client.email,
-        clientName: prospect.client.name || 'Client',
-        companyName: prospect.client.companyName || prospect.company || '',
-        serviceName: selectedService || finalServices[0]?.name || 'Custom package',
-        requirements: structuredRequirements,
-        baseCost,
-        discountAmount,
-        finalAmount,
-        paymentStatus,
-        termsAndConditions,
-      });
-
-      prospect.clientEmailStatus = 'SENT';
-      prospect.clientEmailMessageId = emailResult.messageId || null;
-      prospect.clientEmailError = null;
-      await prospect.save();
+    const recipientEmail = String(prospect.client?.email || '').trim();
+    if (!recipientEmail) {
+      throw new AppError('Client email is missing. Please update the client record before sending the quotation.', 400);
     }
+
+    emailResult = await sendProspectQuotationEmail({
+      email: recipientEmail,
+      clientName: prospect.client.name || 'Client',
+      companyName: prospect.client.companyName || prospect.company || '',
+      serviceName: selectedService || finalServices[0]?.name || 'Custom package',
+      requirements: structuredRequirements,
+      baseCost,
+      discountAmount,
+      finalAmount,
+      paymentStatus,
+      termsAndConditions,
+    });
+
+    prospect.clientEmailStatus = 'SENT';
+    prospect.clientEmailMessageId = emailResult.messageId || null;
+    prospect.clientEmailError = null;
+    await prospect.save();
   } catch (error) {
     prospect.clientEmailStatus = 'FAILED';
     prospect.clientEmailError = error.message;

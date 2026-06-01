@@ -1141,8 +1141,59 @@ const ProspectFormSchema = new Schema(
       default: "OPEN",
     },
   },
-  { timestamps: true },
-);
+  clientEmailMessageId: { type: String, default: null },
+  clientEmailError: { type: String, default: null },
+  // Razorpay / Payment tracking
+  razorpayOrderId: { type: String, default: null },
+  razorpayPaymentId: { type: String, default: null },
+  razorpayLinkUrl: { type: String, default: null },
+  razorpayLinkStatus: { type: String, enum: ['PENDING','SENT','EXPIRED'], default: 'PENDING' },
+  paymentStatus: { type: String, enum: ['PENDING','SUCCESS','FAILED'], default: 'PENDING' },
+  paymentMethod: { type: String, default: null },
+  paymentVerifiedAt: { type: Date, default: null },
+  paymentNote: { type: String, default: null },
+
+  totalAmount: { type: Number, default: 0 },
+  discount: { type: Number, default: 0 },
+  finalAmount: { type: Number, default: 0 },
+
+  paymentStatus: {
+    type: String,
+    enum: ['PENDING', 'SUCCESS', 'FAILED'],
+    default: 'PENDING',
+  },
+  paymentType: {
+    type: String,
+    enum: ['FULL', 'PARTIAL'],
+    default: 'FULL',
+  },
+  paymentMethod: { type: String, default: null },
+  paymentVerifiedAt: { type: Date, default: null },
+  paymentFailedAt: { type: Date, default: null },
+  paymentFailureReason: { type: String, default: null },
+
+  razorpayLinkToken: { type: String, default: null },
+  razorpayLinkUrl: { type: String, default: null },
+  razorpayOrderId: { type: String, default: null },
+  razorpayPaymentId: { type: String, default: null },
+  razorpaySignature: { type: String, default: null },
+  razorpayPaymentLinkId: { type: String, default: null },
+  razorpayLinkStatus: {
+    type: String,
+    enum: ['PENDING', 'SENT', 'FAILED'],
+    default: 'PENDING',
+  },
+  razorpayLinkSentAt: { type: Date, default: null },
+
+  // Payments attached to this prospect (references Payment documents)
+  payments: [{ type: Schema.Types.ObjectId, ref: 'Payment' }],
+
+  status: {
+    type: String,
+    enum: ['OPEN', 'IN_NEGOTIATION', 'SENT_TO_FINANCE', 'WON', 'LOST'],
+    default: 'OPEN',
+  },
+}, { timestamps: true });
 
 ProspectFormSchema.index({ admin: 1, lead: 1 });
 ProspectFormSchema.index({ admin: 1, filledBy: 1 });
@@ -1340,27 +1391,40 @@ ProjectUpdateSchema.index({ admin: 1, project: 1, createdAt: -1 });
 // webhookVerified = backup confirmation via Razorpay webhook.
 // paidAmount on Project updated via $inc (atomic).
 // ════════════════════════════════════════════════════════════
-const PaymentSchema = new Schema(
-  {
-    admin: { type: Schema.Types.ObjectId, ref: "Admin", required: true },
-    project: { type: Schema.Types.ObjectId, ref: "Project", required: true },
-    client: { type: Schema.Types.ObjectId, ref: "Client", required: true },
+const PaymentSchema = new Schema({
+  admin: { type: Schema.Types.ObjectId, ref: 'Admin', required: true },
+  project: { type: Schema.Types.ObjectId, ref: 'Project', default: null },
+  prospectForm: { type: Schema.Types.ObjectId, ref: 'ProspectForm', default: null },
+  client: { type: Schema.Types.ObjectId, ref: 'Client', required: true },
 
-    razorpayOrderId: { type: String, default: null },
-    razorpayPaymentId: { type: String, default: null },
-    razorpaySignature: { type: String, default: null },
+  // Provider fields (Razorpay)
+  razorpayOrderId: { type: String, default: null },
+  razorpayPaymentId: { type: String, default: null },
+  razorpaySignature: { type: String, default: null },
 
-    amount: { type: Number, required: true, min: 1 },
-    paymentType: { type: String, enum: ["FULL", "PARTIAL"], required: true },
-    status: { type: String, enum: PAY_STATUS, default: "PENDING" },
-    failureReason: { type: String, default: null },
+  // Payment link metadata
+  paymentProvider: { type: String, enum: ['RAZORPAY', 'PAYTM', 'OTHER'], default: 'RAZORPAY' },
+  paymentLinkId: { type: String, default: null },
+  paymentLinkUrl: { type: String, default: null },
+  paymentLinkStatus: { type: String, enum: ['PENDING','SENT','EXPIRED','FAILED'], default: 'PENDING' },
+
+  // Raw response from payment provider and email message id
+  rawResponse: { type: Schema.Types.Mixed, default: null },
+  emailMessageId: { type: String, default: null },
+
+  amount: { type: Number, required: true, min: 1 },
+  paymentType: { type: String, enum: ['FULL', 'PARTIAL'], required: true },
+  status: { type: String, enum: PAY_STATUS, default: 'PENDING' },
+  failureReason: { type: String, default: null },
 
     signatureVerified: { type: Boolean, default: false },
     webhookVerified: { type: Boolean, default: false },
 
-    paidAt: { type: Date, default: null },
-    retryCount: { type: Number, default: 0 },
-    verifiedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+  sentAt: { type: Date, default: null },
+  sentBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  paidAt: { type: Date, default: null },
+  retryCount: { type: Number, default: 0 },
+  verifiedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
 
     isRefunded: { type: Boolean, default: false },
     refundedAt: { type: Date, default: null },
@@ -1375,6 +1439,8 @@ PaymentSchema.index({ admin: 1, client: 1 });
 PaymentSchema.index({ razorpayOrderId: 1 });
 PaymentSchema.index({ admin: 1, status: 1 });
 PaymentSchema.index({ admin: 1, createdAt: -1 });
+PaymentSchema.index({ prospectForm: 1 });
+PaymentSchema.index({ paymentLinkId: 1 });
 
 // ════════════════════════════════════════════════════════════
 // MODEL 32 — WORK ORDER

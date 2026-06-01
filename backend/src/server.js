@@ -32,6 +32,9 @@ const leaveRoutes = require('./routes/leaves');
 const salesExecutiveLeadRoutes = require('./routes/salesExecutiveLeads');
 const salesExecutiveProspectRoutes = require('./routes/salesExecutiveProspects');
 const financeProspectRoutes = require('./routes/financeProspects');
+const financePaymentRoutes = require('./routes/financePayments');
+const paymentWebhookRoutes = require('./routes/paymentWebhooks');
+const paymentSuccessRoutes = require('./routes/paymentSuccess');
 const salesExecutiveFollowUpRoutes = require('./routes/salesExecutiveFollowUps');
 const salesExecutiveDashboardRoutes = require('./routes/salesExecutiveDashboard');
 const ticketRoutes = require('./routes/tickets');
@@ -60,8 +63,26 @@ app.use(cors({
 	],
 	credentials: true,
 }));
-app.use(express.json({ limit: '16kb' })); // Parse JSON payloads
-app.use(express.urlencoded({ limit: '16kb', extended: true })); // Parse URL-encoded
+
+// Razorpay webhooks need exact raw bytes before any JSON parsing happens.
+// Mount the webhook route first with a raw body parser so signature verification
+// uses the original request payload bytes.
+app.use('/api/payments/webhook', express.raw({ type: 'application/json', limit: '64kb' }));
+
+// Middleware to capture raw body for webhook verification
+app.use('/api/payments/webhook', (req, res, next) => {
+  if (Buffer.isBuffer(req.body)) {
+    // Store both req.body (Buffer) and req.rawBody (string) for flexibility
+    req.rawBody = req.body;
+  }
+  next();
+});
+
+app.use('/api/payments/webhook', paymentWebhookRoutes);
+
+// Capture raw body for the rest of the app as well.
+app.use(express.json({ limit: '64kb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
+app.use(express.urlencoded({ limit: '64kb', extended: true, verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(morgan('dev')); // HTTP request logging
 
 // ────────────────────────────────────────────────────────────
@@ -119,6 +140,11 @@ try {
 	console.log('✓ /api/sales-executive/prospects routes registered');
 	app.use('/api/finance/prospects', financeProspectRoutes);
 	console.log('✓ /api/finance/prospects routes registered');
+	app.use('/api/finance/payments', financePaymentRoutes);
+	console.log('✓ /api/finance/payments routes registered');
+	app.use('/api/payments', paymentSuccessRoutes);
+	console.log('✓ /api/payments success routes registered');
+	console.log('✓ /api/payments/webhook routes registered');
 	app.use('/api/sales-executive/follow-ups', salesExecutiveFollowUpRoutes);
 	console.log('✓ /api/sales-executive/follow-ups routes registered');
 	app.use('/api/sales-executive/dashboard', salesExecutiveDashboardRoutes);
@@ -196,7 +222,7 @@ app.use((err, _req, res, _next) => {
 });
 
 // ────────────────────────────────────────────────────────────
-// START SERVER
+// START SERVER (only when run directly)
 // ────────────────────────────────────────────────────────────
 const startServer = async () => {
 	try {
@@ -210,4 +236,9 @@ const startServer = async () => {
 	}
 };
 
-startServer();
+// Export app for testing/imports
+module.exports = app;
+
+if (require.main === module) {
+	startServer();
+}

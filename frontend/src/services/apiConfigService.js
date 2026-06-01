@@ -12,6 +12,11 @@ const apiConfigService = {
     const response = await apiClient.post('/api-config/razorpay', configData);
     return response.data;
   }
+,
+  generateRazorpaySecret: async () => {
+    const response = await apiClient.post('/api-config/razorpay/generate-secret');
+    return response.data;
+  }
 };
 
 export default apiConfigService;

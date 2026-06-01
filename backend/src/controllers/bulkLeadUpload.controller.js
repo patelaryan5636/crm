@@ -817,6 +817,8 @@ exports.saveLeadProspect = catchAsync(async (req, res, next) => {
     return next(new AppError('Invalid expected close date', 400));
   }
 
+  const mongoose = require('mongoose');
+
   const prospectPayload = {
     admin: req.admin._id,
     lead: lead._id,
@@ -837,69 +839,110 @@ exports.saveLeadProspect = catchAsync(async (req, res, next) => {
     status: 'OPEN',
   };
 
-  const prospect = await ProspectForm.findOneAndUpdate(
-    { admin: req.admin._id, lead: lead._id },
-    { $set: prospectPayload },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
-  );
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  let createdNew = false;
+  try {
+    // Upsert prospect form inside transaction (detect creation)
+    let prospect = await ProspectForm.findOne({ admin: req.admin._id, lead: lead._id }).session(session);
+    const previousProspectFormId = lead.prospectForm || null;
 
-  const previousProspectFormId = lead.prospectForm || null;
-  lead.status = 'INTERESTED';
-  lead.lastContactedAt = new Date();
-  lead.prospectForm = prospect._id;
-  lead.isDumped = false;
-  lead.dumpReason = null;
-  lead.dumpedAt = null;
-  lead.dumpedBy = null;
-  await lead.save();
+    if (prospect) {
+      Object.assign(prospect, prospectPayload);
+      prospect.updatedBy = req.user._id;
+      await prospect.save({ session });
+    } else {
+      const created = await ProspectForm.create([prospectPayload], { session });
+      prospect = created[0];
+      createdNew = true;
+    }
 
-  await LeadActivity.create({
-    admin: req.admin._id,
-    lead: lead._id,
-    user: req.user._id,
-    status: 'INTERESTED',
-    comment: requirement?.trim() || null,
-    duration: 0,
-  });
+    // Update lead atomically
+    lead.status = 'INTERESTED';
+    lead.lastContactedAt = new Date();
+    lead.prospectForm = prospect._id;
+    lead.isDumped = false;
+    lead.dumpReason = null;
+    lead.dumpedAt = null;
+    lead.dumpedBy = null;
+    await lead.save({ session });
 
-  await AuditLog.create({
-    admin: req.admin._id,
-    performedBy: req.user._id,
-    performerType: 'USER',
-    action: 'PROSPECT_CREATED',
-    targetModel: 'ProspectForm',
-    targetId: prospect._id,
-    before: { prospectForm: previousProspectFormId },
-    after: {
-      prospectForm: prospect._id,
-      leadStatus: lead.status,
-    },
-    ipAddress: getClientIp(req),
-    note: `Prospect created for ${lead.client?.name || 'lead'}`,
-  });
-
-  res.status(201).json(
-    new ApiResponse(
-      201,
+    // Create LeadActivity
+    await LeadActivity.create([
       {
-        leadId: lead._id,
-        status: lead.status,
-        isDumped: lead.isDumped,
-        prospect: {
-          id: prospect._id,
-          contactPerson: prospect.contactPerson,
-          company: prospect.company,
-          value: prospect.value,
-          probability: prospect.probability,
-          expectedClose: prospect.expectedClose,
-          stage: prospect.stage,
-          priority: prospect.priority,
-          requirement: prospect.requirement,
-        },
+        admin: req.admin._id,
+        lead: lead._id,
+        user: req.user._id,
+        status: 'INTERESTED',
+        comment: requirement?.trim() || null,
+        duration: 0,
       },
-      'Prospect form saved successfully'
-    )
-  );
+    ], { session });
+
+    // Audit log
+    await AuditLog.create([
+      {
+        admin: req.admin._id,
+        performedBy: req.user._id,
+        performerType: 'USER',
+        action: 'PROSPECT_CREATED',
+        targetModel: 'ProspectForm',
+        targetId: prospect._id,
+        before: { prospectForm: previousProspectFormId },
+        after: { prospectForm: prospect._id, leadStatus: lead.status },
+        ipAddress: getClientIp(req),
+        note: `Prospect created for ${lead.client?.name || 'lead'}`,
+      },
+    ], { session });
+
+    // Update daily report counters for the user (only when a new prospect is created)
+    if (createdNew) {
+      const { DailyReport } = require('../models');
+      const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+      const today = startOfDay(new Date());
+      await DailyReport.findOneAndUpdate(
+        { admin: req.admin._id, user: req.user._id, date: today },
+        { $inc: { todayProspect: 1, todaySell: 0 } },
+        { upsert: true, new: true, setDefaultsOnInsert: true, session }
+      );
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    const populated = await ProspectForm.findById(prospect._id)
+      .populate('client', 'name email mobile companyName')
+      .populate({ path: 'lead', select: 'status isDumped lastContactedAt' })
+      .lean();
+
+    res.status(createdNew ? 201 : 200).json(
+      new ApiResponse(
+        createdNew ? 201 : 200,
+        {
+          leadId: lead._id,
+          status: lead.status,
+          isDumped: lead.isDumped,
+          prospect: {
+            id: populated._id,
+            contactPerson: populated.contactPerson,
+            company: populated.company,
+            value: populated.value,
+            probability: populated.probability,
+            expectedClose: populated.expectedClose,
+            stage: populated.stage,
+            priority: populated.priority,
+            requirement: populated.requirement,
+          },
+        },
+        createdNew ? 'Prospect form created successfully' : 'Prospect form updated successfully'
+      )
+    );
+    return;
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    return next(err);
+  }
 });
 
 /**

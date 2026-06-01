@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { getAdminLeads } from "../../../services/leadService";
 import {
   Users,
   Flame,
@@ -38,21 +39,7 @@ import {
   Grid,
 } from "../../../components/shared/Common_Components";
 
-// ── Mock Leads ──
-const mockLeads = [
-  { id: 1, name: "Arun Kapoor", mobile: "9812345678", email: "arun@techcorp.in", source: "Website", status: "New", owner: "Rahul S.", value: "₹2,50,000", lastContact: "Today", nextFollowup: "Apr 23", avatar: "AK" },
-  { id: 2, name: "Priya Mehta", mobile: "9823456789", email: "priya@startup.io", source: "Referral", status: "Contacted", owner: "Neha S.", value: "₹1,80,000", lastContact: "Yesterday", nextFollowup: "Apr 22", avatar: "PM" },
-  { id: 3, name: "Vikash Sharma", mobile: "9834567890", email: "vikash@bigbiz.com", source: "Cold Call", status: "Interested", owner: "Rahul S.", value: "₹5,00,000", lastContact: "Apr 18", nextFollowup: "Apr 24", avatar: "VS" },
-  { id: 4, name: "Ritu Desai", mobile: "9845678901", email: "ritu@globalfirm.co", source: "Social", status: "Proposal", owner: "Deepika N.", value: "₹3,20,000", lastContact: "Apr 17", nextFollowup: "Apr 25", avatar: "RD" },
-  { id: 5, name: "Kabir Singh", mobile: "9856789012", email: "kabir@digitalhub.in", source: "Ads", status: "Won", owner: "Anita B.", value: "₹4,50,000", lastContact: "Apr 15", nextFollowup: "—", avatar: "KS" },
-  { id: 6, name: "Meera Joshi", mobile: "9867890123", email: "meera@cloudnet.com", source: "Website", status: "Lost", owner: "Rahul S.", value: "₹1,20,000", lastContact: "Apr 10", nextFollowup: "—", avatar: "MJ" },
-  { id: 7, name: "Deepak Rao", mobile: "9878901234", email: "deepak@innov8.io", source: "Referral", status: "New", owner: "Neha S.", value: "₹2,00,000", lastContact: "Today", nextFollowup: "Apr 22", avatar: "DR" },
-  { id: 8, name: "Ananya Nair", mobile: "9889012345", email: "ananya@finserv.in", source: "Cold Call", status: "Contacted", owner: "Deepika N.", value: "₹3,80,000", lastContact: "Apr 19", nextFollowup: "Apr 23", avatar: "AN" },
-  { id: 9, name: "Rohan Gupta", mobile: "9890123456", email: "rohan@luxedev.com", source: "Social", status: "Interested", owner: "Anita B.", value: "₹6,00,000", lastContact: "Apr 16", nextFollowup: "Apr 26", avatar: "RG" },
-  { id: 10, name: "Sanya Patel", mobile: "9801234567", email: "sanya@nextwave.in", source: "Ads", status: "Proposal", owner: "Rahul S.", value: "₹2,75,000", lastContact: "Apr 14", nextFollowup: "Apr 28", avatar: "SP" },
-  { id: 11, name: "Tarun Bhat", mobile: "9812345670", email: "tarun@alpha.co", source: "Website", status: "New", owner: "Neha S.", value: "₹1,50,000", lastContact: "Today", nextFollowup: "Apr 24", avatar: "TB" },
-  { id: 12, name: "Nisha Verma", mobile: "9823456780", email: "nisha@zenith.io", source: "Referral", status: "Won", owner: "Deepika N.", value: "₹7,00,000", lastContact: "Apr 12", nextFollowup: "—", avatar: "NV" },
-];
+// Removed mockLeads in favor of dynamic fetching
 
 const statusOptions = ["All", "New", "Contacted", "Interested", "Proposal", "Won", "Lost"];
 const sourceOptions = ["All Sources", "Website", "Referral", "Cold Call", "Social", "Ads"];
@@ -68,7 +55,31 @@ const statusColors = {
 };
 
 export default function AllLeads() {
-  const [leads, setLeads] = useState(mockLeads);
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const fetchLeads = async () => {
+    try {
+      setLoading(true);
+      const response = await getAdminLeads();
+      if (response.success && response.data && response.data.leads) {
+        setLeads(response.data.leads);
+      } else {
+        setLeads([]);
+      }
+      setError('');
+    } catch (err) {
+      console.error("Error fetching leads:", err);
+      setError("Failed to load leads");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeads();
+  }, []);
   const [activeTab, setActiveTab] = useState("all");
 
   const handleExport = () => {
@@ -141,6 +152,10 @@ export default function AllLeads() {
           </button>
         </div>
       </div>
+
+      {loading && <div className="text-center text-slate-500 py-10">Loading leads...</div>}
+      {error && <div className="text-center text-red-500 py-10">{error}</div>}
+      {!loading && !error && <>
 
       {/* Stat Cards */}
       <DashGrid cols={12} gap={4}>
@@ -222,6 +237,7 @@ export default function AllLeads() {
           })}
         </div>
       )}
+      </>}
 
       {/* Lead Detail Modal */}
       <Modal id="lead-detail-modal" title="Lead Details">

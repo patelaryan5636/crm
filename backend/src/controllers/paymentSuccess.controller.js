@@ -167,6 +167,20 @@ exports.razorpaySuccess = catchAsync(async (req, res, next) => {
           logger.info('razorpaySuccess: Payment updated via callback', {
             paymentId: String(payment._id),
           });
+
+          // Auto-generate invoice (fire-and-forget)
+          setImmediate(async () => {
+            try {
+              const { autoCreateInvoice } = require('./invoice.controller');
+              await autoCreateInvoice({
+                adminId: payment.admin,
+                paymentId: String(payment._id),
+                prospectId: payment.prospectForm ? String(payment.prospectForm) : null,
+              });
+            } catch (err) {
+              logger.error('razorpaySuccess: autoCreateInvoice failed', { error: err.message });
+            }
+          });
         } else if (!payment && prospectId) {
           // No Payment doc exists (created before schema fix) — update ProspectForm directly
           // and create a Payment record so the webhook can find it later

@@ -1462,11 +1462,19 @@ WorkOrderSchema.index({ admin: 1, project: 1 });
 const InvoiceSchema = new Schema(
   {
     admin: { type: Schema.Types.ObjectId, ref: "Admin", required: true },
-    project: { type: Schema.Types.ObjectId, ref: "Project", required: true },
+    project: { type: Schema.Types.ObjectId, ref: "Project", default: null }, // optional — prospect-based invoices have no project
+    prospectForm: { type: Schema.Types.ObjectId, ref: "ProspectForm", default: null },
     payment: { type: Schema.Types.ObjectId, ref: "Payment", default: null },
-    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    client: { type: Schema.Types.ObjectId, ref: "Client", default: null },
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
 
     invoiceNumber: { type: String, required: true }, // generated via InvoiceCounter
+
+    // Client snapshot (denormalised so invoice is self-contained)
+    clientName: { type: String, default: "" },
+    clientEmail: { type: String, default: "" },
+    clientMobile: { type: String, default: "" },
+    clientCompany: { type: String, default: "" },
 
     amount: { type: Number, required: true, min: 0 },
     discount: { type: Number, default: 0, min: 0 },
@@ -1485,6 +1493,7 @@ const InvoiceSchema = new Schema(
       },
     ],
 
+    notes: { type: String, default: "" },
     status: { type: String, enum: INVOICE_STATUS, default: "DRAFT" },
     pdfUrl: { type: String, default: null },
     dueDate: { type: Date, default: null },
@@ -1498,6 +1507,7 @@ const InvoiceSchema = new Schema(
 // invoiceNumber unique per admin
 InvoiceSchema.index({ admin: 1, invoiceNumber: 1 }, { unique: true });
 InvoiceSchema.index({ admin: 1, project: 1 });
+InvoiceSchema.index({ admin: 1, prospectForm: 1 });
 InvoiceSchema.index({ admin: 1, status: 1 });
 
 // ════════════════════════════════════════════════════════════

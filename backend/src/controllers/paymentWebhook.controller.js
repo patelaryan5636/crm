@@ -372,6 +372,7 @@ async function processWebhookEvent(payload, event, Payment, ProspectForm, Projec
 
 /**
  * Mark a Payment as SUCCESS and mirror the status to ProspectForm + Project.
+ * Also auto-generates an invoice if one doesn't exist yet.
  */
 async function markPaymentSuccess(payment, { razorpayPaymentId, paidAt }, ProspectForm, Project) {
   payment.status = 'SUCCESS';
@@ -379,7 +380,7 @@ async function markPaymentSuccess(payment, { razorpayPaymentId, paidAt }, Prospe
   payment.paidAt = paidAt || new Date();
   payment.signatureVerified = true;
   payment.webhookVerified = true;
-  payment.paymentLinkStatus = 'SENT'; // keep as SENT (link was used)
+  payment.paymentLinkStatus = 'SENT';
   await payment.save();
 
   logger.info('Payment marked SUCCESS', {
@@ -404,6 +405,20 @@ async function markPaymentSuccess(payment, { razorpayPaymentId, paidAt }, Prospe
       );
     }
   }
+
+  // Auto-generate invoice (fire-and-forget — don't block webhook response)
+  setImmediate(async () => {
+    try {
+      const { autoCreateInvoice } = require('./invoice.controller');
+      await autoCreateInvoice({
+        adminId: payment.admin,
+        paymentId: String(payment._id),
+        prospectId: payment.prospectForm ? String(payment.prospectForm) : null,
+      });
+    } catch (err) {
+      logger.error('markPaymentSuccess: autoCreateInvoice failed', { error: err.message });
+    }
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

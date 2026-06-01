@@ -29,6 +29,18 @@ const TARGET_ROLE_BY_AUDIENCE = {
 // Roles that can create announcements
 const SENDER_ROLES = ['SALES_MANAGER', 'SALES_TL', 'ADMIN', 'SUPER_ADMIN'];
 
+const BROADCAST_RECIPIENT_ROLES = [
+  'SALES_TL',
+  'SALES_EXECUTIVE',
+  'FINANCE_MANAGER',
+  'FINANCE_EXECUTIVE',
+  'MANAGEMENT_MANAGER',
+  'MANAGEMENT_TL',
+  'MANAGEMENT_EMPLOYEE',
+  'ADMIN',
+  'SUPER_ADMIN',
+];
+
 // ─────────────────────────────────────────────────────────────
 // INTERNAL: Fan-out notifications to all resolved recipients
 // Called after an Announcement is created.
@@ -41,7 +53,7 @@ async function fanOutNotifications(announcement, adminId) {
       // Everyone in the tenant with a receivable role
       const users = await User.find({
         admin: adminId,
-        role: { $in: ['SALES_TL', 'SALES_EXECUTIVE'] },
+        role: { $in: BROADCAST_RECIPIENT_ROLES },
         isDeleted: false,
         isActive: true,
       }).select('_id').lean();

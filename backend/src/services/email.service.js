@@ -6,6 +6,12 @@
 const axios = require('axios');
 const logger = require('../utils/logger');
 
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+const getSender = () => ({
+  name: process.env.BREVO_SENDER_NAME || 'Graphura CRM',
+  email: process.env.BREVO_SENDER_EMAIL || 'noreply@graphura.com',
+});
+
 /**
  * Send OTP Email via Brevo API
  * @param {string} email - Recipient email
@@ -252,9 +258,172 @@ const sendPasswordResetConfirmationEmail = async (email, name = 'User') => {
   }
 };
 
+/**
+ * Send Prospect Quotation Email
+ * @param {object} payload
+ * @param {string} payload.email
+ * @param {string} payload.clientName
+ * @param {string} payload.companyName
+ * @param {string} payload.serviceName
+ * @param {Array<{title:string,cost:number,description?:string}>} payload.requirements
+ * @param {number} payload.baseCost
+ * @param {number} payload.discountAmount
+ * @param {number} payload.finalAmount
+ * @param {string} payload.paymentStatus
+ * @param {string} payload.termsAndConditions
+ */
+const sendProspectQuotationEmail = async (payload) => {
+  try {
+    if (!process.env.BREVO_API_KEY) {
+      throw new Error('BREVO_API_KEY is not configured');
+    }
+    if (!isValidEmail(payload.email)) {
+      throw new Error('Client email is missing or invalid');
+    }
+
+    const requirementsRows = (payload.requirements || [])
+      .map((item) => `
+        <tr>
+          <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${item.title || 'Requirement'}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">₹${Number(item.cost || 0).toLocaleString('en-IN')}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${item.description || '—'}</td>
+        </tr>`)
+      .join('');
+
+    const response = await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: getSender(),
+        to: [{ email: payload.email, name: payload.clientName || 'Client' }],
+        subject: `${payload.companyName || payload.clientName || 'Your'} quotation from Graphura CRM`,
+        htmlContent: `
+          <div style="font-family:Arial,sans-serif;max-width:720px;margin:0 auto;padding:24px;color:#1f2937;">
+            <div style="background:#0f172a;color:#fff;padding:20px 24px;border-radius:14px 14px 0 0;">
+              <h2 style="margin:0;font-size:22px;">Quotation from Graphura CRM</h2>
+              <p style="margin:8px 0 0;color:#cbd5e1;">Prepared for ${payload.clientName || 'your team'}</p>
+            </div>
+            <div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 14px 14px;padding:24px;background:#fff;">
+              <p style="margin:0 0 12px;">Hi ${payload.clientName || 'there'},</p>
+              <p style="margin:0 0 20px;line-height:1.6;">We reviewed the requirements shared by our finance team and prepared the following scope for ${payload.companyName || 'your project'}.</p>
+
+              <div style="margin:20px 0;padding:16px;border:1px solid #e5e7eb;border-radius:12px;background:#f8fafc;">
+                <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+                  <div><strong>Service</strong><div>${payload.serviceName || 'Custom service package'}</div></div>
+                  <div><strong>Payment Status</strong><div>${payload.paymentStatus || 'Unpaid'}</div></div>
+                </div>
+              </div>
+
+              <table style="width:100%;border-collapse:collapse;margin:20px 0;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+                <thead>
+                  <tr style="background:#1e293b;color:#fff;">
+                    <th style="padding:12px;text-align:left;">Requirement</th>
+                    <th style="padding:12px;text-align:right;">Cost</th>
+                    <th style="padding:12px;text-align:left;">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${requirementsRows || '<tr><td colspan="3" style="padding:12px;">No detailed requirements were added.</td></tr>'}
+                </tbody>
+              </table>
+
+              <div style="margin-top:18px;display:grid;gap:8px;">
+                <div style="display:flex;justify-content:space-between;"><span>Base Cost</span><strong>₹${Number(payload.baseCost || 0).toLocaleString('en-IN')}</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span>Discount</span><strong>- ₹${Number(payload.discountAmount || 0).toLocaleString('en-IN')}</strong></div>
+                <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid #e5e7eb;"><span>Final Amount</span><strong>₹${Number(payload.finalAmount || 0).toLocaleString('en-IN')}</strong></div>
+              </div>
+
+              ${payload.termsAndConditions ? `<div style="margin-top:24px;padding:16px;border-left:4px solid #2563eb;background:#eff6ff;border-radius:8px;"><strong>Terms & Conditions</strong><div style="margin-top:8px;white-space:pre-line;line-height:1.6;">${payload.termsAndConditions}</div></div>` : ''}
+
+              <p style="margin:24px 0 0;line-height:1.6;color:#475569;">Please review and reply if you would like any adjustments. Our team will coordinate the next step promptly.</p>
+            </div>
+          </div>
+        `,
+      },
+      {
+        headers: {
+          'api-key': process.env.BREVO_API_KEY.trim(),
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      }
+    );
+
+    const messageId = response.data.messageId || response.data.id || null;
+    logger.info(`Prospect quotation email sent to ${payload.email} (${messageId || 'no message id'})`);
+    return { success: true, messageId };
+  } catch (error) {
+    const details = error.response?.data?.message || error.response?.data || error.message;
+    logger.error('Failed to send prospect quotation email', details);
+    throw new Error(typeof details === 'string' ? details : 'Unable to send prospect quotation email. Please try again.');
+  }
+};
+
+/**
+ * Send Razorpay Payment Link Email
+ * @param {object} payload
+ * @param {string} payload.email
+ * @param {string} payload.clientName
+ * @param {string} payload.companyName
+ * @param {string} payload.linkUrl
+ * @param {number} payload.amount
+ * @param {string} payload.referenceId
+ */
+const sendRazorpayLinkEmail = async (payload) => {
+  try {
+    if (!process.env.BREVO_API_KEY) {
+      throw new Error('BREVO_API_KEY is not configured');
+    }
+    if (!isValidEmail(payload.email)) {
+      throw new Error('Client email is missing or invalid');
+    }
+
+    const response = await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: getSender(),
+        to: [{ email: payload.email, name: payload.clientName || 'Client' }],
+        subject: `Payment link for ${payload.companyName || payload.clientName || 'your project'}`,
+        htmlContent: `
+          <div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px;color:#1f2937;">
+            <div style="background:#0f172a;color:#fff;padding:20px 24px;border-radius:14px 14px 0 0;">
+              <h2 style="margin:0;font-size:22px;">Your payment link is ready</h2>
+              <p style="margin:8px 0 0;color:#cbd5e1;">Reference: ${payload.referenceId || 'N/A'}</p>
+            </div>
+            <div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 14px 14px;padding:24px;background:#fff;">
+              <p style="margin:0 0 12px;">Hi ${payload.clientName || 'there'},</p>
+              <p style="margin:0 0 16px;line-height:1.6;">Please use the secure Razorpay link below to complete the payment for ${payload.companyName || 'your project'}.</p>
+              <div style="margin:24px 0;text-align:center;">
+                <a href="${payload.linkUrl}" style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:700;display:inline-block;">Pay ${Number(payload.amount || 0).toLocaleString('en-IN')}</a>
+              </div>
+              <p style="margin:0;color:#64748b;font-size:13px;line-height:1.6;">If the button doesn't work, copy this link: ${payload.linkUrl}</p>
+            </div>
+          </div>
+        `,
+      },
+      {
+        headers: {
+          'api-key': process.env.BREVO_API_KEY.trim(),
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      }
+    );
+
+    const messageId = response.data.messageId || response.data.id || null;
+    logger.info(`Razorpay link email sent to ${payload.email} (${messageId || 'no message id'})`);
+    return { success: true, messageId };
+  } catch (error) {
+    const details = error.response?.data?.message || error.response?.data || error.message;
+    logger.error('Failed to send Razorpay link email', details);
+    throw new Error(typeof details === 'string' ? details : 'Unable to send Razorpay payment link email. Please try again.');
+  }
+};
+
 module.exports = {
   sendOTPEmail,
   sendRegistrationConfirmationEmail,
   sendPasswordResetEmail,
   sendPasswordResetConfirmationEmail,
+  sendProspectQuotationEmail,
+  sendRazorpayLinkEmail,
 };

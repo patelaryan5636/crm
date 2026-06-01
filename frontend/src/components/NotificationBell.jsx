@@ -137,7 +137,15 @@ function NotificationBell({ userRole }) {
   const pollRef     = useRef(null);
 
   // Roles that receive announcement notifications
-  const isReceiver = ['SALES_TL', 'SALES_EXECUTIVE', 'sales-team-leader', 'sales-executive'].includes(userRole);
+  const isReceiver = [
+    'SALES_TL',
+    'SALES_EXECUTIVE',
+    'FINANCE_MANAGER',
+    'FINANCE_EXECUTIVE',
+    'sales-team-leader',
+    'sales-executive',
+    'finance',
+  ].includes(userRole);
 
   // ── Fetch unread count (for badge) ──
   const refreshBadge = useCallback(async () => {

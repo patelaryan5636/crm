@@ -1,7 +1,6 @@
 import { memo, useState, useRef, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
-  Bell,
   Menu,
   PanelLeft,
   Search,
@@ -35,6 +34,7 @@ const PATH_TO_BACKEND_ROLE = {
   "sales-team-leader": "SALES_TL",
   "sales-executive": "SALES_EXECUTIVE",
   "sales-manager": "SALES_MANAGER",
+  finance: "FINANCE_MANAGER",
   admin: "ADMIN",
   "super-admin": "SUPER_ADMIN",
 };
@@ -394,6 +394,8 @@ function Navbar({ onToggleDesktop, onToggleMobile }) {
       <div className="flex items-center gap-3">
         {/* ── Attendance mini widget ── */}
         <NavAttendance />
+
+        <NotificationBell userRole={backendRole} />
 
         <button
           type="button"

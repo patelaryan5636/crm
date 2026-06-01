@@ -22,20 +22,27 @@ const superAdminRoutes = require('./routes/superadmin');
 const teamRoutes = require('./routes/teams');
 const announcementRoutes = require('./routes/announcements');
 const salesManagerLeadRoutes = require('./routes/salesManagerLeads');
-const salesTeamLeaderLeadRoutes      = require('./routes/salesTeamLeaderLeads');
+const salesTeamLeaderLeadRoutes = require('./routes/salesTeamLeaderLeads');
 const salesTeamLeaderDashboardRoutes = require('./routes/salesTeamLeaderDashboard');
-const salesTeamLeaderReportRoutes    = require('./routes/salesTeamLeaderReports');
-const salesManagerDashboardRoutes    = require('./routes/salesManagerDashboard');
-const salesManagerReportRoutes       = require('./routes/salesManagerReports');
+const salesTeamLeaderReportRoutes = require('./routes/salesTeamLeaderReports');
+const salesManagerDashboardRoutes = require('./routes/salesManagerDashboard');
+const salesManagerReportRoutes = require('./routes/salesManagerReports');
 const attendanceRoutes = require('./routes/attendance');
 const leaveRoutes = require('./routes/leaves');
 const salesExecutiveLeadRoutes = require('./routes/salesExecutiveLeads');
 const salesExecutiveProspectRoutes = require('./routes/salesExecutiveProspects');
+const financeProspectRoutes = require('./routes/financeProspects');
+const financePaymentRoutes = require('./routes/financePayments');
+const paymentWebhookRoutes = require('./routes/paymentWebhooks');
+const paymentSuccessRoutes = require('./routes/paymentSuccess');
 const salesExecutiveFollowUpRoutes = require('./routes/salesExecutiveFollowUps');
 const salesExecutiveDashboardRoutes = require('./routes/salesExecutiveDashboard');
 const ticketRoutes = require('./routes/tickets');
 const notificationRoutes = require('./routes/notifications');
 const logsRoutes = require('./routes/logs');
+const adminRoutes = require('./routes/admin');
+const apiConfigRoutes = require('./routes/apiConfig');
+const financeRoutes = require('./routes/finance');
 
 dotenv.config();
 
@@ -48,16 +55,34 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 // ────────────────────────────────────────────────────────────
 app.use(helmet()); // Security headers
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-  ],
-  credentials: true,
+	origin: [
+		'http://localhost:5173',
+		'http://localhost:5174',
+		'http://localhost:5175',
+		process.env.FRONTEND_URL || 'http://localhost:5173',
+	],
+	credentials: true,
 }));
-app.use(express.json({ limit: '16kb' })); // Parse JSON payloads
-app.use(express.urlencoded({ limit: '16kb', extended: true })); // Parse URL-encoded
+
+// Razorpay webhooks need exact raw bytes before any JSON parsing happens.
+// Mount the webhook route first with a raw body parser so signature verification
+// uses the original request payload bytes.
+app.use('/api/payments/webhook', express.raw({ type: 'application/json', limit: '64kb' }));
+
+// Middleware to capture raw body for webhook verification
+app.use('/api/payments/webhook', (req, res, next) => {
+  if (Buffer.isBuffer(req.body)) {
+    // Store both req.body (Buffer) and req.rawBody (string) for flexibility
+    req.rawBody = req.body;
+  }
+  next();
+});
+
+app.use('/api/payments/webhook', paymentWebhookRoutes);
+
+// Capture raw body for the rest of the app as well.
+app.use(express.json({ limit: '64kb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
+app.use(express.urlencoded({ limit: '64kb', extended: true, verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(morgan('dev')); // HTTP request logging
 
 // ────────────────────────────────────────────────────────────
@@ -79,52 +104,65 @@ app.get('/logout', authController.logout);
 // ────────────────────────────────────────────────────────────
 console.log('📍 Registering API routes...');
 try {
-  app.use('/api/auth', authRoutes);
-  console.log('✓ /api/auth routes registered');
-  app.use('/api/users/bulk', bulkUserUploadRoutes);
-  console.log('✓ /api/users/bulk routes registered');
-  app.use('/api/users', userRoutes);
-  console.log('✓ /api/users routes registered');
-  app.use('/api/superadmin', superAdminRoutes);
-  console.log('✓ /api/superadmin routes registered');
-  app.use('/api/teams', teamRoutes);
-  console.log('✓ /api/teams routes registered');
+	app.use('/api/auth', authRoutes);
+	console.log('✓ /api/auth routes registered');
+	app.use('/api/users/bulk', bulkUserUploadRoutes);
+	console.log('✓ /api/users/bulk routes registered');
+	app.use('/api/users', userRoutes);
+	console.log('✓ /api/users routes registered');
+	app.use('/api/superadmin', superAdminRoutes);
+	console.log('✓ /api/superadmin routes registered');
+	app.use('/api/teams', teamRoutes);
+	console.log('✓ /api/teams routes registered');
 	app.use('/api/announcements', announcementRoutes);
 	console.log('✓ /api/announcements routes registered');
-  app.use('/api/sales-manager/leads', salesManagerLeadRoutes);
-  console.log('✓ /api/sales-manager/leads routes registered');
-  app.use('/api/sales-team-leader/leads', salesTeamLeaderLeadRoutes);
-  console.log('✓ /api/sales-team-leader/leads routes registered');
-  app.use('/api/sales-team-leader/dashboard', salesTeamLeaderDashboardRoutes);
-  console.log('✓ /api/sales-team-leader/dashboard routes registered');
-  app.use('/api/sales-team-leader/reports', salesTeamLeaderReportRoutes);
-  console.log('✓ /api/sales-team-leader/reports routes registered');
-  app.use('/api/sales-manager/dashboard', salesManagerDashboardRoutes);
-  console.log('✓ /api/sales-manager/dashboard routes registered');
-  app.use('/api/sales-manager/reports', salesManagerReportRoutes);
-  console.log('✓ /api/sales-manager/reports routes registered');
-  app.use('/api/sales-manager/reports', salesManagerReportRoutes);
-  console.log('✓ /api/sales-manager/reports routes registered');
-  app.use('/api/attendance', attendanceRoutes);
-  console.log('✓ /api/attendance registered');
-  app.use('/api/leaves', leaveRoutes);
-  console.log('✓ /api/leaves registered');
+	app.use('/api/sales-manager/leads', salesManagerLeadRoutes);
+	console.log('✓ /api/sales-manager/leads routes registered');
+	app.use('/api/sales-team-leader/leads', salesTeamLeaderLeadRoutes);
+	console.log('✓ /api/sales-team-leader/leads routes registered');
+	app.use('/api/sales-team-leader/dashboard', salesTeamLeaderDashboardRoutes);
+	console.log('✓ /api/sales-team-leader/dashboard routes registered');
+	app.use('/api/sales-team-leader/reports', salesTeamLeaderReportRoutes);
+	console.log('✓ /api/sales-team-leader/reports routes registered');
+	app.use('/api/sales-manager/dashboard', salesManagerDashboardRoutes);
+	console.log('✓ /api/sales-manager/dashboard routes registered');
+	app.use('/api/sales-manager/reports', salesManagerReportRoutes);
+	console.log('✓ /api/sales-manager/reports routes registered');
+	app.use('/api/sales-manager/reports', salesManagerReportRoutes);
+	console.log('✓ /api/sales-manager/reports routes registered');
+	app.use('/api/attendance', attendanceRoutes);
+	console.log('✓ /api/attendance registered');
+	app.use('/api/leaves', leaveRoutes);
+	console.log('✓ /api/leaves registered');
 	app.use('/api/sales-executive/leads', salesExecutiveLeadRoutes);
 	console.log('✓ /api/sales-executive/leads routes registered');
 	app.use('/api/sales-executive/prospects', salesExecutiveProspectRoutes);
 	console.log('✓ /api/sales-executive/prospects routes registered');
+	app.use('/api/finance/prospects', financeProspectRoutes);
+	console.log('✓ /api/finance/prospects routes registered');
+	app.use('/api/finance/payments', financePaymentRoutes);
+	console.log('✓ /api/finance/payments routes registered');
+	app.use('/api/payments', paymentSuccessRoutes);
+	console.log('✓ /api/payments success routes registered');
+	console.log('✓ /api/payments/webhook routes registered');
 	app.use('/api/sales-executive/follow-ups', salesExecutiveFollowUpRoutes);
 	console.log('✓ /api/sales-executive/follow-ups routes registered');
 	app.use('/api/sales-executive/dashboard', salesExecutiveDashboardRoutes);
 	console.log('✓ /api/sales-executive/dashboard routes registered');
-  app.use('/api/support-tickets', ticketRoutes);
-  console.log('✓ /api/support-tickets routes registered');
-  app.use('/api/notifications', notificationRoutes);
-  console.log('✓ /api/notifications routes registered');
-  app.use('/api/logs', logsRoutes);
-  console.log('✓ /api/logs routes registered');
+	app.use('/api/support-tickets', ticketRoutes);
+	console.log('✓ /api/support-tickets routes registered');
+	app.use('/api/notifications', notificationRoutes);
+	console.log('✓ /api/notifications routes registered');
+	app.use('/api/logs', logsRoutes);
+	console.log('✓ /api/logs routes registered');
+	app.use('/api/api-config', apiConfigRoutes);
+	console.log('✓ /api/api-config routes registered');
+  app.use('/api/admin', adminRoutes);
+  console.log('✓ /api/admin routes registered');
+	app.use('/api/finance', financeRoutes);
+	console.log('✓ /api/finance routes registered');
 } catch (error) {
-  console.error('❌ Error registering routes:', error);
+	console.error('❌ Error registering routes:', error);
 }
 
 // ────────────────────────────────────────────────────────────
@@ -184,7 +222,7 @@ app.use((err, _req, res, _next) => {
 });
 
 // ────────────────────────────────────────────────────────────
-// START SERVER
+// START SERVER (only when run directly)
 // ────────────────────────────────────────────────────────────
 const startServer = async () => {
 	try {
@@ -198,4 +236,9 @@ const startServer = async () => {
 	}
 };
 
-startServer();
+// Export app for testing/imports
+module.exports = app;
+
+if (require.main === module) {
+	startServer();
+}

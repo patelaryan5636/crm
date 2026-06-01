@@ -435,6 +435,83 @@ const MENUS = {
       },
     ],
   },
+  "management-employee": {
+    title: "Management Employee",
+    initials: "ME",
+    sections: [
+      {
+        label: "Overview",
+        items: [
+          {
+            name: "Dashboard",
+            path: "/management-employee",
+            icon: LayoutDashboard,
+            end: true,
+          },
+        ],
+      },
+      {
+        label: "Work",
+        items: [
+          {
+            name: "My Projects",
+            path: "/management-employee/my-projects",
+            icon: FolderOpen,
+          },
+          {
+            name: "Activity",
+            path: "/management-employee/activity",
+            icon: Activity,
+          },
+        ],
+      },
+      {
+        label: "Planning",
+        items: [
+          {
+            name: "Deadlines",
+            path: "/management-employee/deadlines",
+            icon: ClipboardList,
+          },
+          {
+            name: "Reminders",
+            path: "/management-employee/reminders",
+            icon: Bell,
+          },
+          {
+            name: "Performance",
+            path: "/management-employee/performance",
+            icon: TrendingUp,
+          },
+        ],
+      },
+      {
+        label: "Support",
+        items: [
+          {
+            name: "Tickets",
+            path: "/management-employee/tickets",
+            icon: Ticket,
+          },
+        ],
+      },
+      {
+        label: "Personal",
+        items: [
+          {
+            name: "HRM",
+            path: "/management-employee/hrm",
+            icon: UserCheck,
+          },
+          {
+            name: "Login Logs",
+            path: "/management-employee/login-logs",
+            icon: History,
+          },
+        ],
+      },
+    ],
+  },
   "management-team-leader": {
     title: "Management Team Leader",
     initials: "ML",

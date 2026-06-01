@@ -34,6 +34,8 @@ const salesExecutiveProspectRoutes = require('./routes/salesExecutiveProspects')
 const financeProspectRoutes = require('./routes/financeProspects');
 const financePaymentRoutes = require('./routes/financePayments');
 const invoiceRoutes = require('./routes/invoices');
+const workOrderRoutes = require('./routes/workOrders');
+const managementWorkOrderRoutes = require('./routes/managementWorkOrders');
 const paymentWebhookRoutes = require('./routes/paymentWebhooks');
 const paymentSuccessRoutes = require('./routes/paymentSuccess');
 const salesExecutiveFollowUpRoutes = require('./routes/salesExecutiveFollowUps');
@@ -159,6 +161,10 @@ try {
 	console.log('✓ /api/finance/payments routes registered');
 	app.use('/api/finance/invoices', invoiceRoutes);
 	console.log('✓ /api/finance/invoices routes registered');
+	app.use('/api/finance/work-orders', workOrderRoutes);
+	console.log('✓ /api/finance/work-orders routes registered');
+	app.use('/api/management/work-orders', managementWorkOrderRoutes);
+	console.log('✓ /api/management/work-orders routes registered');
 	app.use('/api/payments', paymentSuccessRoutes);
 	console.log('✓ /api/payments success routes registered');
 	console.log('✓ /api/payments/webhook routes registered');

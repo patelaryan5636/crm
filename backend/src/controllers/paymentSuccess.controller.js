@@ -180,6 +180,17 @@ exports.razorpaySuccess = catchAsync(async (req, res, next) => {
             } catch (err) {
               logger.error('razorpaySuccess: autoCreateInvoice failed', { error: err.message });
             }
+
+            try {
+              const { autoCreateWorkOrder } = require('./workOrder.controller');
+              await autoCreateWorkOrder({
+                adminId: payment.admin,
+                paymentId: String(payment._id),
+                prospectId: payment.prospectForm ? String(payment.prospectForm) : null,
+              });
+            } catch (err) {
+              logger.error('razorpaySuccess: autoCreateWorkOrder failed', { error: err.message });
+            }
           });
         } else if (!payment && prospectId) {
           // No Payment doc exists (created before schema fix) — update ProspectForm directly

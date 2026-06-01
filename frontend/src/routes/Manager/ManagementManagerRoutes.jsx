@@ -6,6 +6,7 @@ import ManagementManagerProjects  from "../../pages/management/managementManager
 import ManagementManagerTeams from "../../pages/management/managementManager/ManagementManagerTeams";
 import ManagementManagerClients from "../../pages/management/managementManager/ManagementManagerClients";
 import ManagementManagerReports from "../../pages/management/managementManager/ManagementManagerReports";
+import ManagementManagerWorkOrders from "../../pages/management/managementManager/ManagementManagerWorkOrders";
 import HRMPage                    from "../../pages/management/managementManager/hrm/HRMPage";
 import LoginLogs                  from "../../pages/management/managementManager/loginLogs/LoginLogs";
 import ManagementManagerTickets   from "../../pages/management/managementManager/ManagementManagerTickets";
@@ -15,11 +16,12 @@ function ManagementManagerRoutes() {
     <Routes>
       <Route element={<MainLayout />}>
 
-        <Route index            element={<ManagementManagerDashboard />} />
-        <Route path="projects"  element={<ManagementManagerProjects  />} />
-        <Route path="teams" element={<ManagementManagerTeams />} />
-        <Route path="clients" element={<ManagementManagerClients />} />
-        <Route path="reports" element={<ManagementManagerReports />} />
+        <Route index              element={<ManagementManagerDashboard />} />
+        <Route path="work-orders" element={<ManagementManagerWorkOrders />} />
+        <Route path="projects"    element={<ManagementManagerProjects  />} />
+        <Route path="teams"       element={<ManagementManagerTeams />} />
+        <Route path="clients"     element={<ManagementManagerClients />} />
+        <Route path="reports"     element={<ManagementManagerReports />} />
         <Route path="hrm"         element={<HRMPage                  />} />
         <Route path="login-logs"  element={<LoginLogs                />} />
         <Route path="tickets"     element={<ManagementManagerTickets />} />

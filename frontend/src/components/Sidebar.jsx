@@ -390,6 +390,11 @@ const MENUS = {
         label: "Operations",
         items: [
           {
+            name: "Work Orders",
+            path: "/management-manager/work-orders",
+            icon: ClipboardList,
+          },
+          {
             name: "Projects",
             path: "/management-manager/projects",
             icon: FolderOpen,

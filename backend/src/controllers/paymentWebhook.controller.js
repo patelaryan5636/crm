@@ -418,6 +418,17 @@ async function markPaymentSuccess(payment, { razorpayPaymentId, paidAt }, Prospe
     } catch (err) {
       logger.error('markPaymentSuccess: autoCreateInvoice failed', { error: err.message });
     }
+
+    try {
+      const { autoCreateWorkOrder } = require('./workOrder.controller');
+      await autoCreateWorkOrder({
+        adminId: payment.admin,
+        paymentId: String(payment._id),
+        prospectId: payment.prospectForm ? String(payment.prospectForm) : null,
+      });
+    } catch (err) {
+      logger.error('markPaymentSuccess: autoCreateWorkOrder failed', { error: err.message });
+    }
   });
 }
 

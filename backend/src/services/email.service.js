@@ -473,6 +473,105 @@ const sendInvoiceEmail = async (payload) => {
   }
 };
 
+/**
+ * Send Work Order Email to client
+ */
+const sendWorkOrderEmail = async (payload) => {
+  try {
+    if (!process.env.BREVO_API_KEY) throw new Error('BREVO_API_KEY is not configured');
+    if (!isValidEmail(payload.email)) throw new Error('Client email is missing or invalid');
+
+    const {
+      email, clientName, companyName, woNumber, service,
+      requirements = [], terms, deliveryDate,
+      totalCost, discountAmt, netPayable, paymentStatus,
+      senderName, senderEmail,
+    } = payload;
+
+    const fmtAmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+    const reqRows = requirements.map((r, i) => `
+      <tr style="background:${i % 2 === 0 ? '#f8fafc' : '#fff'}">
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600;">${r.title || 'Service'}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;">${r.description || '—'}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:700;">${fmtAmt(r.cost)}</td>
+      </tr>`).join('');
+
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Work Order ${woNumber}</title></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
+<div style="max-width:680px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  <div style="background:#1e293b;padding:28px 32px;color:#fff;">
+    <h1 style="margin:0;font-size:22px;font-weight:900;">${senderName || 'Graphura CRM'}</h1>
+    <p style="margin:6px 0 0;color:#94a3b8;font-size:12px;">Work Order Document</p>
+    <p style="margin:8px 0 0;font-size:18px;font-weight:900;">WORK ORDER</p>
+    <p style="margin:4px 0 0;color:#94a3b8;font-size:13px;">${woNumber}</p>
+    ${deliveryDate ? `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">Delivery: ${fmtDate(deliveryDate)}</p>` : ''}
+  </div>
+  <div style="padding:24px 32px 0;">
+    <p style="margin:0 0 6px;font-size:11px;font-weight:700;text-transform:uppercase;color:#94a3b8;">Client</p>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;">
+      <p style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">${clientName || 'Client'}</p>
+      ${companyName ? `<p style="margin:4px 0 0;font-size:13px;color:#475569;">${companyName}</p>` : ''}
+      <p style="margin:4px 0 0;font-size:13px;color:#475569;">${email}</p>
+      ${service ? `<p style="margin:4px 0 0;font-size:13px;color:#475569;">Service: ${service}</p>` : ''}
+    </div>
+  </div>
+  <div style="padding:24px 32px 0;">
+    <p style="margin:0 0 10px;font-size:11px;font-weight:700;text-transform:uppercase;color:#94a3b8;">Scope of Work</p>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;">
+      <thead><tr style="background:#1e293b;color:#fff;">
+        <th style="padding:10px 12px;text-align:left;font-size:12px;">Requirement</th>
+        <th style="padding:10px 12px;text-align:left;font-size:12px;">Description</th>
+        <th style="padding:10px 12px;text-align:right;font-size:12px;">Cost</th>
+      </tr></thead>
+      <tbody>${reqRows || '<tr><td colspan="3" style="padding:12px;color:#64748b;">Professional Services</td></tr>'}</tbody>
+    </table>
+  </div>
+  <div style="padding:20px 32px 0;">
+    <table style="width:240px;margin-left:auto;border-collapse:collapse;">
+      <tr><td style="padding:6px 12px;font-size:13px;color:#475569;">Total Cost</td><td style="padding:6px 12px;font-size:13px;text-align:right;">${fmtAmt(totalCost)}</td></tr>
+      ${discountAmt > 0 ? `<tr><td style="padding:6px 12px;font-size:13px;color:#475569;">Discount</td><td style="padding:6px 12px;font-size:13px;text-align:right;color:#ef4444;">- ${fmtAmt(discountAmt)}</td></tr>` : ''}
+      <tr style="border-top:2px solid #1e293b;"><td style="padding:10px 12px;font-size:15px;font-weight:900;color:#1e293b;">Net Payable</td><td style="padding:10px 12px;font-size:15px;font-weight:900;color:#1e293b;text-align:right;">${fmtAmt(netPayable)}</td></tr>
+    </table>
+  </div>
+  <div style="padding:16px 32px 0;">
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;">
+      <p style="margin:0;font-size:13px;color:#166534;"><strong>Payment Status:</strong> ${paymentStatus || 'Unpaid'}</p>
+    </div>
+  </div>
+  ${terms ? `<div style="padding:20px 32px 0;"><div style="background:#eff6ff;border-left:4px solid #3b82f6;border-radius:8px;padding:12px 16px;"><p style="margin:0;font-size:12px;color:#1e40af;"><strong>Terms & Conditions:</strong></p><p style="margin:6px 0 0;font-size:12px;color:#1e40af;white-space:pre-line;">${terms}</p></div></div>` : ''}
+  <div style="padding:24px 32px;margin-top:24px;border-top:1px solid #e2e8f0;">
+    <p style="margin:0;font-size:12px;color:#64748b;">Please review this work order and revert with your signed copy or any queries.</p>
+    <p style="margin:8px 0 0;font-size:11px;color:#94a3b8;text-align:center;">— ${senderName || 'Graphura CRM'}</p>
+  </div>
+</div>
+</body></html>`;
+
+    const response = await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: getSender(),
+        to: [{ email, name: clientName || 'Client' }],
+        subject: `Work Order ${woNumber} from ${senderName || 'Graphura CRM'}`,
+        htmlContent,
+      },
+      {
+        headers: { 'api-key': process.env.BREVO_API_KEY.trim(), 'Content-Type': 'application/json' },
+        timeout: 15000,
+      },
+    );
+
+    const messageId = response.data.messageId || response.data.id || null;
+    logger.info(`Work order email sent to ${email} (${woNumber})`);
+    return { success: true, messageId };
+  } catch (error) {
+    const details = error.response?.data?.message || error.response?.data || error.message;
+    logger.error('Failed to send work order email', details);
+    throw new Error(typeof details === 'string' ? details : 'Unable to send work order email');
+  }
+};
+
 module.exports = {
   sendOTPEmail,
   sendRegistrationConfirmationEmail,
@@ -481,4 +580,5 @@ module.exports = {
   sendProspectQuotationEmail,
   sendRazorpayLinkEmail,
   sendInvoiceEmail,
+  sendWorkOrderEmail,
 };

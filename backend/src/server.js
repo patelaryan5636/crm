@@ -42,6 +42,7 @@ const notificationRoutes = require('./routes/notifications');
 const logsRoutes = require('./routes/logs');
 const adminRoutes = require('./routes/admin');
 const apiConfigRoutes = require('./routes/apiConfig');
+const financeRoutes = require('./routes/finance');
 
 dotenv.config();
 
@@ -158,6 +159,8 @@ try {
 	console.log('✓ /api/api-config routes registered');
   app.use('/api/admin', adminRoutes);
   console.log('✓ /api/admin routes registered');
+	app.use('/api/finance', financeRoutes);
+	console.log('✓ /api/finance routes registered');
 } catch (error) {
 	console.error('❌ Error registering routes:', error);
 }

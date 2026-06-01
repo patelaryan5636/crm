@@ -27,4 +27,7 @@ router.post('/test', controller.test);
 // GET /api/payments/webhook/status (diagnostics)
 router.get('/status', controller.status);
 
+// GET /api/payments/webhook/last-payload (debug — shows last received webhook)
+router.get('/last-payload', controller.lastPayload);
+
 module.exports = router;

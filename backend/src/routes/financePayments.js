@@ -7,6 +7,7 @@ const { requireUser } = require('../middleware/auth');
 router.get('/', requireUser, controller.listPayments);
 router.post('/:prospectId/send-razorpay-link', requireUser, controller.sendRazorpayLink);
 router.get('/:prospectId/fetch-razorpay-link', requireUser, controller.fetchExistingRazorpayLink);
+router.post('/:prospectId/recreate-link', requireUser, controller.recreatePaymentLink);
 router.put('/:prospectId/verify', requireUser, controller.verifyPayment);
 router.put('/:prospectId/failed', requireUser, controller.markFailed);
 module.exports = router;

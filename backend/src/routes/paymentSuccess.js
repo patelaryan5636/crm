@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/paymentSuccess.controller');
 
-// Razorpay redirects here after payment (no auth required, query params only)
+// PUBLIC — no auth required on any of these routes.
+// Razorpay redirects the client (not logged in) to /api/payments/razorpay-success
+// after payment. We verify the callback signature and redirect to the frontend.
 router.get('/razorpay-success', controller.razorpaySuccess);
 
-// Frontend can call this to check payment status (no auth required for public endpoints)
+// Frontend polls this to check payment status (client is not logged in)
 router.get('/status/:prospectId', controller.checkPaymentStatus);
 
 module.exports = router;

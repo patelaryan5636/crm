@@ -165,9 +165,11 @@ exports.sendRazorpayLink = catchAsync(async (req, res, next) => {
     }, 'Existing payment link reused and resent'));
   }
 
-  // Pass tenant adminId and proper parameter names expected by razorpay.service
-  // Include callback URL for Razorpay to redirect after payment
-  const callbackUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/finance/payments/success?prospectId=${prospectId}`;
+  // Razorpay redirects the CLIENT (not logged-in) here after payment.
+  // Must be a public URL — use the backend public success endpoint which
+  // then serves the standalone success page.
+  const backendBase = process.env.BACKEND_PUBLIC_URL || process.env.NGROK_URL || `http://localhost:${process.env.PORT || 5000}`;
+  const callbackUrl = `${backendBase}/api/payments/razorpay-success?prospectId=${prospectId}`;
   
   const linkResult = await createPaymentLink({
     adminId: req.admin._id,
@@ -199,7 +201,7 @@ exports.sendRazorpayLink = catchAsync(async (req, res, next) => {
   const paymentDoc = await Payment.create({
     admin: req.admin._id,
     prospectForm: prospect._id,
-    client: prospect.client?._id || null,
+    client: prospect.client?._id || undefined, // optional — schema allows null
     amount,
     paymentType: prospect.paymentType || 'FULL',
     status: 'PENDING',
@@ -339,4 +341,39 @@ exports.fetchExistingRazorpayLink = catchAsync(async (req, res, next) => {
   const found = await fetchPaymentLinkByReference(receipt, req.admin._id);
   if (!found) return res.status(404).json(new ApiResponse(404, null, 'No payment link found for this prospect'));
   return res.status(200).json(new ApiResponse(200, { link: { id: found.id, url: found.short_url || found.url }, raw: found }, 'Existing link found'));
+});
+
+/**
+ * POST /api/finance/payments/:prospectId/recreate-link
+ * Force-creates a new Razorpay payment link (marks old one as EXPIRED first).
+ * Use this when the old link has a dead callback URL (e.g. stale ngrok URL).
+ */
+exports.recreatePaymentLink = catchAsync(async (req, res, next) => {
+  if (!requireFinanceRole(req, next)) return;
+  const { ProspectForm, Payment } = require('../models');
+  const { prospectId } = req.params;
+
+  const prospect = await ProspectForm.findOne({ _id: prospectId, admin: req.admin._id }).populate('client', 'name email mobile companyName');
+  if (!prospect) return next(new AppError('Prospect not found', 404));
+
+  const amount = Number(prospect.finalAmount || prospect.totalAmount || prospect.value || 0);
+  if (!amount || amount <= 0) return next(new AppError('Payment amount is not set on this record', 400));
+
+  const recipientEmail = String(prospect.client?.email || req.body?.email || '').trim();
+  if (!recipientEmail) return next(new AppError('Client email is missing', 400));
+
+  // Mark all existing PENDING/SENT payment links as EXPIRED
+  await Payment.updateMany(
+    {
+      admin: req.admin._id,
+      prospectForm: prospect._id,
+      paymentLinkStatus: { $in: ['SENT', 'PENDING'] },
+      status: { $ne: 'SUCCESS' },
+    },
+    { $set: { paymentLinkStatus: 'EXPIRED' } },
+  );
+
+  // Now delegate to sendRazorpayLink which will create a fresh link
+  // (no existing SENT/PENDING payment found → creates new)
+  return exports.sendRazorpayLink(req, res, next);
 });

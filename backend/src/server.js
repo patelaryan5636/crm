@@ -55,12 +55,26 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 // ────────────────────────────────────────────────────────────
 app.use(helmet()); // Security headers
 app.use(cors({
-	origin: [
-		'http://localhost:5173',
-		'http://localhost:5174',
-		'http://localhost:5175',
-		process.env.FRONTEND_URL || 'http://localhost:5173',
-	],
+	origin: (origin, callback) => {
+		const allowed = [
+			'http://localhost:5173',
+			'http://localhost:5174',
+			'http://localhost:5175',
+			process.env.FRONTEND_URL,
+			process.env.BACKEND_PUBLIC_URL,
+			process.env.NGROK_URL,
+		].filter(Boolean);
+
+		// Allow requests with no origin (mobile apps, curl, Razorpay webhooks)
+		if (!origin || allowed.some((u) => origin.startsWith(u))) {
+			return callback(null, true);
+		}
+		// Allow any ngrok domain
+		if (/\.ngrok(-free)?\.app$/.test(origin) || /\.ngrok\.io$/.test(origin)) {
+			return callback(null, true);
+		}
+		callback(new Error(`CORS: origin ${origin} not allowed`));
+	},
 	credentials: true,
 }));
 

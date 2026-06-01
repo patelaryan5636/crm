@@ -6,7 +6,7 @@ import {
   DataField, SelectField, Option,
   openModal, closeModal,
 } from "../../components/shared/Common_Components";
-import { CreditCard, CheckCircle, Clock, XCircle, Split, DollarSign, Eye, ShieldCheck, Ban, Link2 } from "lucide-react";
+import { CreditCard, CheckCircle, Clock, XCircle, Split, DollarSign, Eye, ShieldCheck, Ban, Link2, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import apiClient from "../../services/apiClient";
 
@@ -124,6 +124,26 @@ export default function Payments() {
       setError(failError?.message || 'Failed to mark payment as failed');
     }
   };
+  const recreateLink = async (row) => {
+    try {
+      toast.loading('Creating new payment link…', { id: 'recreate' });
+      const response = await apiClient.post(`/finance/payments/${row.prospectId}/recreate-link`, {
+        email: row.email,
+        mobile: row.mobile,
+      });
+      toast.dismiss('recreate');
+      const emailResult = response?.data?.data?.email;
+      if (emailResult?.success) {
+        toast.success('New payment link created and sent!');
+      } else {
+        toast.success('New payment link created. Email: ' + (emailResult?.reason || 'check logs'));
+      }
+      await loadPayments();
+    } catch (err) {
+      toast.dismiss('recreate');
+      setError(err?.response?.data?.message || err?.message || 'Failed to recreate link');
+    }
+  };
   const saveVerify = async () => {
     try {
       await apiClient.put(`/finance/payments/${selected.prospectId}/verify`, {
@@ -179,6 +199,7 @@ export default function Payments() {
         pageSize={10}
         actions={[
           { icon: <Link2 size={15}/>,        label: paymentLinkActionLabel, tooltip: paymentLinkActionTooltip, variant: "primary", onClick: sendRazorpayLink },
+          { icon: <RefreshCw size={15}/>,    tooltip: "Recreate Link (fix stale ngrok URL)", variant: "ghost", onClick: recreateLink },
           { icon: <Eye size={15}/>,        tooltip: "View Details",  variant: "ghost",   onClick: openView   },
           { icon: <ShieldCheck size={15}/>, tooltip: "Verify / Update", variant: "success", onClick: openVerify },
           { icon: <Ban size={15}/>,         tooltip: "Mark Failed",   variant: "danger",  onClick: markFailed },

@@ -8,304 +8,481 @@ const logger = require('../utils/logger');
 
 /**
  * Razorpay webhook handler
- * Verifies signature, logs webhook, and updates Payment/Prospect/Project atomically
+ *
+ * Signature verification strategy (in order):
+ *  1. Global env secrets (RAZORPAY_WEBHOOK_SECRET, RAZORPAY_KEY_SECRET)
+ *  2. Tenant-scoped secrets — resolved by finding the Payment record that
+ *     matches the incoming event, then loading that admin's ApiConfig.
+ *
+ * Razorpay sends the raw JSON body and signs it with HMAC-SHA256.
+ * We MUST use the exact bytes received — no re-serialisation.
  */
-
 exports.razorpay = catchAsync(async (req, res, next) => {
-  const models = require('../models');
-  const { WebhookLog, Payment, ProspectForm, Project } = models;
-
-  const ApiConfig = require('../models').ApiConfig;
+  const { WebhookLog, Payment, ProspectForm, Project, ApiConfig } = require('../models');
   const { decrypt } = require('../utils/encrypt');
-  const signatureHeader = req.headers['x-razorpay-signature'] || req.headers['x-razorpay-signature'.toLowerCase()];
-  
-  // Priority: use req.body directly if it's a Buffer from express.raw()
-  // Otherwise use req.rawBody from verify callback
+
+  // ── 1. Extract raw body ──────────────────────────────────────────────────
   let raw = '';
   if (Buffer.isBuffer(req.body)) {
     raw = req.body.toString('utf8');
-    logger.info('Webhook: Using req.body (Buffer from express.raw)', { bodyLength: req.body.length });
   } else if (req.rawBody) {
-    raw = req.rawBody.toString('utf8');
-    logger.info('Webhook: Using req.rawBody (from verify callback)', { bodyLength: req.rawBody.length });
+    raw = Buffer.isBuffer(req.rawBody) ? req.rawBody.toString('utf8') : String(req.rawBody);
   } else if (typeof req.body === 'string') {
     raw = req.body;
-    logger.info('Webhook: Using req.body (string)', { bodyLength: req.body.length });
   } else {
+    // Last resort — re-serialise. Signature will almost certainly fail but we
+    // still want to log the event.
     raw = JSON.stringify(req.body || {});
-    logger.info('Webhook: Using JSON.stringify(req.body)', { bodyLength: raw.length });
+    logger.warn('Webhook: raw body unavailable, falling back to JSON.stringify — signature will likely fail');
   }
-  
-  logger.info('Webhook signature check', { 
-    signatureHeader: signatureHeader ? signatureHeader.substring(0, 20) + '...' : 'MISSING',
-    rawLength: raw.length,
-    rawPreview: raw.substring(0, 100)
-  });
-  
-  let isVerified = false;
 
-  const tryVerify = (secret, label = 'secret') => {
+  const signatureHeader = (
+    req.headers['x-razorpay-signature'] || ''
+  ).trim();
+
+  logger.info('Webhook received', {
+    event: 'pending-parse',
+    rawLength: raw.length,
+    signaturePresent: !!signatureHeader,
+  });
+
+  // ── 2. Parse payload (best-effort) ──────────────────────────────────────
+  let payload = {};
+  try {
+    payload = JSON.parse(raw);
+  } catch (e) {
+    logger.warn('Webhook: failed to parse JSON body', { error: e.message });
+    payload = req.body || {};
+  }
+
+  const event = payload?.event || 'razorpay.unknown';
+
+  // ── 3. Helper: try one secret ────────────────────────────────────────────
+  const tryVerify = (secret, label) => {
+    if (!secret) return false;
     try {
-      if (!secret) {
-        logger.warn('Webhook verify attempt: secret is empty', { label });
-        return false;
-      }
-      const secretStr = String(secret).trim();
-      const signatureStr = String(signatureHeader || '').trim();
-      
-      const expected = crypto.createHmac('sha256', secretStr).update(raw).digest('hex');
-      const matches = expected === signatureStr;
-      
-      if (!matches) {
+      const expected = crypto
+        .createHmac('sha256', String(secret).trim())
+        .update(raw)
+        .digest('hex');
+      const match = expected === signatureHeader;
+      if (match) {
+        logger.info('Webhook signature verified', { label });
+      } else {
         logger.warn('Webhook signature mismatch', {
           label,
-          expectedStart: expected.substring(0, 20),
-          actualStart: signatureStr.substring(0, 20),
-          rawLength: raw.length,
+          expectedPrefix: expected.substring(0, 16),
+          receivedPrefix: signatureHeader.substring(0, 16),
         });
-      } else {
-        logger.info('Webhook signature verified!', { label });
       }
-      return matches;
+      return match;
     } catch (err) {
-      logger.error('Webhook signature verification attempt error', { label, error: err.message });
+      logger.error('Webhook verify error', { label, error: err.message });
       return false;
     }
   };
 
-  // Try global secrets first
-  const globalCandidates = [process.env.RAZORPAY_WEBHOOK_SECRET, process.env.RAZORPAY_KEY_SECRET];
-  for (let i = 0; i < globalCandidates.length; i++) {
-    const s = globalCandidates[i];
-    logger.info('Trying global secret', { index: i, secretAvailable: !!s });
-    if (s && tryVerify(s, `GLOBAL_${i === 0 ? 'WEBHOOK_SECRET' : 'KEY_SECRET'}`)) {
-      isVerified = true;
-      logger.info('Verified with global secret', { index: i });
-      break;
-    }
+  // ── 4. Try global secrets first ──────────────────────────────────────────
+  let isVerified = false;
+
+  if (!isVerified && process.env.RAZORPAY_WEBHOOK_SECRET) {
+    isVerified = tryVerify(process.env.RAZORPAY_WEBHOOK_SECRET, 'ENV_WEBHOOK_SECRET');
+  }
+  if (!isVerified && process.env.RAZORPAY_KEY_SECRET) {
+    isVerified = tryVerify(process.env.RAZORPAY_KEY_SECRET, 'ENV_KEY_SECRET');
   }
 
-  const payload = (() => { try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (e) { logger.warn('Failed to parse payload JSON', { error: e.message }); return req.body || {}; } })();
-  
-  // If not verified yet, attempt tenant-scoped secret lookup by finding associated Payment -> admin
+  // ── 5. Tenant-scoped lookup ──────────────────────────────────────────────
   if (!isVerified) {
-    logger.info('Attempting tenant-scoped secret lookup...');
     try {
-      const paymentEntity = payload?.payload?.payment?.entity;
-      const linkEntity = payload?.payload?.payment_link?.entity;
-      let adminId = null;
-      
-      if (paymentEntity) {
-        logger.info('Payment entity found, searching by payment ID or order ID', { paymentId: paymentEntity.id, orderId: paymentEntity.order_id });
-        const p = await Payment.findOne({ $or: [{ razorpayPaymentId: paymentEntity.id }, { razorpayOrderId: paymentEntity.order_id }] });
-        if (p) {
-          adminId = p.admin;
-          logger.info('Payment found by paymentEntity', { adminId: adminId?.toString() });
-        }
-      }
-      
-      if (!adminId && linkEntity) {
-        const linkId = linkEntity?.id || linkEntity?.short_url;
-        logger.info('Link entity found, searching by link ID', { linkId });
-        const p = await Payment.findOne({ paymentLinkId: linkId });
-        if (p) {
-          adminId = p.admin;
-          logger.info('Payment found by linkEntity', { adminId: adminId?.toString() });
-        }
-      }
-      
+      const adminId = await resolveAdminFromPayload(payload, Payment);
+
       if (adminId) {
-        logger.info('Looking up tenant secrets', { adminId: adminId.toString() });
-        const configs = await ApiConfig.find({ admin: adminId, key: { $in: ['RAZORPAY_WEBHOOK_SECRET', 'RAZORPAY_KEY_SECRET'] } });
-        logger.info('Found API configs', { count: configs.length });
-        
+        logger.info('Tenant lookup succeeded', { adminId: String(adminId) });
+
+        const configs = await ApiConfig.find({
+          admin: adminId,
+          key: { $in: ['RAZORPAY_WEBHOOK_SECRET', 'RAZORPAY_KEY_SECRET'] },
+        }).lean();
+
         const configMap = {};
-        (configs || []).forEach((c) => { 
+        configs.forEach((c) => {
           configMap[c.key] = c.isEncrypted ? decrypt(c.value) : c.value;
-          logger.info('Loaded API config', { key: c.key, isEncrypted: c.isEncrypted });
         });
-        
-        const tenantCandidates = [configMap.RAZORPAY_WEBHOOK_SECRET, configMap.RAZORPAY_KEY_SECRET];
-        for (let i = 0; i < tenantCandidates.length; i++) {
-          const s = tenantCandidates[i];
-          logger.info('Trying tenant secret', { index: i, secretAvailable: !!s });
-          if (s && tryVerify(s, `TENANT_${adminId.toString()}_${i === 0 ? 'WEBHOOK_SECRET' : 'KEY_SECRET'}`)) {
-            isVerified = true;
-            logger.info('Verified with tenant secret', { adminId: adminId.toString(), index: i });
-            break;
-          }
+
+        if (!isVerified && configMap.RAZORPAY_WEBHOOK_SECRET) {
+          isVerified = tryVerify(configMap.RAZORPAY_WEBHOOK_SECRET, 'TENANT_WEBHOOK_SECRET');
+        }
+        if (!isVerified && configMap.RAZORPAY_KEY_SECRET) {
+          isVerified = tryVerify(configMap.RAZORPAY_KEY_SECRET, 'TENANT_KEY_SECRET');
         }
       } else {
-        logger.warn('No admin found for tenant-scoped verification');
+        logger.warn('Webhook: could not resolve admin from payload — tenant verification skipped');
       }
     } catch (err) {
-      logger.error('Tenant secret verification attempt error', { error: err.message, stack: err.stack });
+      logger.error('Webhook tenant lookup error', { error: err.message });
     }
   }
-  const event = payload?.event || (payload?.payload ? Object.keys(payload.payload)[0] : 'razorpay.unknown');
 
-  // Persist webhook log
-  const wlog = await WebhookLog.create({ source: 'RAZORPAY', event, payload, rawBody: raw, signature: signatureHeader, isVerified });
+  // ── 6. Persist webhook log ───────────────────────────────────────────────
+  const wlog = await WebhookLog.create({
+    source: 'RAZORPAY',
+    event,
+    payload,
+    rawBody: raw,
+    signature: signatureHeader,
+    isVerified,
+  });
 
   if (!isVerified) {
     wlog.error = 'Signature verification failed';
     await wlog.save();
-    logger.warn('Razorpay webhook signature failed');
-    return res.status(400).send('signature verification failed');
+    logger.warn('Razorpay webhook rejected — signature invalid');
+    // Return 200 to prevent Razorpay retries for permanently bad secrets,
+    // but include a body that signals failure for debugging.
+    // NOTE: returning 400 causes Razorpay to retry indefinitely.
+    return res.status(200).json({ status: 'signature_failed' });
   }
 
-  // Process known events
+  // ── 7. Process event ─────────────────────────────────────────────────────
   try {
-    // Payment captured (classic)
-    const paymentEntity = payload?.payload?.payment?.entity;
-    const linkEntity = payload?.payload?.payment_link?.entity;
+    const result = await processWebhookEvent(payload, event, Payment, ProspectForm, Project);
 
-    if (paymentEntity) {
-      const razorpayPaymentId = paymentEntity.id;
-      const razorpayOrderId = paymentEntity.order_id;
-      // Find associated Payment
-      const payment = await Payment.findOne({ $or: [{ razorpayPaymentId }, { razorpayOrderId }] });
-      if (payment) {
-        if (payment.status !== 'SUCCESS') {
-          payment.status = 'SUCCESS';
-          payment.razorpayPaymentId = razorpayPaymentId;
-          payment.paidAt = paymentEntity?.created_at ? new Date(paymentEntity.created_at * 1000) : new Date();
-          payment.signatureVerified = true;
-          payment.webhookVerified = true;
-          await payment.save();
-
-          // Mirror to prospect and project atomically
-          if (payment.prospectForm) {
-            const prospect = await ProspectForm.findById(payment.prospectForm);
-            if (prospect) {
-              prospect.paymentStatus = 'SUCCESS';
-              prospect.paymentVerifiedAt = payment.paidAt || new Date();
-              prospect.razorpayPaymentId = razorpayPaymentId;
-              prospect.updatedBy = null;
-              await prospect.save();
-              // Update project paidAmount if there's a project referencing this prospect
-              await Project.updateOne({ prospectForm: prospect._id }, { $inc: { paidAmount: payment.amount } });
-            }
-          }
-        }
-        wlog.isProcessed = true;
-        wlog.processedAt = new Date();
-        wlog.razorpayPaymentId = razorpayPaymentId;
-        wlog.razorpayOrderId = razorpayOrderId;
-        await wlog.save();
-        return res.status(200).json({ success: true });
-      }
-    }
-
-    // Payment link paid event
-    if (linkEntity) {
-      const linkId = linkEntity?.id || linkEntity?.short_url;
-      const payments = await Payment.find({ paymentLinkId: linkId });
-      if (payments && payments.length > 0) {
-        for (const payment of payments) {
-          if (payment.status !== 'SUCCESS') {
-            payment.status = 'SUCCESS';
-            payment.paidAt = new Date();
-            payment.webhookVerified = true;
-            await payment.save();
-            if (payment.prospectForm) {
-              const prospect = await ProspectForm.findById(payment.prospectForm);
-              if (prospect) {
-                prospect.paymentStatus = 'SUCCESS';
-                prospect.paymentVerifiedAt = payment.paidAt;
-                prospect.updatedBy = null;
-                await prospect.save();
-              }
-            }
-          }
-        }
-        wlog.isProcessed = true;
-        wlog.processedAt = new Date();
-        await wlog.save();
-        return res.status(200).json({ success: true });
-      }
-    }
-
-    // Unknown event — mark processed to avoid retries
     wlog.isProcessed = true;
     wlog.processedAt = new Date();
+    if (result.razorpayPaymentId) wlog.razorpayPaymentId = result.razorpayPaymentId;
+    if (result.razorpayOrderId) wlog.razorpayOrderId = result.razorpayOrderId;
     await wlog.save();
-    return res.status(200).json({ success: true, note: 'event noted' });
+
+    return res.status(200).json({ status: 'ok' });
   } catch (err) {
-    logger.error('Failed processing webhook', err.message || err);
+    logger.error('Webhook processing error', { error: err.message, stack: err.stack });
     wlog.error = String(err.message || err);
     await wlog.save();
-    return res.status(500).json({ success: false });
+    // Still return 200 — we logged it, no point in Razorpay retrying
+    return res.status(200).json({ status: 'processing_error' });
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Test endpoint to verify webhook signature verification
- * POST /api/payments/webhook/test
- * Body: { signature: "...", payload: {...} }
+ * Resolve the admin (tenant) from the webhook payload.
+ * Tries multiple strategies in order of reliability.
  */
-exports.test = catchAsync(async (req, res, next) => {
-  const crypto = require('crypto');
+async function resolveAdminFromPayload(payload, Payment) {
+  const paymentEntity = payload?.payload?.payment?.entity;
+  const linkEntity = payload?.payload?.payment_link?.entity;
+
+  logger.info('resolveAdmin: payload keys', {
+    event: payload?.event,
+    hasPaymentEntity: !!paymentEntity,
+    hasLinkEntity: !!linkEntity,
+    paymentId: paymentEntity?.id,
+    orderId: paymentEntity?.order_id,
+    linkId: linkEntity?.id,
+    shortUrl: linkEntity?.short_url,
+    referenceId: linkEntity?.reference_id,
+  });
+
+  // Strategy A: payment entity — look up by Razorpay payment ID or order ID
+  if (paymentEntity?.id || paymentEntity?.order_id) {
+    const query = [];
+    if (paymentEntity.id) query.push({ razorpayPaymentId: paymentEntity.id });
+    if (paymentEntity.order_id) query.push({ razorpayOrderId: paymentEntity.order_id });
+
+    const p = await Payment.findOne({ $or: query }).lean();
+    if (p?.admin) {
+      logger.info('resolveAdmin: found via Strategy A (payment entity)', { adminId: String(p.admin) });
+      return p.admin;
+    }
+  }
+
+  // Strategy B: payment link entity — look up by link ID (plink_xxx)
+  if (linkEntity?.id) {
+    const p = await Payment.findOne({ paymentLinkId: linkEntity.id }).lean();
+    if (p?.admin) {
+      logger.info('resolveAdmin: found via Strategy B (link ID)', { adminId: String(p.admin) });
+      return p.admin;
+    }
+    logger.warn('resolveAdmin: Strategy B miss', { linkId: linkEntity.id });
+  }
+
+  // Strategy C: payment link entity — look up by short_url
+  if (linkEntity?.short_url) {
+    const p = await Payment.findOne({ paymentLinkUrl: linkEntity.short_url }).lean();
+    if (p?.admin) {
+      logger.info('resolveAdmin: found via Strategy C (short_url)', { adminId: String(p.admin) });
+      return p.admin;
+    }
+    logger.warn('resolveAdmin: Strategy C miss', { shortUrl: linkEntity.short_url });
+  }
+
+  // Strategy D: extract PROSPECT-<id> from reference_id and look up ProspectForm
+  const referenceId = linkEntity?.reference_id || paymentEntity?.description || '';
+  const notes = paymentEntity?.notes || linkEntity?.notes || {};
+  const description = paymentEntity?.description || linkEntity?.description || '';
+
+  const prospectMatch = String(referenceId || description || JSON.stringify(notes))
+    .match(/PROSPECT-([a-f0-9]{24})/i);
+
+  if (prospectMatch) {
+    const { ProspectForm } = require('../models');
+    const prospect = await ProspectForm.findById(prospectMatch[1]).lean();
+    if (prospect?.admin) {
+      logger.info('resolveAdmin: found via Strategy D (reference_id)', {
+        prospectId: prospectMatch[1],
+        adminId: String(prospect.admin),
+      });
+      return prospect.admin;
+    }
+    logger.warn('resolveAdmin: Strategy D miss', { prospectId: prospectMatch[1] });
+  }
+
+  // Strategy E: scan recent payments for any that match the link URL pattern
+  // This is a last-resort fallback for when the Payment doc was created but
+  // the paymentLinkId wasn't stored correctly.
+  if (linkEntity?.short_url) {
+    // Try partial URL match — Razorpay short URLs are like https://rzp.io/l/xxx
+    const p = await Payment.findOne({
+      paymentLinkUrl: { $regex: linkEntity.short_url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') },
+    }).lean();
+    if (p?.admin) {
+      logger.info('resolveAdmin: found via Strategy E (URL regex)', { adminId: String(p.admin) });
+      return p.admin;
+    }
+  }
+
+  logger.warn('resolveAdmin: all strategies exhausted — no admin found');
+  return null;
+}
+
+/**
+ * Process a verified webhook event and update Payment / ProspectForm / Project.
+ * Returns metadata for the webhook log.
+ */
+async function processWebhookEvent(payload, event, Payment, ProspectForm, Project) {
+  const paymentEntity = payload?.payload?.payment?.entity;
+  const linkEntity = payload?.payload?.payment_link?.entity;
+
+  // ── payment.captured / payment.authorized ───────────────────────────────
+  if (paymentEntity) {
+    const razorpayPaymentId = paymentEntity.id;
+    const razorpayOrderId = paymentEntity.order_id;
+
+    const query = [];
+    if (razorpayPaymentId) query.push({ razorpayPaymentId });
+    if (razorpayOrderId) query.push({ razorpayOrderId });
+
+    const payment = query.length
+      ? await Payment.findOne({ $or: query })
+      : null;
+
+    if (payment && payment.status !== 'SUCCESS') {
+      await markPaymentSuccess(payment, {
+        razorpayPaymentId,
+        paidAt: paymentEntity.created_at
+          ? new Date(paymentEntity.created_at * 1000)
+          : new Date(),
+      }, ProspectForm, Project);
+    }
+
+    return { razorpayPaymentId, razorpayOrderId };
+  }
+
+  // ── payment_link.paid ────────────────────────────────────────────────────
+  if (linkEntity) {
+    const linkId = linkEntity.id; // plink_xxx — always present
+    const shortUrl = linkEntity.short_url;
+    const referenceId = linkEntity.reference_id || '';
+
+    // Find by link ID first, then by URL as fallback
+    const query = [];
+    if (linkId) query.push({ paymentLinkId: linkId });
+    if (shortUrl) query.push({ paymentLinkUrl: shortUrl });
+
+    let payments = query.length ? await Payment.find({ $or: query }) : [];
+
+    // Also extract the Razorpay payment ID from the nested payment entity
+    const nestedPaymentId = payload?.payload?.payment?.entity?.id || null;
+
+    // If no Payment doc found (e.g. created before the schema fix), try to
+    // find the ProspectForm via reference_id and create a Payment on the fly.
+    if (payments.length === 0) {
+      const prospectMatch = referenceId.match(/PROSPECT-([a-f0-9]{24})/i);
+      if (prospectMatch) {
+        const prospect = await ProspectForm.findById(prospectMatch[1]);
+        if (prospect) {
+          logger.info('processWebhook: no Payment found, creating from ProspectForm', {
+            prospectId: String(prospect._id),
+          });
+          try {
+            const newPayment = await Payment.create({
+              admin: prospect.admin,
+              prospectForm: prospect._id,
+              client: prospect.client || undefined,
+              amount: prospect.finalAmount || prospect.totalAmount || 0,
+              paymentType: prospect.paymentType || 'FULL',
+              status: 'PENDING',
+              paymentProvider: 'RAZORPAY',
+              paymentLinkId: linkId || null,
+              paymentLinkUrl: shortUrl || null,
+              paymentLinkStatus: 'SENT',
+              razorpayPaymentId: nestedPaymentId || null,
+            });
+            payments = [newPayment];
+          } catch (createErr) {
+            logger.error('processWebhook: failed to create Payment from ProspectForm', {
+              error: createErr.message,
+            });
+            // Still try to update the ProspectForm directly
+            if (prospect.paymentStatus !== 'SUCCESS') {
+              prospect.paymentStatus = 'SUCCESS';
+              prospect.paymentVerifiedAt = new Date();
+              if (nestedPaymentId) prospect.razorpayPaymentId = nestedPaymentId;
+              await prospect.save();
+              logger.info('processWebhook: ProspectForm updated directly (no Payment doc)', {
+                prospectId: String(prospect._id),
+              });
+            }
+            return { razorpayPaymentId: nestedPaymentId };
+          }
+        }
+      }
+    }
+
+    for (const payment of payments) {
+      if (payment.status !== 'SUCCESS') {
+        await markPaymentSuccess(payment, {
+          razorpayPaymentId: nestedPaymentId || payment.razorpayPaymentId,
+          paidAt: new Date(),
+        }, ProspectForm, Project);
+      }
+    }
+
+    return { razorpayPaymentId: nestedPaymentId };
+  }
+
+  // Unknown event — nothing to process
+  logger.info('Webhook: unhandled event type', { event });
+  return {};
+}
+
+/**
+ * Mark a Payment as SUCCESS and mirror the status to ProspectForm + Project.
+ */
+async function markPaymentSuccess(payment, { razorpayPaymentId, paidAt }, ProspectForm, Project) {
+  payment.status = 'SUCCESS';
+  if (razorpayPaymentId) payment.razorpayPaymentId = razorpayPaymentId;
+  payment.paidAt = paidAt || new Date();
+  payment.signatureVerified = true;
+  payment.webhookVerified = true;
+  payment.paymentLinkStatus = 'SENT'; // keep as SENT (link was used)
+  await payment.save();
+
+  logger.info('Payment marked SUCCESS', {
+    paymentId: String(payment._id),
+    razorpayPaymentId: payment.razorpayPaymentId,
+  });
+
+  // Mirror to ProspectForm
+  if (payment.prospectForm) {
+    const prospect = await ProspectForm.findById(payment.prospectForm);
+    if (prospect) {
+      prospect.paymentStatus = 'SUCCESS';
+      prospect.paymentVerifiedAt = payment.paidAt;
+      if (razorpayPaymentId) prospect.razorpayPaymentId = razorpayPaymentId;
+      prospect.updatedBy = null;
+      await prospect.save();
+
+      // Update Project paidAmount atomically
+      await Project.updateOne(
+        { prospectForm: prospect._id },
+        { $inc: { paidAmount: payment.amount } },
+      );
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DIAGNOSTIC ENDPOINTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/payments/webhook/test
+ * Verify a signature locally without hitting Razorpay.
+ */
+exports.test = catchAsync(async (req, res) => {
   const { signature, payload, secret } = req.body;
-  
+
   if (!signature || !payload || !secret) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       error: 'Missing required fields: signature, payload, secret',
-      example: { signature: 'xxx', payload: {}, secret: 'webhook_secret' }
     });
   }
-  
+
   const raw = typeof payload === 'string' ? payload : JSON.stringify(payload);
-  const expected = crypto.createHmac('sha256', String(secret).trim()).update(raw).digest('hex');
+  const expected = crypto
+    .createHmac('sha256', String(secret).trim())
+    .update(raw)
+    .digest('hex');
   const matches = expected === String(signature).trim();
-  
+
   return res.status(200).json({
-    signatureProvided: signature.substring(0, 20) + '...',
-    signatureExpected: expected.substring(0, 20) + '...',
     matches,
+    expected: expected.substring(0, 20) + '...',
+    received: String(signature).substring(0, 20) + '...',
     rawLength: raw.length,
-    rawPreview: raw.substring(0, 200),
   });
 });
 
 /**
  * GET /api/payments/webhook/status
- * Shows webhook configuration and health status
  */
-exports.status = catchAsync(async (req, res, next) => {
-  const { ApiConfig, WebhookLog } = require('../models');
-  
-  const globalSecretSet = !!process.env.RAZORPAY_WEBHOOK_SECRET;
-  const recentWebhooks = await WebhookLog.find()
+exports.status = catchAsync(async (req, res) => {
+  const { WebhookLog } = require('../models');
+
+  const recent = await WebhookLog.find()
     .sort({ createdAt: -1 })
     .limit(10)
     .lean();
-  
-  const recentFailures = recentWebhooks.filter(w => !w.isVerified).length;
-  const recentSuccesses = recentWebhooks.filter(w => w.isVerified).length;
-  
+
   return res.status(200).json({
     status: 'ok',
-    webhook: {
-      globalSecretConfigured: globalSecretSet,
-      recentWebhooks: recentWebhooks.length,
-      recentFailures,
-      recentSuccesses,
-      lastWebhook: recentWebhooks[0] ? {
-        event: recentWebhooks[0].event,
-        isVerified: recentWebhooks[0].isVerified,
-        createdAt: recentWebhooks[0].createdAt,
-        error: recentWebhooks[0].error,
-      } : null,
-    },
-    diagnostics: {
-      message: 'If you see recent webhook failures with "Signature verification failed", check:',
-      steps: [
-        '1. Verify RAZORPAY_WEBHOOK_SECRET in .env matches Razorpay dashboard settings',
-        '2. For tenant-specific secrets, check Admin > API Config > Razorpay Webhook Secret',
-        '3. Use POST /api/payments/webhook/test to verify signature logic',
-        '4. Check logs for detailed signature mismatch information',
-      ],
-    },
+    globalSecretConfigured: !!process.env.RAZORPAY_WEBHOOK_SECRET,
+    recentWebhooks: recent.length,
+    failures: recent.filter((w) => !w.isVerified).length,
+    successes: recent.filter((w) => w.isVerified).length,
+    last: recent[0]
+      ? {
+          event: recent[0].event,
+          isVerified: recent[0].isVerified,
+          isProcessed: recent[0].isProcessed,
+          error: recent[0].error,
+          createdAt: recent[0].createdAt,
+        }
+      : null,
+  });
+});
+
+/**
+ * GET /api/payments/webhook/last-payload
+ * Returns the raw payload of the most recent webhook for debugging.
+ */
+exports.lastPayload = catchAsync(async (req, res) => {
+  const { WebhookLog } = require('../models');
+  const last = await WebhookLog.findOne().sort({ createdAt: -1 }).lean();
+  if (!last) return res.status(404).json({ error: 'No webhooks received yet' });
+  return res.status(200).json({
+    event: last.event,
+    isVerified: last.isVerified,
+    isProcessed: last.isProcessed,
+    error: last.error,
+    createdAt: last.createdAt,
+    rawBody: last.rawBody,
+    payload: last.payload,
+    signature: last.signature ? last.signature.substring(0, 20) + '...' : null,
   });
 });

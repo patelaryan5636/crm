@@ -15,12 +15,18 @@ import ManagementTeamLeaderRoutes from "./Manager/ManagementTeamLeaderRoutes";
 import ManagementEmployeeRoutes from "./Manager/ManagementEmployeeRoutes";
 import ClientRoutes from "./clientRoutes";
 import ClientLogin from "../pages/auth/ClientLogin";
+import PaymentResult from "../pages/public/PaymentResult";
 
 function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
+
+        {/* ── Public pages (no auth) ── */}
+        {/* Razorpay redirects the client here after payment */}
+        <Route path="/payment-success" element={<PaymentResult />} />
+
         {/* Authentication Pages */}
         <Route path="/super-admin-login" element={<SuperAdminLogin />} />
         <Route path="/admin-login" element={<AdminLogin />} />

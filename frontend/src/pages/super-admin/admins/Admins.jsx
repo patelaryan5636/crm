@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import apiClient from "../../../services/apiClient";
 import { useNavigate } from "react-router-dom";
 import {
   Grid,
@@ -58,21 +59,7 @@ const LimitBar = ({ used, max, label }) => {
   );
 };
 
-// ── Initial mock admin data ──
-const INITIAL_ADMINS = [
-  { id: 1,  adminName: "Arjun Mehta",     company: "Nexus Corp",        email: "arjun@nexuscorp.in",      phone: "+91 98101 10001", status: "Active",   userUsed: 142, userMax: 200, dataUsed: 18400, dataMax: 20000, plan: "Enterprise", createdDate: "2024-08-15", date: "2024-08-15", renewal: "2026-08-15" },
-  { id: 2,  adminName: "Priya Sharma",    company: "Skyline Solutions",  email: "priya@skyline.io",        phone: "+91 98101 10002", status: "Active",   userUsed: 87,  userMax: 100, dataUsed: 9200,  dataMax: 10000, plan: "Pro",        createdDate: "2024-06-20", date: "2024-06-20", renewal: "2026-06-30" },
-  { id: 3,  adminName: "Rohan Gupta",     company: "BlueWave Tech",     email: "rohan@bluewave.tech",     phone: "+91 98101 10003", status: "Active",   userUsed: 63,  userMax: 80,  dataUsed: 7100,  dataMax: 10000, plan: "Pro",        createdDate: "2024-09-10", date: "2024-09-10", renewal: "2026-05-10" },
-  { id: 4,  adminName: "Sneha Patil",     company: "Orion Retail",      email: "sneha@orionretail.com",   phone: "+91 98101 10004", status: "Active",   userUsed: 29,  userMax: 40,  dataUsed: 3800,  dataMax: 5000,  plan: "Starter",    createdDate: "2025-01-05", date: "2025-01-05", renewal: "2026-07-22" },
-  { id: 5,  adminName: "Kiran Joshi",     company: "Apex Ventures",     email: "kiran@apexventures.in",   phone: "+91 98101 10005", status: "Active",   userUsed: 211, userMax: 250, dataUsed: 24600, dataMax: 25000, plan: "Enterprise", createdDate: "2024-03-01", date: "2024-03-01", renewal: "2026-09-01" },
-  { id: 6,  adminName: "Divya Rao",       company: "Nova Finance",      email: "divya@novafinance.com",   phone: "+91 98101 10006", status: "Active",   userUsed: 55,  userMax: 100, dataUsed: 4200,  dataMax: 10000, plan: "Pro",        createdDate: "2024-11-18", date: "2024-11-18", renewal: "2026-05-28" },
-  { id: 7,  adminName: "Amit Verma",      company: "Vortex Logistics",  email: "amit@vortexlog.com",      phone: "+91 98101 10007", status: "Inactive", userUsed: 18,  userMax: 40,  dataUsed: 1200,  dataMax: 5000,  plan: "Starter",    createdDate: "2025-02-14", date: "2025-02-14", renewal: "2026-06-14" },
-  { id: 8,  adminName: "Neha Kulkarni",   company: "Pulse Media",       email: "neha@pulsemedia.in",      phone: "+91 98101 10008", status: "Active",   userUsed: 74,  userMax: 100, dataUsed: 8900,  dataMax: 10000, plan: "Pro",        createdDate: "2024-07-22", date: "2024-07-22", renewal: "2026-10-05" },
-  { id: 9,  adminName: "Vikram Singh",    company: "TechNova Labs",     email: "vikram@technova.io",      phone: "+91 98101 10009", status: "Inactive", userUsed: 5,   userMax: 40,  dataUsed: 420,   dataMax: 5000,  plan: "Starter",    createdDate: "2025-03-28", date: "2025-03-28", renewal: "2026-09-28" },
-  { id: 10, adminName: "Meera Iyer",      company: "CloudSync AI",      email: "meera@cloudsync.ai",      phone: "+91 98101 10010", status: "Active",   userUsed: 196, userMax: 200, dataUsed: 19800, dataMax: 20000, plan: "Enterprise", createdDate: "2024-04-11", date: "2024-04-11", renewal: "2026-04-11" },
-  { id: 11, adminName: "Rahul Deshmukh",  company: "Zenith Infra",      email: "rahul@zenithinfra.com",   phone: "+91 98101 10011", status: "Inactive", userUsed: 12,  userMax: 80,  dataUsed: 980,   dataMax: 10000, plan: "Pro",        createdDate: "2025-01-30", date: "2025-01-30", renewal: "2026-07-30" },
-  { id: 12, adminName: "Ananya Kapoor",   company: "FreshCart Online",  email: "ananya@freshcart.in",     phone: "+91 98101 10012", status: "Active",   userUsed: 38,  userMax: 40,  dataUsed: 4750,  dataMax: 5000,  plan: "Starter",    createdDate: "2024-12-02", date: "2024-12-02", renewal: "2026-12-02" },
-];
+// ── Initial mock admin data removed, fetching from API ──
 
 const adminCols = [
   { key: "adminName",   label: "Admin Name" },
@@ -85,9 +72,10 @@ const adminCols = [
 
 export default function Admins() {
   // ── Live admin data (stateful) ──
-  const [admins, setAdmins] = useState(INITIAL_ADMINS);
+  const [admins, setAdmins] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const [nextId, setNextId] = useState(INITIAL_ADMINS.length + 1);
 
   // ── Selected row states ──
   const [selectedAdmin, setSelectedAdmin] = useState(null);
@@ -105,7 +93,7 @@ export default function Admins() {
 
   // ── Create form state ──
   const [createForm, setCreateForm] = useState({
-    adminName: "", company: "", email: "", phone: "",
+    adminName: "", company: "", email: "", phone: "", password: "",
     plan: "Starter", userMax: "40", dataMax: "5000", renewal: "",
   });
   const handleCreateField = (field) => (e) =>
@@ -124,18 +112,59 @@ export default function Admins() {
     openModal("admin-edit");
   };
 
-  // ── Action handlers ──
-  const handleToggleStatus = () => {
-    if (!selectedAdmin) return;
-    if (selectedAdmin.status === "Active" && !deactivateReason.trim()) return;
-    const newStatus = selectedAdmin.status === "Active" ? "Inactive" : "Active";
-    setAdmins((prev) => prev.map((a) => a.id === selectedAdmin.id ? { ...a, status: newStatus, deactivateReason: newStatus === "Inactive" ? deactivateReason : "" } : a));
-    setSelectedAdmin((prev) => ({ ...prev, status: newStatus }));
-    setDeactivateReason("");
-    closeModal("admin-toggle");
+  // ── Fetch Data ──
+  const fetchAdmins = async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.get('/superadmin/admins');
+      const mappedAdmins = res.data.data.admins.map(admin => ({
+        id: admin._id,
+        adminName: admin.name,
+        company: admin.company?.name || "-",
+        email: admin.email,
+        phone: admin.phone,
+        status: admin.isActive ? "Active" : "Inactive",
+        plan: admin.planStatus || "TRIAL",
+        userUsed: 0, // Mocked for now, need user count endpoint
+        userMax: admin.userLimit,
+        dataUsed: 0, // Mocked for now
+        dataMax: admin.clientLimit,
+        createdDate: new Date(admin.createdAt).toISOString().split('T')[0],
+        date: new Date(admin.createdAt).toISOString().split('T')[0],
+        renewal: "—" // Mocked, would come from planExpiresAt
+      }));
+      setAdmins(mappedAdmins);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Failed to fetch admins');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  useEffect(() => {
+    fetchAdmins();
+  }, []);
 
+  // ── Action handlers ──
+  const handleToggleStatus = async () => {
+    if (!selectedAdmin) return;
+    if (selectedAdmin.status === "Active" && !deactivateReason.trim()) return;
+    
+    const newStatus = selectedAdmin.status === "Active" ? false : true;
+    
+    try {
+      await apiClient.patch(`/superadmin/admins/${selectedAdmin.id}/status`, { isActive: newStatus });
+      await fetchAdmins();
+      setSelectedAdmin((prev) => ({ ...prev, status: newStatus ? "Active" : "Inactive" }));
+      setDeactivateReason("");
+      closeModal("admin-toggle");
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to toggle status");
+    }
+  };
 
   const handleSaveEdit = () => {
     if (!selectedAdmin) return;
@@ -150,21 +179,26 @@ export default function Admins() {
     closeModal("admin-edit");
   };
 
-  const handleCreateAdmin = () => {
-    const newAdmin = {
-      id: nextId,
-      adminName: createForm.adminName, company: createForm.company,
-      email: createForm.email, phone: createForm.phone,
-      status: "Active", plan: createForm.plan,
-      userUsed: 0, userMax: Number(createForm.userMax) || 40,
-      dataUsed: 0, dataMax: Number(createForm.dataMax) || 5000,
-      createdDate: new Date().toISOString().split("T")[0],
-      date: new Date().toISOString().split("T")[0],
-      renewal: createForm.renewal || "—",
-    };
-    setAdmins((prev) => [newAdmin, ...prev]);
-    setNextId((n) => n + 1);
-    closeModal("admin-create");
+  const handleCreateAdmin = async () => {
+    try {
+      const payload = {
+        name: createForm.adminName,
+        email: createForm.email,
+        phone: createForm.phone,
+        password: createForm.password || "Graphura@123", // Fallback password
+        companyName: createForm.company,
+        userLimit: Number(createForm.userMax) || 40,
+        clientLimit: Number(createForm.dataMax) || 5000,
+      };
+      
+      await apiClient.post('/superadmin/admins', payload);
+      await fetchAdmins();
+      closeModal("admin-create");
+      setCreateForm({ adminName: "", company: "", email: "", phone: "", password: "", plan: "Starter", userMax: "40", dataMax: "5000", renewal: "" });
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to create admin");
+    }
   };
 
   // ── KPI calculations ──
@@ -205,7 +239,7 @@ export default function Admins() {
             </h2>
             <button
               onClick={() => {
-                setCreateForm({ adminName: "", company: "", email: "", phone: "", plan: "Starter", userMax: "40", dataMax: "5000", renewal: "" });
+                setCreateForm({ adminName: "", company: "", email: "", phone: "", password: "", plan: "Starter", userMax: "40", dataMax: "5000", renewal: "" });
                 openModal("admin-create");
               }}
               className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-white font-bold text-sm shadow-lg bg-[#2a465a] hover:bg-gradient-to-r hover:from-[#1e3a52] hover:to-[#2b5a7a] hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-200 shiny-sweep"
@@ -214,23 +248,34 @@ export default function Admins() {
               Create Admin
             </button>
           </div>
-          <DataTable
-            columns={adminCols}
-            rows={admins}
-            size={12}
-            pageSize={5}
-            date={true}
-            filterSize="xl"
-            filters={[
-              { title: "Status", type: "toggle", key: "status", options: ["Active", "Inactive"] },
-              { title: "Plan",   type: "toggle", key: "plan",   options: ["Starter", "Pro", "Enterprise"] },
-            ]}
-            actions={[
-              { icon: <Eye size={15} />,      tooltip: "View",       variant: "ghost",   onClick: (row) => { navigate("/super-admin/departments", { state: { admin: row } }); } },
-              { icon: <Pencil size={15} />,    tooltip: "Edit",       variant: "primary", onClick: (row) => openEditModal(row) },
-              { icon: <Power size={15} />,     tooltip: "Toggle Status", variant: "ghost", onClick: (row) => { setSelectedAdmin(row); setDeactivateReason(""); openModal("admin-toggle"); } },
-            ]}
-          />
+          
+          {loading ? (
+            <div className="flex justify-center items-center py-12 text-slate-500 font-medium">
+              Loading admins...
+            </div>
+          ) : error ? (
+            <div className="flex justify-center items-center py-12 text-rose-500 font-medium">
+              {error}
+            </div>
+          ) : (
+            <DataTable
+              columns={adminCols}
+              rows={admins}
+              size={12}
+              pageSize={5}
+              date={true}
+              filterSize="xl"
+              filters={[
+                { title: "Status", type: "toggle", key: "status", options: ["Active", "Inactive"] },
+                { title: "Plan",   type: "toggle", key: "plan",   options: ["Starter", "Pro", "Enterprise"] },
+              ]}
+              actions={[
+                { icon: <Eye size={15} />,      tooltip: "View",       variant: "ghost",   onClick: (row) => { navigate("/super-admin/departments", { state: { admin: row } }); } },
+                { icon: <Pencil size={15} />,    tooltip: "Edit",       variant: "primary", onClick: (row) => openEditModal(row) },
+                { icon: <Power size={15} />,     tooltip: "Toggle Status", variant: "ghost", onClick: (row) => { setSelectedAdmin(row); setDeactivateReason(""); openModal("admin-toggle"); } },
+              ]}
+            />
+          )}
         </div>
       </Grid>
 
@@ -353,8 +398,9 @@ export default function Admins() {
           <Grid cols={12} gap={3}>
             <DataField label="Admin Name" id="create-adminName" size={6} value={createForm.adminName} onChange={handleCreateField("adminName")} placeholder="Full name" />
             <DataField label="Company Name" id="create-company" size={6} value={createForm.company} onChange={handleCreateField("company")} placeholder="Company name" />
-            <DataField label="Email" id="create-email" type="email" size={6} value={createForm.email} onChange={handleCreateField("email")} placeholder="admin@company.com" />
-            <DataField label="Phone" id="create-phone" type="tel" size={6} value={createForm.phone} onChange={handleCreateField("phone")} placeholder="+91 98101 XXXXX" />
+            <DataField label="Email" id="create-email" type="email" size={4} value={createForm.email} onChange={handleCreateField("email")} placeholder="admin@company.com" />
+            <DataField label="Phone" id="create-phone" type="tel" size={4} value={createForm.phone} onChange={handleCreateField("phone")} placeholder="98101XXXXX" />
+            <DataField label="Password" id="create-password" type="password" size={4} value={createForm.password} onChange={handleCreateField("password")} placeholder="Password" />
             <SelectField label="Plan" id="create-plan" size={6} value={createForm.plan} onChange={handleCreateField("plan")}>
               <Option value="Starter" label="Starter" />
               <Option value="Pro" label="Pro" />

@@ -4,10 +4,13 @@ const ApiResponse = require('../utils/apiResponse');
 const { 
   SuperAdmin, 
   SuperAdminLoginLog, 
-  AdminLoginLog 
+  AdminLoginLog,
+  Admin,
+  AuditLog
 } = require('../models/index');
 const { 
   comparePassword, 
+  hashPassword,
   generateAccessToken, 
   generateRefreshToken 
 } = require('../services/auth.service');
@@ -101,5 +104,132 @@ exports.getAdminLoginLogs = catchAsync(async (req, res, next) => {
 
   res.status(200).json(
     new ApiResponse(200, { logs }, 'Admin login logs retrieved successfully')
+  );
+});
+
+/**
+ * GET ALL ADMINS (PAGINATED)
+ */
+exports.getAllAdmins = catchAsync(async (req, res, next) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const skip = (page - 1) * limit;
+
+  // Find all active admins (excluding soft deleted)
+  const query = { isDeleted: false };
+  
+  const admins = await Admin.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .select('_id name email phone company userLimit clientLimit planStatus isActive createdAt');
+
+  const total = await Admin.countDocuments(query);
+  const pages = Math.ceil(total / limit);
+
+  res.status(200).json(
+    new ApiResponse(200, {
+      admins,
+      pagination: { total, page, pages }
+    }, 'Admins retrieved successfully')
+  );
+});
+
+/**
+ * CREATE NEW ADMIN (TENANT)
+ */
+exports.createAdmin = catchAsync(async (req, res, next) => {
+  const { name, email, phone, password, companyName, userLimit, clientLimit } = req.body;
+
+  if (!name || !email || !password) {
+    return next(new AppError('Name, email, and password are required', 400));
+  }
+
+  // Check unique email
+  const existingAdmin = await Admin.findOne({ email: email.toLowerCase() });
+  if (existingAdmin) {
+    return next(new AppError('Email is already registered', 400));
+  }
+
+  const hashedPassword = await hashPassword(password);
+
+  const newAdmin = await Admin.create({
+    name,
+    email,
+    phone,
+    password: hashedPassword,
+    company: {
+      name: companyName || ''
+    },
+    userLimit: userLimit || 40,
+    clientLimit: clientLimit || 5000,
+    superAdmin: req.user._id,
+    isActive: true
+  });
+
+  // Audit Log
+  await AuditLog.create({
+    performedBy: req.user._id,
+    performerType: 'SUPER_ADMIN',
+    action: 'ADMIN_CREATED',
+    targetModel: 'Admin',
+    targetId: newAdmin._id,
+    ipAddress: getClientIp(req),
+    note: `Super Admin created tenant ${name}`
+  });
+
+  res.status(201).json(
+    new ApiResponse(201, { admin: newAdmin }, 'Admin created successfully')
+  );
+});
+
+/**
+ * TOGGLE ADMIN STATUS
+ */
+exports.toggleAdminStatus = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { isActive } = req.body;
+
+  if (typeof isActive !== 'boolean') {
+    return next(new AppError('isActive boolean is required', 400));
+  }
+
+  const admin = await Admin.findOne({ _id: id, isDeleted: false });
+  if (!admin) {
+    return next(new AppError('Admin not found', 404));
+  }
+
+  admin.isActive = isActive;
+  await admin.save();
+
+  // Audit Log
+  await AuditLog.create({
+    performedBy: req.user._id,
+    performerType: 'SUPER_ADMIN',
+    action: isActive ? 'ADMIN_UPDATED' : 'ADMIN_DEACTIVATED',
+    targetModel: 'Admin',
+    targetId: admin._id,
+    ipAddress: getClientIp(req),
+    note: `Super Admin ${isActive ? 'activated' : 'deactivated'} admin ${admin.name}`
+  });
+
+  res.status(200).json(
+    new ApiResponse(200, { admin }, `Admin ${isActive ? 'activated' : 'deactivated'} successfully`)
+  );
+});
+
+/**
+ * GET SINGLE ADMIN
+ */
+exports.getAdminById = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  const admin = await Admin.findOne({ _id: id, isDeleted: false });
+  if (!admin) {
+    return next(new AppError('Admin not found', 404));
+  }
+
+  res.status(200).json(
+    new ApiResponse(200, { admin }, 'Admin retrieved successfully')
   );
 });

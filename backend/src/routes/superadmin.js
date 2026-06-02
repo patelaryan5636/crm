@@ -1,14 +1,21 @@
 const express = require('express');
 const superAdminController = require('../controllers/superadmin.controller');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireSuperAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Public route
 router.post('/login', superAdminController.login);
 
-// Protected route (Super Admin only)
-// Note: You'll need to update the requireAuth middleware to handle SUPER_ADMIN
-router.get('/admin-login-logs', requireAuth, superAdminController.getAdminLoginLogs);
+// Protected routes (Super Admin only)
+router.use(requireSuperAdmin);
+
+router.get('/admin-login-logs', superAdminController.getAdminLoginLogs);
+
+// Admin Management
+router.get('/admins', superAdminController.getAllAdmins);
+router.post('/admins', superAdminController.createAdmin);
+router.get('/admins/:id', superAdminController.getAdminById);
+router.patch('/admins/:id/status', superAdminController.toggleAdminStatus);
 
 module.exports = router;

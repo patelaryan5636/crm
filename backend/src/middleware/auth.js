@@ -85,3 +85,16 @@ exports.requireUser = catchAsync(async (req, res, next) => {
     next();
   });
 });
+
+/**
+ * Middleware: require a valid SuperAdmin JWT specifically
+ */
+exports.requireSuperAdmin = catchAsync(async (req, res, next) => {
+  await exports.requireAuth(req, res, (err) => {
+    if (err) return next(err);
+    if (req.userType !== 'SUPER_ADMIN') {
+      return next(new AppError('This resource requires a Super Admin account.', 403));
+    }
+    next();
+  });
+});

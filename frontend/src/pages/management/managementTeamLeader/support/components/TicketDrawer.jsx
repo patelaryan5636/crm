@@ -18,7 +18,6 @@ export default function TicketDrawer({ ticket }) {
         {ticket && (
           <div className="space-y-5">
             <ModalGrid>
-              <ModalData label="Ticket ID" value={ticket.id || ticket.source} />
               <ModalData label="Issue" value={ticket.title || ticket.item} />
               <ModalData label="Raised By" value={ticket.raisedBy || ticket.owner} />
               <ModalData label="Ticket Type" value={ticket.ticketType || "-"} />
@@ -58,7 +57,6 @@ export default function TicketDrawer({ ticket }) {
 
       <Modal id="mtl-support-resolve-ticket" title="Resolve Team Issue" size="md">
         <Grid cols={12} gap={3}>
-          <DataField label="Ticket" size={12} value={ticket?.id || ""} readOnly />
           <DataField label="Issue" size={12} value={ticket?.title || ""} readOnly />
           <DataField label="Resolution Notes" type="textarea" size={12} rows={4} placeholder="What was resolved and what action was taken?" />
         </Grid>

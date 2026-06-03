@@ -3,7 +3,6 @@ import { DataTable, openModal } from "../../../../../components/shared/Common_Co
 import { tickets } from "../supportData";
 
 const columns = [
-  { key: "id", label: "Ticket ID" },
   { key: "title", label: "Issue Title" },
   { key: "raisedBy", label: "Raised By" },
   { key: "project", label: "Project" },

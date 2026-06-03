@@ -239,7 +239,6 @@ export default function ManagementTeamLeaderDashboard() {
         <DataTable
           title="Support Tickets & Issues"
           columns={[
-            { key: "id", label: "Ticket ID" },
             { key: "issue", label: "Issue Description" },
             { key: "assignee", label: "Assignee" },
             { key: "priority", label: "Priority" },
@@ -297,7 +296,7 @@ export default function ManagementTeamLeaderDashboard() {
             <ModalProfile
               name={selectedTicket.issue}
               subtitle={`Assigned to: ${selectedTicket.assignee}`}
-              meta={`Ticket ID: ${selectedTicket.id} · Priority: ${selectedTicket.priority}`}
+              meta={`Priority: ${selectedTicket.priority}`}
             />
             <ModalGrid title="Details" cols={2}>
               <ModalData label="Status" value={selectedTicket.status} />

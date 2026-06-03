@@ -21,7 +21,6 @@ import {
 import { Ticket, Clock, MessageSquare as MsgIcon, CheckCircle2 as CheckIcon } from "lucide-react";
 
 const ticketCols = [
-  { key: "id",          label: "Ticket ID"    },
   { key: "title",       label: "Subject"      },
   { key: "priority",    label: "Priority"     },
   { key: "status",      label: "Status"       },
@@ -253,7 +252,6 @@ function SETicketDetail({ selected, onClose }) {
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2.5">
         {[
-          { label: 'Ticket ID', value: selected.id },
           { label: 'Raised By', value: 'Sales Executive' },
           { label: 'Priority',  value: selected.priority },
           { label: 'Status',    value: selected.status },

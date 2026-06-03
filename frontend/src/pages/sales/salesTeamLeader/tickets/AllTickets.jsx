@@ -20,7 +20,6 @@ const kpiAccents = ['#3b82f6', '#f59e0b', '#8b5cf6', '#22c55e'];
 const kpiLabels  = ['Total Tickets', 'In Progress', 'Replied', 'Resolved'];
 
 const teamCols = [
-  { key: 'id',          label: 'Ticket ID'    },
   { key: 'title',       label: 'Title'        },
   { key: 'raisedBy',    label: 'Raised By'    },
   { key: 'role',        label: 'Role'         },
@@ -30,7 +29,6 @@ const teamCols = [
 ];
 
 const myCols = [
-  { key: 'id',          label: 'Ticket ID'  },
   { key: 'title',       label: 'Title'      },
   { key: 'priority',    label: 'Priority'   },
   { key: 'status',      label: 'Status'     },
@@ -266,7 +264,7 @@ function ReplyTicketContent({ selected, onSendMsg, onClose, loading, currentUser
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2.5">
-        {[['Ticket ID', selected.id], ['Raised By', selected.raisedBy],
+        {[['Raised By', selected.raisedBy],
           ['Priority', selected.priority], ['Status', selected.status]].map(([label, value]) => (
           <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
@@ -310,7 +308,7 @@ function ReadOnlyTicketContent({ selected, onClose, currentUser }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2.5">
-        {[['Ticket ID', selected.id], ['Raised By', currentUser],
+        {[['Raised By', currentUser],
           ['Priority', selected.priority], ['Status', selected.status]].map(([label, value]) => (
           <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>

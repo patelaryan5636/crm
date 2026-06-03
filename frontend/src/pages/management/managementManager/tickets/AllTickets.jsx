@@ -17,7 +17,6 @@ const kpiAccents = ["#3b82f6", "#f59e0b", "#8b5cf6", "#22c55e"];
 
 // Team Tickets columns — TLs/Employees raised to MM
 const ticketCols = [
-  { key: "id",          label: "Ticket ID"    },
   { key: "title",       label: "Title"        },
   { key: "raisedBy",    label: "Raised By"    },
   { key: "role",        label: "Role"         },
@@ -28,7 +27,6 @@ const ticketCols = [
 
 // My Tickets columns — MM → Admin
 const myTicketCols = [
-  { key: "id",          label: "Ticket ID"    },
   { key: "title",       label: "Title"        },
   { key: "priority",    label: "Priority"     },
   { key: "status",      label: "Status"       },
@@ -430,7 +428,6 @@ function TicketDetailContent({ selected, onSendMsg, onClose }) {
       {/* ── Ticket meta tiles ── */}
       <div className="grid grid-cols-2 gap-2.5">
         {[
-          { label: "Ticket ID",  value: selected.id },
           { label: "Raised By",  value: selected.raisedBy },
           { label: "Priority",   value: selected.priority },
           { label: "Status",     value: selected.status },

@@ -60,7 +60,7 @@ const getDepartmentByRole = (role) => {
 // ─────────────────────────────────────────────────────────────
 const determineInitialAssignee = async (raisedBy, admin) => {
   try {
-    const user = await User.findById(raisedBy).select('role department admin');
+    const user = await User.findById(raisedBy).select('role department admin manager');
     if (!user) throw new Error('User not found');
 
     const department = getDepartmentByRole(user.role);
@@ -77,6 +77,19 @@ const determineInitialAssignee = async (raisedBy, admin) => {
 
     // First level in escalation chain
     const targetRole = escalationChain[0];
+
+    // Check if the user's manager matches the target role
+    if (user.manager) {
+      const managerUser = await User.findOne({
+        _id: user.manager,
+        role: targetRole,
+        isActive: true,
+        isDeleted: false,
+      }).select('_id name email');
+      if (managerUser) {
+        return managerUser._id;
+      }
+    }
 
     // Find user with that role in same department & admin
     const assignee = await User.findOne({
@@ -99,7 +112,7 @@ const determineInitialAssignee = async (raisedBy, admin) => {
 // ─────────────────────────────────────────────────────────────
 const escalateTicket = async (ticket, escalatedByUser, admin) => {
   try {
-    const assignee = await User.findById(ticket.assignedTo).select('role department');
+    const assignee = await User.findById(ticket.assignedTo).select('role department manager');
     if (!assignee) throw new Error('Assignee not found');
 
     const department = getDepartmentByRole(assignee.role);
@@ -116,13 +129,27 @@ const escalateTicket = async (ticket, escalatedByUser, admin) => {
       throw new Error('No next level in escalation chain');
     }
 
-    // Find next assignee
-    const nextAssignee = await User.findOne({
-      role: nextRole,
-      admin: admin._id,
-      isActive: true,
-      isDeleted: false,
-    }).select('_id name email');
+    let nextAssignee = null;
+
+    // Check if the assignee's manager matches nextRole
+    if (assignee.manager) {
+      nextAssignee = await User.findOne({
+        _id: assignee.manager,
+        role: nextRole,
+        isActive: true,
+        isDeleted: false,
+      }).select('_id name email');
+    }
+
+    // Find next assignee fallback
+    if (!nextAssignee) {
+      nextAssignee = await User.findOne({
+        role: nextRole,
+        admin: admin._id,
+        isActive: true,
+        isDeleted: false,
+      }).select('_id name email');
+    }
 
     if (!nextAssignee) {
       throw new Error(`No user found with role ${nextRole} to escalate to`);

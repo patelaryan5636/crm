@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Headphones, AlertCircle, Clock, CheckCircle, TrendingUp, TrendingDown,
   Eye, Pencil, Plus, FileDown, Shield, Zap, AlertTriangle,
@@ -8,38 +8,50 @@ import {
   GAreaChart, GBarChart, Button,
   PanelModal as Modal, openModal, closeModal,
 } from "../../components/shared/Common_Components";
+import { getMyTickets } from "../../services/ticketService";
 
-// ── Mock Data ──────────────────────────────────────────────────────────────
+// ── Map Backend Ticket to Admin Shape ───────────────────────────────────────
+const mapBackendTicketToAdminShape = (t) => {
+  const time = t.updatedAt
+    ? new Date(t.updatedAt).toLocaleString("en-US", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
 
-const initialTickets = [
-  { id: "SUP-2104", user: "Riya Sharma", role: "Sales Executive", department: "Sales", category: "Lead Data Issue", issue: "Leads are not loading after the morning sync for west region accounts.", priority: "High", status: "Open", time: "19 Apr 2026, 10:15 AM", assignedTo: "Tech Team", sla: "4h left" },
-  { id: "SUP-2098", user: "Vikram Nair", role: "Finance Manager", department: "Finance", category: "Payment Issue", issue: "Invoice export is duplicating tax rows for April statements.", priority: "Medium", status: "In Progress", time: "19 Apr 2026, 09:05 AM", assignedTo: "Developer", sla: "12h left" },
-  { id: "SUP-2089", user: "Ananya Patel", role: "Management Lead", department: "Mgmt", category: "Account/Login Issue", issue: "Team leaders are getting signed out after role switch from the approvals panel.", priority: "High", status: "Resolved", time: "18 Apr 2026, 06:40 PM", assignedTo: "Super Admin", sla: "Resolved" },
-  { id: "SUP-2085", user: "Priya Mehta", role: "Sales Manager", department: "Sales", category: "CRM Bug", issue: "Dashboard charts not rendering on mobile browsers.", priority: "Low", status: "Open", time: "17 Apr 2026, 03:20 PM", assignedTo: "Frontend Team", sla: "24h left" },
-  { id: "SUP-2080", user: "Karan Bhatia", role: "Finance Analyst", department: "Finance", category: "Report Issue", issue: "Q1 finance report shows incorrect totals after recent update.", priority: "High", status: "Escalated", time: "16 Apr 2026, 11:45 AM", assignedTo: "Backend Team", sla: "Breached" },
-];
+  const priorityMap = {
+    LOW: "Low",
+    NORMAL: "Medium",
+    MEDIUM: "Medium",
+    HIGH: "High",
+    URGENT: "High"
+  };
 
-const ticketTrendData = [
-  { name: "Jan", open: 8, resolved: 6, escalated: 1 },
-  { name: "Feb", open: 12, resolved: 10, escalated: 2 },
-  { name: "Mar", open: 9, resolved: 8, escalated: 1 },
-  { name: "Apr", open: 15, resolved: 11, escalated: 3 },
-  { name: "May", open: 10, resolved: 9, escalated: 1 },
-  { name: "Jun", open: 7, resolved: 7, escalated: 0 },
-];
+  const statusMap = {
+    OPEN: "Open",
+    IN_PROGRESS: "In Progress",
+    RESOLVED: "Resolved",
+    CLOSED: "Resolved",
+    ESCALATED: "Escalated"
+  };
 
-const deptIssueData = [
-  { name: "Sales", tickets: 14, resolved: 11 },
-  { name: "Finance", tickets: 8, resolved: 5 },
-  { name: "Mgmt", tickets: 5, resolved: 4 },
-  { name: "HR", tickets: 3, resolved: 3 },
-];
-
-const operationalAlerts = [
-  { Icon: AlertCircle, text: "2 SLA breaches detected in last 24 hours", color: "#ef4444" },
-  { Icon: TrendingDown, text: "Avg resolution time increased by 18%", color: "#f59e0b" },
-  { Icon: TrendingUp, text: "Ticket volume down 12% vs last month", color: "#22c55e" },
-];
+  return {
+    id: t._id,
+    user: t.raisedBy?.name || "Unknown",
+    role: t.raisedBy?.role || "",
+    department: t.raisedBy?.department || "N/A",
+    category: t.refType || "System",
+    issue: t.message || "",
+    priority: priorityMap[t.priority] || "Medium",
+    status: statusMap[t.status] || "Open",
+    time,
+    assignedTo: t.assignedTo?.name || "Unassigned",
+    sla: t.isEscalated ? "Escalated" : (t.status === "RESOLVED" || t.status === "CLOSED" ? "Resolved" : "Active"),
+  };
+};
 
 const columns = [
   { key: "id", label: "Ticket ID" },
@@ -58,16 +70,88 @@ const defaultForm = { user: "", role: "Sales Executive", department: "Sales", ca
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function Support() {
-  const [tickets, setTickets] = useState(initialTickets);
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [form, setForm] = useState(defaultForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const fetchTickets = async () => {
+    try {
+      setLoading(true);
+      const res = await getMyTickets({ limit: 100 });
+      const mapped = (res.tickets || []).map(mapBackendTicketToAdminShape);
+      setTickets(mapped);
+    } catch (err) {
+      console.error("Failed to fetch tickets:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
   // KPIs
-  const openCount = tickets.filter(t => t.status === "Open").length;
+  const openCount = tickets.filter(t => t.status === "Open" || t.status === "In Progress" || t.status === "Escalated").length;
   const highPriority = tickets.filter(t => t.priority === "High").length;
-  const resolvedCount = tickets.filter(t => t.status === "Resolved").length;
-  const breachedCount = tickets.filter(t => t.sla === "Breached").length;
+  const resolvedCount = tickets.filter(t => t.status === "Resolved" || t.status === "Closed").length;
+  const breachedCount = tickets.filter(t => t.sla === "Breached" || t.sla === "Escalated").length;
+
+  // Dynamic ticketTrendData
+  const ticketTrendData = (() => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const currentMonthIdx = new Date().getMonth();
+    const trend = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(currentMonthIdx - i);
+      const monthName = months[d.getMonth()];
+      trend.push({ name: monthName, open: 0, resolved: 0, escalated: 0 });
+    }
+
+    tickets.forEach(t => {
+      if (!t.time) return;
+      const date = new Date(t.time);
+      if (isNaN(date.getTime())) return;
+      const monthName = months[date.getMonth()];
+      const monthBucket = trend.find(item => item.name === monthName);
+      if (monthBucket) {
+        if (t.status === "Resolved") {
+          monthBucket.resolved++;
+        } else if (t.status === "Escalated") {
+          monthBucket.escalated++;
+        } else {
+          monthBucket.open++;
+        }
+      }
+    });
+    return trend;
+  })();
+
+  // Dynamic deptIssueData
+  const deptIssueData = (() => {
+    const depts = {};
+    tickets.forEach(t => {
+      const dept = t.department || "Other";
+      if (!depts[dept]) {
+        depts[dept] = { name: dept, tickets: 0, resolved: 0 };
+      }
+      depts[dept].tickets++;
+      if (t.status === "Resolved") {
+        depts[dept].resolved++;
+      }
+    });
+    return Object.values(depts);
+  })();
+
+  // Dynamic operationalAlerts
+  const operationalAlerts = [
+    { Icon: AlertCircle, text: `${breachedCount} SLA breaches/escalations active`, color: "#ef4444" },
+    { Icon: TrendingDown, text: "Avg resolution SLA tracking is operational", color: "#f59e0b" },
+    { Icon: TrendingUp, text: `Ticket volume: ${tickets.length} total tickets`, color: "#22c55e" },
+  ];
 
   const handleFormChange = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 

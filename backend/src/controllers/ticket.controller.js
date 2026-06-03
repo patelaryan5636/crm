@@ -10,7 +10,7 @@ const mongoose = require('mongoose');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const ApiResponse = require('../utils/apiResponse');
-const { Ticket, User, AuditLog, Notification } = require('../models');
+const { Ticket, User, AuditLog, Notification, Team } = require('../models');
 const ticketService = require('../services/ticket.service');
 const notificationService = require('../services/notification.service');
 
@@ -138,8 +138,77 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
 
   if (user?.role && !['ADMIN'].includes(user.role)) {
     if (view === 'assigned') {
-      // Team Tickets: only tickets assigned to this user
-      filter.assignedTo = userId;
+      if (['SALES_MANAGER', 'FINANCE_MANAGER', 'MANAGEMENT_MANAGER'].includes(user.role)) {
+        // 1. Direct subordinates of the Manager
+        const directSubordinates = await User.find({
+          admin: adminId,
+          manager: userId,
+          isDeleted: false,
+        }).select('_id');
+        const directSubordinateIds = directSubordinates.map(u => u._id);
+
+        // 2. Indirect subordinates (e.g. Executives managed by Team Leaders under the Manager)
+        let indirectSubordinateIds = [];
+        if (directSubordinateIds.length > 0) {
+          const indirectSubordinates = await User.find({
+            admin: adminId,
+            manager: { $in: directSubordinateIds },
+            isDeleted: false,
+          }).select('_id');
+          indirectSubordinateIds = indirectSubordinates.map(u => u._id);
+        }
+
+        // 3. Teams led by the manager or any subordinate
+        const leadIds = [userId, ...directSubordinateIds, ...indirectSubordinateIds];
+        const departmentTeams = await Team.find({
+          admin: adminId,
+          leader: { $in: leadIds },
+          isActive: true,
+          isDeleted: false
+        });
+        const teamMemberIds = departmentTeams.flatMap(t => (t.members || []).map(m => m.user));
+
+        // Combine all subordinate/team member IDs
+        const allUnderIds = Array.from(new Set([
+          ...directSubordinateIds.map(id => id.toString()),
+          ...indirectSubordinateIds.map(id => id.toString()),
+          ...teamMemberIds.map(id => id && id.toString())
+        ].filter(Boolean))).map(id => new mongoose.Types.ObjectId(id));
+
+        filter.$or = [
+          { assignedTo: userId },
+          { assignedTo: { $in: allUnderIds } },
+          { raisedBy: { $in: allUnderIds } }
+        ];
+        filter.raisedBy = { $ne: userId };
+      } else if (['SALES_TL', 'MANAGEMENT_TL'].includes(user.role)) {
+        // Team Leader views tickets of team members (from Team model or manager field)
+        const teams = await Team.find({
+          admin: adminId,
+          leader: userId,
+          isActive: true,
+          isDeleted: false
+        });
+        const teamMemberIdsFromTeams = teams.flatMap(t => (t.members || []).map(m => m.user));
+
+        const teamUsers = await User.find({
+          admin: adminId,
+          manager: userId,
+          isDeleted: false,
+        }).select('_id');
+        const teamMemberIdsFromManager = teamUsers.map(u => u._id);
+
+        const allTeamMemberIds = Array.from(new Set([
+          ...teamMemberIdsFromTeams.map(id => id && id.toString()),
+          ...teamMemberIdsFromManager.map(id => id.toString())
+        ].filter(Boolean))).map(id => new mongoose.Types.ObjectId(id));
+
+        filter.raisedBy = { $in: allTeamMemberIds };
+      } else {
+        // Executive / Employee: only tickets assigned to them
+        filter.assignedTo = userId;
+        filter.raisedBy = { $ne: userId };
+      }
     } else if (view === 'raised') {
       // My Tickets: only tickets raised by this user
       filter.raisedBy = userId;

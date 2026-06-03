@@ -79,7 +79,6 @@ export default function Tickets() {
   }, [tickets, priorityFilter]);
 
   const columns = [
-    { key: "id", label: "Ticket ID" },
     { key: "subject", label: "Subject Line" },
     { key: "customer", label: "Requester" },
     { key: "priority", label: "Priority" },
@@ -187,7 +186,6 @@ export default function Tickets() {
             <div className="relative px-8 py-7 border-b border-slate-100 bg-slate-50/50">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 text-xs font-black text-[#7AAACE] shadow-sm">{selectedTicket.id}</span>
                   <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${priorityColors[selectedTicket.priority]}`}>{selectedTicket.priority}</span>
                 </div>
                 <button onClick={() => setDrawerOpen(false)} className="w-10 h-10 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 hover:rotate-90 transition-all duration-300"><X size={24} /></button>

@@ -54,7 +54,6 @@ const mapBackendTicketToAdminShape = (t) => {
 };
 
 const columns = [
-  { key: "id", label: "Ticket ID" },
   { key: "user", label: "Reported By" },
   { key: "department", label: "Department" },
   { key: "category", label: "Category" },
@@ -300,7 +299,7 @@ export default function Support() {
                 <Headphones size={24} />
               </div>
               <div>
-                <p className="text-lg font-black text-[#2a465a]">{selectedTicket.id}</p>
+                <p className="text-lg font-black text-[#2a465a]">Ticket Details</p>
                 <p className="text-sm font-bold text-slate-500">{selectedTicket.user} • {selectedTicket.role}</p>
               </div>
             </div>

@@ -29,18 +29,14 @@ const signBadge = (v) => {
 };
 const approvalBadge = (v) => {
   const map = { Approved: "bg-emerald-100 text-emerald-700", Pending: "bg-amber-100 text-amber-700", Rejected: "bg-rose-100 text-rose-700" };
-  return <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${map[v] || "bg-slate-100 text-slate-600"}`}>{v || "Pending"}</span>;
+  return <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${map[v] || "bg-slate-100 text-slate-600"}`}>{v || "—"}</span>;
 };
-
-const blankReq = () => ({ _key: Date.now(), title: "", cost: "", description: "" });
 
 export default function WorkOrders() {
   const [wos, setWos] = useState([]);
   const [stats, setStats] = useState({});
   const [selected, setSelected] = useState(null);
   const [editForm, setEditForm] = useState({});
-  const [reqDraft, setReqDraft] = useState(blankReq());
-  const [editingReqKey, setEditingReqKey] = useState(null);
   const [approveComment, setApproveComment] = useState("");
   const [sendEmail, setSendEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -80,14 +76,8 @@ export default function WorkOrders() {
   };
 
   // ── Derived financials from editForm ──────────────────────────────────────
-  const reqs = editForm.requirements || [];
-  const totalCost = reqs.reduce((s, r) => s + (parseFloat(r.cost) || 0), 0);
-  const dv = parseFloat(editForm.discountValue) || 0;
-  const discountAmt = editForm.discountMode === "Percentage"
-    ? Math.round((totalCost * Math.min(dv, 99.99)) / 100)
-    : (editForm.discountMode === "Rupees" || editForm.discountMode === "Flat")
-      ? Math.min(dv, totalCost) : 0;
-  const netPayable = Math.max(0, totalCost - discountAmt);
+  const totalCost = parseFloat(editForm.totalCost) || 0;
+  const netPayable = totalCost;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const ef = (field, val) => setEditForm((p) => ({ ...p, [field]: val }));
@@ -101,29 +91,14 @@ export default function WorkOrders() {
       clientEmail: row.clientEmail || "",
       clientMobile: row.clientMobile || "",
       service: row.service || "",
-      requirements: (row.requirements || []).map((r, i) => ({ ...r, _key: i })),
+      totalCost: row.totalCost || 0,
       terms: row.terms || "",
       deliveryDate: row.deliveryDate ? row.deliveryDate.substring(0, 10) : "",
-      discountMode: row.discountMode || "None",
-      discountValue: row.discountValue || "",
       paymentStatus: row.paymentStatus || "Unpaid",
       signedStatus: row.signedStatus || "Unsigned",
       signedByName: row.signedByName || "",
     });
-    setReqDraft(blankReq());
-    setEditingReqKey(null);
     openModal("wo-edit");
-  };
-
-  const handleAddReq = () => {
-    if (!reqDraft.title.trim() || !reqDraft.cost) return;
-    if (editingReqKey !== null) {
-      ef("requirements", reqs.map((r) => r._key === editingReqKey ? { ...reqDraft, _key: editingReqKey } : r));
-      setEditingReqKey(null);
-    } else {
-      ef("requirements", [...reqs, { ...reqDraft, _key: Date.now() }]);
-    }
-    setReqDraft(blankReq());
   };
 
   const saveEdit = async () => {
@@ -135,11 +110,12 @@ export default function WorkOrders() {
         clientEmail: editForm.clientEmail,
         clientMobile: editForm.clientMobile,
         service: editForm.service,
-        requirements: editForm.requirements.map(({ _key, ...r }) => r),
+        totalCost: Number(editForm.totalCost) || 0,
+        requirements: [],
         terms: editForm.terms,
         deliveryDate: editForm.deliveryDate || null,
-        discountMode: editForm.discountMode,
-        discountValue: editForm.discountValue,
+        discountMode: "None",
+        discountValue: 0,
         paymentStatus: editForm.paymentStatus,
         signedStatus: editForm.signedStatus,
         signedByName: editForm.signedByName,
@@ -287,40 +263,14 @@ export default function WorkOrders() {
               meta={`Mobile: ${selected.clientMobile || "—"} · Sales: ${selected.salesExec || "—"}`}
             />
 
-            {(selected.requirements || []).length > 0 && (
-              <div className="rounded-xl border border-slate-200 overflow-hidden">
-                <div className="grid grid-cols-[1fr_120px] px-4 py-2 bg-slate-800 text-white text-xs font-bold uppercase tracking-wider">
-                  <span>Requirement</span><span className="text-right">Cost</span>
-                </div>
-                {selected.requirements.map((r, i) => (
-                  <div key={i} className={`grid grid-cols-[1fr_120px] px-4 py-3 border-b border-slate-100 last:border-0 ${i % 2 === 0 ? "bg-white" : "bg-slate-50"}`}>
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">{r.title}</p>
-                      {r.description && <p className="text-xs text-slate-400 mt-0.5">{r.description}</p>}
-                    </div>
-                    <p className="text-sm font-black text-slate-800 text-right self-center">{fmt(r.cost)}</p>
-                  </div>
-                ))}
-                <div className="grid grid-cols-[1fr_120px] px-4 py-2 bg-slate-50 border-t border-slate-200">
-                  <span className="text-xs font-bold text-slate-400">Total Cost</span>
-                  <span className="text-sm font-black text-slate-800 text-right">{fmt(selected.totalCost)}</span>
-                </div>
-                {selected.discountAmt > 0 && (
-                  <div className="grid grid-cols-[1fr_120px] px-4 py-2 bg-slate-50 border-t border-slate-100">
-                    <span className="text-xs font-bold text-slate-400">Discount</span>
-                    <span className="text-sm font-black text-rose-500 text-right">- {fmt(selected.discountAmt)}</span>
-                  </div>
-                )}
-                <div className="grid grid-cols-[1fr_120px] px-4 py-3 bg-[#1e293b]">
-                  <span className="text-xs font-black text-white/70 uppercase tracking-widest flex items-center gap-1"><IndianRupee size={11} />Net Payable</span>
-                  <span className="text-sm font-black text-white text-right">{fmt(selected.netPayable)}</span>
-                </div>
-              </div>
-            )}
-
-            <ModalGrid title="Payment & Status" cols={2}>
+            <ModalGrid title="Financials" cols={2}>
+              <ModalData label="Total Cost" value={fmt(selected.totalCost)} />
+              <ModalData label="Net Payable" value={fmt(selected.netPayable)} />
               <ModalData label="Payment Status" value={selected.paymentStatus} />
               <ModalData label="Advance Amount" value={fmt(selected.advanceAmount)} />
+            </ModalGrid>
+
+            <ModalGrid title="Status & Delivery" cols={2}>
               <ModalData label="Signed Status" value={selected.signedStatus} />
               <ModalData label="Signed By" value={selected.signedByName || "—"} />
               <ModalData label="Signed At" value={fmtDate(selected.signedAt)} />
@@ -359,6 +309,7 @@ export default function WorkOrders() {
               <DataField label="Client Email" id="wo-ce" value={editForm.clientEmail || ""} onChange={(e) => ef("clientEmail", e.target.value)} size={12} />
               <DataField label="Mobile" id="wo-cm" value={editForm.clientMobile || ""} onChange={(e) => ef("clientMobile", e.target.value)} size={12} />
               <DataField label="Service" id="wo-svc" value={editForm.service || ""} onChange={(e) => ef("service", e.target.value)} size={12} />
+              <DataField label="Total Amount (₹)" id="wo-tc" type="number" value={editForm.totalCost || ""} onChange={(e) => ef("totalCost", e.target.value)} size={12} />
               <DataField label="Delivery Date" id="wo-dd" type="date" value={editForm.deliveryDate || ""} onChange={(e) => ef("deliveryDate", e.target.value)} size={12} />
               <SelectField label="Payment Status" id="wo-ps" value={editForm.paymentStatus || "Unpaid"} onChange={(e) => ef("paymentStatus", e.target.value)}>
                 <Option value="Unpaid" label="Unpaid" />
@@ -370,48 +321,6 @@ export default function WorkOrders() {
                 <Option value="Signed" label="Signed" />
               </SelectField>
               <DataField label="Signed By" id="wo-sb" value={editForm.signedByName || ""} onChange={(e) => ef("signedByName", e.target.value)} size={12} />
-            </div>
-
-            {/* Requirements */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden">
-              <div className="bg-slate-800 text-white px-4 py-2 text-xs font-bold uppercase tracking-wider">Scope of Work</div>
-              {reqs.map((r, i) => (
-                <div key={r._key} className={`flex items-center gap-3 px-4 py-2 border-b border-slate-100 ${i % 2 === 0 ? "bg-white" : "bg-slate-50"}`}>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{r.title}</p>
-                    {r.description && <p className="text-xs text-slate-400 truncate">{r.description}</p>}
-                  </div>
-                  <span className="text-sm font-black text-slate-700 shrink-0">{fmt(r.cost)}</span>
-                  <button onClick={() => { setReqDraft({ ...r }); setEditingReqKey(r._key); }} className="text-blue-500 hover:text-blue-700 text-xs font-semibold shrink-0">Edit</button>
-                  <button onClick={() => ef("requirements", reqs.filter((x) => x._key !== r._key))} className="text-rose-500 hover:text-rose-700 text-xs font-semibold shrink-0">Del</button>
-                </div>
-              ))}
-              <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-end gap-2">
-                <DataField label="Title" id="req-t" value={reqDraft.title} onChange={(e) => setReqDraft((p) => ({ ...p, title: e.target.value }))} size={12} />
-                <DataField label="Cost (₹)" id="req-c" type="number" value={reqDraft.cost} onChange={(e) => setReqDraft((p) => ({ ...p, cost: e.target.value }))} size={12} />
-                <DataField label="Description" id="req-d" value={reqDraft.description} onChange={(e) => setReqDraft((p) => ({ ...p, description: e.target.value }))} size={12} />
-                <button onClick={handleAddReq} className="shrink-0 flex items-center gap-1 bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg hover:bg-slate-700 mb-0.5">
-                  <Plus size={13} />{editingReqKey !== null ? "Update" : "Add"}
-                </button>
-              </div>
-            </div>
-
-            {/* Discount */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <SelectField label="Discount Mode" id="wo-dm" value={editForm.discountMode || "None"} onChange={(e) => ef("discountMode", e.target.value)}>
-                <Option value="None" label="None" />
-                <Option value="Percentage" label="Percentage (%)" />
-                <Option value="Rupees" label="Flat (₹)" />
-              </SelectField>
-              {editForm.discountMode !== "None" && (
-                <DataField label={editForm.discountMode === "Percentage" ? "Discount %" : "Discount ₹"} id="wo-dv" type="number" value={editForm.discountValue || ""} onChange={(e) => ef("discountValue", e.target.value)} size={12} />
-              )}
-              <div className="flex flex-col justify-end pb-1">
-                <div className="bg-[#1e293b] text-white rounded-xl px-4 py-2 flex justify-between items-center">
-                  <span className="text-xs font-bold text-white/70">Net Payable</span>
-                  <span className="text-sm font-black">{fmt(netPayable)}</span>
-                </div>
-              </div>
             </div>
 
             <DataField label="Terms & Conditions" id="wo-terms" type="textarea" value={editForm.terms || ""} onChange={(e) => ef("terms", e.target.value)} size={12} />

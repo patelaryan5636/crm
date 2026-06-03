@@ -21,7 +21,6 @@ export const blankForm = {
 
 // ── DataTable column definitions ──────────────────────────────────────────────
 export const ticketCols = [
-  { key: "id",          label: "Ticket ID"    },
   { key: "title",       label: "Subject"      },
   { key: "priority",    label: "Priority"     },
   { key: "status",      label: "Status"       },

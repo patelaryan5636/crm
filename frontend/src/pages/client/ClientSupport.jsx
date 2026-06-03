@@ -190,7 +190,6 @@ export default function ClientSupport() {
       <DataTable
         title="My Support Tickets"
         columns={[
-          { key: "id",       label: "Ticket ID" },
           { key: "subject",  label: "Subject" },
           { key: "priority", label: "Priority" },
           { key: "status",   label: "Status" },
@@ -310,7 +309,6 @@ export default function ClientSupport() {
         {selected && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-xs font-bold text-slate-400">{selected.id}</span>
               <StatusPill status={selected.status}   cfgMap={TICKET_STATUS_CFG} />
               <StatusPill status={selected.priority} cfgMap={PRIORITY_CFG} />
             </div>

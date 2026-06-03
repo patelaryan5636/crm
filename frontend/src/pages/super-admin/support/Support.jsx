@@ -218,7 +218,6 @@ const initialTickets = [
 ];
 
 const ticketColumns = [
-  { key: "ticketId",  label: "Ticket ID" },
   { key: "requester", label: "Requester" },
   { key: "company",   label: "Company"   },
   { key: "subject",   label: "Subject"   },
@@ -336,13 +335,11 @@ export default function Support() {
         {selectedTicket && (
           <div className="space-y-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <ModalData label="Ticket ID" value={selectedTicket.ticketId} />
               <ModalData label="Status" value={selectedTicket.status} />
               <ModalData label="Name" value={selectedTicket.requester} />
               <ModalData label="Company Name" value={selectedTicket.company} />
               <ModalData label="Priority" value={selectedTicket.priority} />
               <ModalData label="Category" value={selectedTicket.category} />
-              <ModalData label="Assigned To" value={selectedTicket.assignedTo} />
               <ModalData label="Last Update" value={selectedTicket.lastUpdate} />
             </div>
             <ModalData label="Subject" value={selectedTicket.subject} />

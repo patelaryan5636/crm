@@ -18,7 +18,6 @@ import {
 import { kpiTickets, TICKET_ROLES, ticketCategories } from "./ticketsStore";
 
 const ticketCols = [
-  { key: "id", label: "Ticket ID" },
   { key: "title", label: "Subject" },
   { key: "priority", label: "Priority" },
   { key: "status", label: "Status" },
@@ -199,7 +198,6 @@ export default function AllTickets({ tickets, setTickets }) {
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-2.5">
               {[
-                { label: "Ticket ID", value: selected.id },
                 { label: "Raised By", value: TICKET_ROLES.currentUser },
                 { label: "Priority", value: selected.priority },
                 { label: "Status", value: selected.status },

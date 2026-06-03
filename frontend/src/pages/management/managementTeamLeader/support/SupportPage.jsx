@@ -42,7 +42,6 @@ const kpiAccents = ["#3b82f6", "#f59e0b", "#8b5cf6", "#22c55e"];
 const kpiLabels = ["Team Issues", "Active Issues", "Escalated to Manager", "Resolved"];
 
 const teamColumns = [
-  { key: "id", label: "Ticket ID" },
   { key: "title", label: "Issue Title" },
   { key: "raisedBy", label: "Raised By" },
   { key: "role", label: "Role" },
@@ -56,7 +55,6 @@ const teamColumns = [
 ];
 
 const myColumns = [
-  { key: "id", label: "Ticket ID" },
   { key: "title", label: "Issue Title" },
   { key: "project", label: "Project" },
   { key: "ticketType", label: "Ticket Type" },
@@ -493,7 +491,6 @@ function TicketConversation({ selected, currentUser, readOnly = false, onSend, o
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2.5">
         {[
-          ["Ticket ID", selected.id],
           ["Raised By", selected.raisedBy || currentUser],
           ["Issue Type", selected.issueType],
           ["Assigned To", selected.assignedTo],

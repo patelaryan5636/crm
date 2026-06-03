@@ -265,7 +265,7 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
     clientName, clientEmail, clientMobile, clientCompany, salesExecName,
     service, requirements, terms, deliveryDate,
     discountMode, discountValue, paymentStatus, advanceAmount, advancePayments,
-    signedStatus, signedByName,
+    signedStatus, signedByName, totalCost,
   } = req.body;
 
   if (clientName !== undefined) wo.clientName = clientName;
@@ -287,24 +287,32 @@ exports.updateWorkOrder = catchAsync(async (req, res, next) => {
     if (signedByName !== undefined) wo.signedByName = signedByName;
   }
 
-  if (requirements !== undefined) {
+  // Consolidate financial update logic
+  const dm = discountMode !== undefined ? discountMode : wo.discountMode;
+  const dv = discountValue !== undefined ? discountValue : wo.discountValue;
+
+  if (requirements !== undefined && requirements.length > 0) {
     wo.requirements = requirements;
-    const dm = discountMode !== undefined ? discountMode : wo.discountMode;
-    const dv = discountValue !== undefined ? discountValue : wo.discountValue;
-    const { totalCost, discountAmt, netPayable } = calcFinancials(requirements, dm, dv);
-    wo.totalCost = totalCost;
+    const { totalCost: tc, discountAmt, netPayable } = calcFinancials(requirements, dm, dv);
+    wo.totalCost = tc;
     wo.discountAmt = discountAmt;
     wo.netPayable = netPayable;
+  } 
+  else if (totalCost !== undefined || (wo.requirements || []).length === 0) {
+    if (totalCost !== undefined) wo.totalCost = Number(totalCost) || 0;
+    if (requirements !== undefined) wo.requirements = requirements;
+
+    let da = 0;
+    const val = parseFloat(dv) || 0;
+    if (dm === 'Percentage') da = Math.round((wo.totalCost * Math.min(val, 99.99)) / 100);
+    else if (dm === 'Rupees' || dm === 'Flat') da = Math.min(val, wo.totalCost);
+    
+    wo.discountAmt = da;
+    wo.netPayable = Math.max(0, wo.totalCost - da);
   }
 
   if (discountMode !== undefined) wo.discountMode = discountMode;
-  if (discountValue !== undefined) {
-    wo.discountValue = String(discountValue);
-    const { totalCost, discountAmt, netPayable } = calcFinancials(wo.requirements, wo.discountMode, discountValue);
-    wo.totalCost = totalCost;
-    wo.discountAmt = discountAmt;
-    wo.netPayable = netPayable;
-  }
+  if (discountValue !== undefined) wo.discountValue = String(discountValue);
 
   await wo.save();
   return res.status(200).json(new ApiResponse(200, { workOrder: mapWo(wo.toObject()) }, 'Work order updated'));

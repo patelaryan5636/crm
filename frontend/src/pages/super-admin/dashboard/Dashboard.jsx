@@ -370,7 +370,6 @@ export default function Dashboard() {
 
   // ── Support Tickets Table ────────────────────────────────────────────────────
   const ticketCols = [
-    { key: "ticketId", label: "Ticket ID" },
     { key: "company",  label: "Company" },
     { key: "subject",  label: "Subject" },
     { key: "priority", label: "Priority" },
@@ -800,7 +799,6 @@ export default function Dashboard() {
         {selectedTicket && (
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
-              <ModalData label="Ticket ID" value={selectedTicket.ticketId} />
               <ModalData label="Company"   value={selectedTicket.company} />
               <ModalData label="Subject"   value={selectedTicket.subject} />
               <ModalData label="Priority"  value={selectedTicket.priority} />
@@ -819,7 +817,6 @@ export default function Dashboard() {
         {selectedTicket && (
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
-              <ModalData label="Ticket ID" value={selectedTicket.ticketId} />
               <ModalData label="Company"   value={selectedTicket.company} />
               <ModalData label="Subject"   value={selectedTicket.subject} />
               <ModalData label="Priority"  value={selectedTicket.priority} />

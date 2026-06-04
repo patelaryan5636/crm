@@ -31,7 +31,6 @@ function deadlineBucket(deadline) {
 const COLS = [
   { key: "id",            label: "ID" },
   { key: "name",          label: "Project" },
-  { key: "clientName",    label: "Client" },
   { key: "deadline",      label: "Deadline" },
   { key: "progress",      label: "Progress" },
   { key: "bucket",        label: "Bucket" },
@@ -50,7 +49,6 @@ export default function ManagementEmployeeDeadlines() {
         .map((p) => ({
           id:         p.id,
           name:       p.name,
-          clientName: p.clientName,
           deadline:   p.deadline,
           progress:   `${p.progress}%`,
           bucket:     deadlineBucket(p.deadline),

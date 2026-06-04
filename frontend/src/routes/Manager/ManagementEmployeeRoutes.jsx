@@ -22,6 +22,7 @@ import ManagementEmployeePerformance from "../../pages/management/managementEmpl
 import HRMPage                       from "../../pages/management/managementEmployee/hrm/HRMPage";
 import LoginLogs                     from "../../pages/management/managementEmployee/loginLogs/LoginLogs";
 import ManagementEmployeeTickets     from "../../pages/management/managementEmployee/ManagementEmployeeTickets";
+import ManagementEmployeeProfile     from "../../pages/management/managementEmployee/ManagementEmployeeProfile";
 
 function ManagementEmployeeRoutes() {
   return (
@@ -52,6 +53,7 @@ function ManagementEmployeeRoutes() {
         <Route path="hrm"         element={<HRMPage />} />
         <Route path="login-logs"  element={<LoginLogs />} />
         <Route path="tickets"     element={<ManagementEmployeeTickets />} />
+        <Route path="profile"     element={<ManagementEmployeeProfile />} />
 
         <Route path="*" element={<Navigate to="/management-employee" replace />} />
       </Route>

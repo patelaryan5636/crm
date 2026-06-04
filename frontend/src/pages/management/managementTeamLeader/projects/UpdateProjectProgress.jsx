@@ -1,14 +1,14 @@
 /**
- * UpdateProjectProgress.jsx
+ * UpdateProjectProgress.jsx → "Task Board" Tab
  * ─────────────────────────────────────────────────────────────────────────────
- * Tab: "Update Progress"
- * • Select a project → auto-fill employee + current progress
- * • Slider for % + status dropdown + note
- * • Live progress table of all projects
- * • Uses Common_Components + projectsStore
+ * Shows ALL tasks across ALL projects in a filterable table:
+ *   • Filter by project, employee, status, priority
+ *   • Update task status via modal
+ *   • View task details
+ * Uses Common_Components + projectsStore
  */
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Grid,
   DataField,
@@ -16,43 +16,56 @@ import {
   Option,
   Button,
   DataTable,
+  Modal,
+  ModalProfile,
+  ModalGrid,
+  ModalData,
+  openModal,
+  closeModal,
 } from "../../../../components/shared/Common_Components";
 import {
   useProjectsStore,
-  STATUSES,
+  TASK_STATUSES,
   getAvatarColor,
   getInitials,
 } from "./projectsStore";
+import { Eye, PencilLine, CheckCircle2, Clock, AlertTriangle, ListTodo } from "lucide-react";
 
-// ── Toast ─────────────────────────────────────────────────────────────────────
-function Toast({ msg, type }) {
-  if (!msg) return null;
-  const cls =
-    type === "success"
-      ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-      : "bg-amber-50 border-amber-200 text-amber-700";
+// ── Status pill ──────────────────────────────────────────────────────────────
+function StatusPill({ status }) {
+  const map = {
+    Completed: { bg: "#dcfce7", color: "#16a34a" },
+    "In Progress": { bg: "#dbeafe", color: "#2563eb" },
+    "Not Started": { bg: "#f1f5f9", color: "#64748b" },
+    Delayed: { bg: "#fee2e2", color: "#dc2626" },
+  };
+  const s = map[status] || map["Not Started"];
   return (
-    <div className={`col-span-12 rounded-2xl border px-4 py-3 text-sm font-semibold ${cls}`}>
-      {msg}
-    </div>
+    <span
+      className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+      style={{ background: s.bg, color: s.color }}
+    >
+      {status}
+    </span>
   );
 }
 
-// ── Progress bar cell ─────────────────────────────────────────────────────────
-function ProgressCell({ value }) {
+// ── Priority badge ───────────────────────────────────────────────────────────
+function PriorityBadge({ priority }) {
+  const map = {
+    Critical: { bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+    High: { bg: "#fff7ed", color: "#ea580c", border: "#fed7aa" },
+    Medium: { bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+    Low: { bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
+  };
+  const s = map[priority] || map["Medium"];
   return (
-    <div className="flex items-center gap-2 min-w-[100px]">
-      <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{
-            width: `${value}%`,
-            background: "linear-gradient(90deg,#2a465a,#38bdf8)",
-          }}
-        />
-      </div>
-      <span className="text-xs font-bold text-[#2a465a] w-8 text-right">{value}%</span>
-    </div>
+    <span
+      className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold border"
+      style={{ background: s.bg, color: s.color, borderColor: s.border }}
+    >
+      {priority}
+    </span>
   );
 }
 
@@ -62,230 +75,252 @@ function AvatarCell({ name }) {
   return (
     <div className="flex items-center gap-2">
       <div
-        className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px] font-black flex-shrink-0"
+        className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[9px] font-black flex-shrink-0"
         style={{ background: bg }}
       >
         {getInitials(name)}
       </div>
-      <span className="text-sm font-semibold text-[#0f172a]">{name}</span>
+      <span className="text-xs font-semibold text-[#0f172a]">{name}</span>
     </div>
   );
 }
 
-// ── Live table columns ────────────────────────────────────────────────────────
-const PROGRESS_COLUMNS = [
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function Toast({ msg, type }) {
+  if (!msg) return null;
+  const cls =
+    type === "success"
+      ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+      : "bg-amber-50 border-amber-200 text-amber-700";
+  return (
+    <div className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${cls}`}>
+      {msg}
+    </div>
+  );
+}
+
+// ── Table columns ────────────────────────────────────────────────────────────
+const COLUMNS = [
+  { key: "title", label: "Task" },
+  { key: "projectName", label: "Project" },
   {
-    key: "employee",
-    label: "Employee",
+    key: "assignee",
+    label: "Assignee",
     render: (val) => <AvatarCell name={val} />,
   },
-  { key: "name", label: "Project" },
-  { key: "status", label: "Status" },
-  { key: "priority", label: "Priority" },
   {
-    key: "progress",
-    label: "Progress",
-    render: (val) => <ProgressCell value={val} />,
-    sortValue: (row) => row.progress,
+    key: "priority",
+    label: "Priority",
+    render: (val) => <PriorityBadge priority={val} />,
   },
   { key: "deadline", label: "Deadline" },
+  {
+    key: "status",
+    label: "Status",
+    render: (val) => <StatusPill status={val} />,
+  },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function UpdateProjectProgress() {
-  const { projects, updateProgress } = useProjectsStore();
+  const { projects, allTasks, taskStats, updateTask } = useProjectsStore();
 
-  const [form, setForm] = useState({
-    projectId: "",
-    status: "",
-    progress: 0,
-    note: "",
-  });
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [updateForm, setUpdateForm] = useState({ status: "", note: "" });
   const [toast, setToast] = useState({ msg: "", type: "" });
-
-  const selectedProject = projects.find((p) => p.id === Number(form.projectId));
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast({ msg: "", type: "" }), 4000);
   };
 
-  const handleProjectChange = (e) => {
-    const project = projects.find((p) => p.id === Number(e.target.value));
-    setForm((f) => ({
-      ...f,
-      projectId: e.target.value,
-      status: project?.status ?? "",
-      progress: project?.progress ?? 0,
-      note: "",
-    }));
+  const handleViewTask = (row) => {
+    setSelectedTask(row);
+    openModal("task-details-modal");
   };
 
-  const handleSave = () => {
-    const { projectId, status, progress } = form;
-    if (!projectId || !status) {
-      showToast("⚠️ Please select a project and status.", "warning");
+  const handleOpenUpdate = (row) => {
+    setSelectedTask(row);
+    setUpdateForm({ status: row.status, note: "" });
+    openModal("task-update-modal");
+  };
+
+  const handleSaveUpdate = () => {
+    if (!selectedTask || !updateForm.status) {
+      showToast("⚠️ Please select a status.", "warning");
       return;
     }
-    const entry = updateProgress({
-      projectId: Number(projectId),
-      status,
-      progress: Number(progress),
-      note: form.note,
-    });
-    showToast(`✅ "${entry.project}" updated to ${entry.newPct}% — ${entry.status}.`);
-    setForm({ projectId: "", status: "", progress: 0, note: "" });
+    updateTask(selectedTask.projectId, selectedTask.id, { status: updateForm.status });
+    showToast(`✅ Task "${selectedTask.title}" updated to "${updateForm.status}".`);
+    closeModal("task-update-modal");
+    setSelectedTask(null);
+    setUpdateForm({ status: "", note: "" });
   };
 
-  const handleClear = () =>
-    setForm({ projectId: "", status: "", progress: 0, note: "" });
+  // Summary stats for header
+  const stats = [
+    { label: "Total", value: taskStats.total, icon: <ListTodo size={13} />, bg: "#f1f5f9", color: "#475569" },
+    { label: "In Progress", value: taskStats.inProgress, icon: <Clock size={13} />, bg: "#dbeafe", color: "#2563eb" },
+    { label: "Completed", value: taskStats.completed, icon: <CheckCircle2 size={13} />, bg: "#dcfce7", color: "#16a34a" },
+    { label: "Delayed", value: taskStats.delayed, icon: <AlertTriangle size={13} />, bg: "#fee2e2", color: "#dc2626" },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
       {/* ── Section header ── */}
-      <div>
-        <p className="text-lg font-black text-[#2a465a]">Update Project Progress</p>
-        <p className="text-xs text-slate-400 mt-0.5">
-          Update the completion percentage and status for assigned projects
-        </p>
-      </div>
-
-      {/* ── Form ── */}
-      <div className="bg-[#efefefb1] rounded-2xl p-5">
-        <Grid cols={12} gap={4}>
-
-          {/* Project selector */}
-          <SelectField
-            label="Select Project"
-            id="progress-project"
-            size={6}
-            placeholder="Choose a project..."
-            value={form.projectId}
-            onChange={handleProjectChange}
-            searchable={true}
-          >
-            {projects.map((p) => (
-              <Option key={p.id} value={String(p.id)} label={p.name} />
-            ))}
-          </SelectField>
-
-          {/* Auto-filled employee */}
-          <DataField
-            label="Assigned Employee"
-            id="progress-employee"
-            size={6}
-            value={selectedProject?.employee ?? ""}
-            readOnly
-            placeholder="Auto-filled..."
-          />
-
-          {/* Status */}
-          <SelectField
-            label="Update Status"
-            id="progress-status"
-            size={6}
-            placeholder="Select status..."
-            value={form.status}
-            onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-            searchable={false}
-          >
-            {STATUSES.map((s) => (
-              <Option key={s} value={s} label={s} />
-            ))}
-          </SelectField>
-
-          {/* Progress slider */}
-          <div className="col-span-12 sm:col-span-6 flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em] select-none">
-              Progress Percentage
-            </label>
-            <div className="flex items-center gap-4 mt-1 bg-white rounded-2xl border border-slate-200 px-4 py-3">
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value={form.progress}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, progress: Number(e.target.value) }))
-                }
-                className="flex-1 h-1.5 rounded-full accent-[#2a465a] cursor-pointer"
-              />
-              <span className="text-lg font-black text-[#2a465a] min-w-[48px] text-right tabular-nums">
-                {form.progress}%
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <p className="text-lg font-black text-[#2a465a]">Task Board</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            View and manage all tasks across all projects
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {stats.map((s) => (
+            <div
+              key={s.label}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border"
+              style={{ background: s.bg, borderColor: `${s.color}22` }}
+            >
+              <span style={{ color: s.color }}>{s.icon}</span>
+              <span className="text-xs font-bold" style={{ color: s.color }}>
+                {s.value} {s.label}
               </span>
             </div>
-            {/* Gradient progress preview */}
-            <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden mt-1">
-              <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${form.progress}%`,
-                  background: "linear-gradient(90deg,#2a465a,#38bdf8)",
-                }}
+          ))}
+        </div>
+      </div>
+
+      {/* Toast */}
+      {toast.msg && <Toast msg={toast.msg} type={toast.type} />}
+
+      {/* ── All Tasks Table ── */}
+      <DataTable
+        title="All Tasks"
+        columns={COLUMNS}
+        rows={allTasks}
+        size={12}
+        pageSize={8}
+        pageSizeOptions={[5, 8, 15, 25]}
+        searchable={true}
+        filters={[
+          {
+            title: "Project",
+            type: "toggle",
+            key: "projectName",
+            options: projects.map((p) => p.name),
+          },
+          {
+            title: "Status",
+            type: "toggle",
+            key: "status",
+            options: ["Not Started", "In Progress", "Completed", "Delayed"],
+          },
+          {
+            title: "Priority",
+            type: "toggle",
+            key: "priority",
+            options: ["Critical", "High", "Medium", "Low"],
+          },
+        ]}
+        actions={[
+          {
+            icon: <Eye size={15} />,
+            tooltip: "View Details",
+            variant: "ghost",
+            onClick: handleViewTask,
+          },
+          {
+            icon: <PencilLine size={15} />,
+            tooltip: "Update Status",
+            variant: "primary",
+            onClick: handleOpenUpdate,
+          },
+        ]}
+        exportable
+        exportFileName="all-tasks"
+      />
+
+      {/* ── Task Details Modal ── */}
+      <Modal id="task-details-modal" title="Task Details" size="lg">
+        {selectedTask && (
+          <div className="flex flex-col gap-4">
+            <ModalProfile
+              name={selectedTask.title}
+              subtitle={selectedTask.description || "No description provided."}
+              meta={`Project: ${selectedTask.projectName} · Assigned to: ${selectedTask.assignee}`}
+            />
+            <ModalGrid title="Details" cols={3}>
+              <ModalData label="Status" value={selectedTask.status} />
+              <ModalData label="Priority" value={selectedTask.priority} />
+              <ModalData label="Deadline" value={selectedTask.deadline} />
+            </ModalGrid>
+            <Grid cols={12} gap={2} className="pt-2">
+              <div className="hidden sm:block sm:col-span-9"></div>
+              <Button
+                text="Close"
+                variant="ghost"
+                size={3}
+                onClick={() => closeModal("task-details-modal")}
+              />
+            </Grid>
+          </div>
+        )}
+      </Modal>
+
+      {/* ── Update Status Modal ── */}
+      <Modal id="task-update-modal" title="Update Task Status" size="md">
+        {selectedTask && (
+          <div className="flex flex-col gap-4">
+            <ModalGrid title="Task Info" cols={2}>
+              <ModalData label="Task" value={selectedTask.title} />
+              <ModalData label="Project" value={selectedTask.projectName} />
+              <ModalData label="Assignee" value={selectedTask.assignee} />
+              <ModalData label="Current Status" value={selectedTask.status} />
+            </ModalGrid>
+
+            <Grid cols={12} gap={3}>
+              <SelectField
+                label="New Status"
+                id="task-update-status"
+                size={12}
+                placeholder="Select new status..."
+                value={updateForm.status}
+                onChange={(e) => setUpdateForm((f) => ({ ...f, status: e.target.value }))}
+                searchable={false}
+              >
+                {TASK_STATUSES.map((s) => (
+                  <Option key={s} value={s} label={s} />
+                ))}
+              </SelectField>
+
+              <DataField
+                label="Update Note (optional)"
+                id="task-update-note"
+                type="textarea"
+                rows={3}
+                placeholder="Describe progress, blockers, or notes..."
+                size={12}
+                value={updateForm.note}
+                onChange={(e) => setUpdateForm((f) => ({ ...f, note: e.target.value }))}
+              />
+            </Grid>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                text="Cancel"
+                variant="secondary"
+                onClick={() => closeModal("task-update-modal")}
+              />
+              <Button
+                text="Update Status"
+                variant="primary"
+                onClick={handleSaveUpdate}
               />
             </div>
           </div>
-
-          {/* Note */}
-          <DataField
-            label="Progress Note / Update"
-            id="progress-note"
-            type="textarea"
-            rows={3}
-            placeholder="Describe what was completed, blockers, next steps..."
-            size={12}
-            value={form.note}
-            onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
-          />
-
-          <Button
-            text="Save Progress →"
-            size={4}
-            variant="primary"
-            onClick={handleSave}
-          />
-          <Button
-            text="Clear"
-            size={4}
-            variant="secondary"
-            onClick={handleClear}
-          />
-
-          {toast.msg && <Toast msg={toast.msg} type={toast.type} />}
-        </Grid>
-      </div>
-
-      {/* ── Live table ── */}
-      <div>
-        <p className="text-sm font-black text-[#2a465a] mb-3">
-          All Projects — Live Progress
-        </p>
-        <DataTable
-          columns={PROGRESS_COLUMNS}
-          rows={projects}
-          size={12}
-          pageSize={5}
-          pageSizeOptions={[5, 10, 20]}
-          searchable={true}
-          filters={[
-            {
-              title: "Status",
-              type: "toggle",
-              key: "status",
-              options: ["Pending", "In Progress", "Completed", "Delayed", "On Hold"],
-            },
-            {
-              title: "Priority",
-              type: "toggle",
-              key: "priority",
-              options: ["Critical", "High", "Medium", "Low"],
-            },
-          ]}
-          exportable
-          exportFileName="project-progress"
-        />
-      </div>
+        )}
+      </Modal>
     </div>
   );
 }

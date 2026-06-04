@@ -26,14 +26,13 @@ import {
 } from "./data/progressData";
 
 const progressColumns = [
+  { key: "task", label: "Task" },
   { key: "project", label: "Project" },
   { key: "employee", label: "Employee" },
   { key: "status", label: "Status" },
   { key: "progress", label: "Progress" },
-  { key: "completed", label: "Completed" },
-  { key: "pending", label: "Pending" },
-  { key: "delayDays", label: "Delay Days" },
-  { key: "qualityIssues", label: "Quality Issues" },
+  { key: "priority", label: "Priority" },
+  { key: "deadline", label: "Deadline" },
   { key: "lastUpdate", label: "Last Update" },
 ];
 
@@ -89,7 +88,7 @@ export default function ProgressPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">This Week</span>
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">Project Status</span>
+            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">Task Status</span>
             <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">Delays Included</span>
           </div>
         </div>
@@ -109,7 +108,7 @@ export default function ProgressPage() {
               {filterOptions.employees.map((item) => <Option key={item} value={item} label={item} />)}
             </SelectField>
             <SelectField
-              label="Project Status"
+              label="Task Status"
               id="mtl-progress-status"
               size={3}
               searchable={false}
@@ -146,7 +145,7 @@ export default function ProgressPage() {
 
       <Grid cols={12} gap={6}>
         <GColumnChart
-          title="Completed vs Pending Projects"
+          title="Completed vs Pending Tasks"
           subtitle="Employee-wise task completion status"
           data={completedPendingProjects}
           bars={[
@@ -158,7 +157,7 @@ export default function ProgressPage() {
         />
         <GBarChart
           title="Delays & Quality Issues"
-          subtitle="Projects needing attention"
+          subtitle="Tasks needing attention"
           data={delayQualityData}
           bars={[
             { key: "delays", label: "Delay Days", color: "#dc2626" },
@@ -170,14 +169,14 @@ export default function ProgressPage() {
       </Grid>
 
       <DataTable
-        title="Employee Project Progress"
+        title="Employee Task Progress"
         columns={progressColumns}
         rows={employeeProgressRows}
         size={12}
         pageSize={8}
         searchable
         filters={[
-          { title: "Status", type: "toggle", key: "status", options: ["Completed", "Pending", "Delayed", "On Track"] },
+          { title: "Status", type: "toggle", key: "status", options: ["Completed", "In Progress", "Not Started", "Delayed"] },
           { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High", "Critical"] },
         ]}
         actions={[
@@ -211,35 +210,34 @@ export default function ProgressPage() {
         searchable
       />
 
-      <Modal id="mtl-progress-project-details" title="Project Progress Details" size="lg">
+      <Modal id="mtl-progress-project-details" title="Task Progress Details" size="lg">
         {selectedProject && (
           <ModalGrid>
+            <ModalData label="Task" value={selectedProject.task} />
             <ModalData label="Project" value={selectedProject.project} />
             <ModalData label="Employee" value={selectedProject.employee} />
             <ModalData label="Status" value={selectedProject.status} />
             <ModalData label="Progress" value={selectedProject.progress} />
-            <ModalData label="Completed Tasks" value={selectedProject.completed} />
-            <ModalData label="Pending Tasks" value={selectedProject.pending} />
-            <ModalData label="Delay Days" value={selectedProject.delayDays} />
-            <ModalData label="Quality Issues" value={selectedProject.qualityIssues} />
+            <ModalData label="Priority" value={selectedProject.priority} />
+            <ModalData label="Deadline" value={selectedProject.deadline} />
             <ModalData label="Last Update" value={selectedProject.lastUpdate} />
           </ModalGrid>
         )}
       </Modal>
 
-      <Modal id="mtl-progress-update-project" title="Update Project Progress" size="md">
+      <Modal id="mtl-progress-update-project" title="Update Task Progress" size="md">
         <Grid cols={12} gap={3}>
-          <DataField label="Project" size={12} value={selectedProject?.project || ""} readOnly />
+          <DataField label="Task" size={12} value={selectedProject?.task || ""} readOnly />
+          <DataField label="Project" size={6} value={selectedProject?.project || ""} readOnly />
           <DataField label="Assigned Employee" size={6} value={selectedProject?.employee || ""} readOnly />
           <DataField label="Progress %" type="number" size={6} placeholder="0" />
           <SelectField label="Status" id="mtl-progress-update-status" size={6} placeholder="Select status">
             <Option value="Completed" label="Completed" />
-            <Option value="Pending" label="Pending" />
+            <Option value="In Progress" label="In Progress" />
+            <Option value="Not Started" label="Not Started" />
             <Option value="Delayed" label="Delayed" />
-            <Option value="On Track" label="On Track" />
           </SelectField>
-          <DataField label="Quality Issues" type="number" size={6} placeholder="0" />
-          <DataField label="Update Notes" type="textarea" size={12} rows={4} placeholder="Add progress notes, blockers, delay reason, or quality concerns..." />
+          <DataField label="Update Notes" type="textarea" size={12} rows={4} placeholder="Add progress notes, blockers, or concerns..." />
         </Grid>
         <div className="mt-5 flex justify-end gap-2">
           <Button text="Cancel" variant="secondary" onClick={() => closeModal("mtl-progress-update-project")} />

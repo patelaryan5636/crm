@@ -1,18 +1,21 @@
 /**
  * ProjectsPage.jsx
  * ─────────────────────────────────────────────────────────────────────────────
- * Main Projects Management page.
- * Renders the Heading banner + a tab bar that switches between:
- *   1. AssignProjects
- *   2. ReassignProjects
- *   3. UpdateProjectProgress
+ * Main Projects Management page for the Team Leader.
+ * Renders the Heading banner + a tab bar with 3 tabs:
+ *   1. My Projects   — read-only project overview with task progress
+ *   2. Assign Tasks   — create and assign tasks within a project
+ *   3. Task Board     — view/update all tasks across projects
+ *
+ * One team = one project (pre-assigned by Manager).
+ * The TL's job is to break projects into tasks and assign to employees.
  *
  * ── What is imported from Common_Components ──────────────────────────────────
  *   Heading  — animated dark navy banner (primaryText + secondaryText)
- *   Grid     — 12-column layout wrapper (wraps the whole page)
+ *   Grid     — 12-column layout wrapper
  *
  * Tab routing is internal (useState) — no router needed.
- * All shared project data lives in projectsStore (Zustand).
+ * All shared project+task data lives in projectsStore.
  */
 
 import React, { useState } from "react";
@@ -21,11 +24,11 @@ import AssignProjects from "./AssignProjects";
 import ReassignProjects from "./ReassignProjects";
 import UpdateProjectProgress from "./UpdateProjectProgress";
 
-// ── Tab config — component is a reference (not JSX), rendered inside render ──
+// ── Tab config ───────────────────────────────────────────────────────────────
 const TABS = [
   {
-    id: "assign",
-    label: "Assign Projects",
+    id: "projects",
+    label: "My Projects",
     Component: AssignProjects,
     icon: (
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
@@ -37,22 +40,19 @@ const TABS = [
     ),
   },
   {
-    id: "reassign",
-    label: "Reassign Projects",
+    id: "assign",
+    label: "Assign Tasks",
     Component: ReassignProjects,
     icon: (
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
         strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 1l4 4-4 4" />
-        <path d="M3 11V9a4 4 0 014-4h14" />
-        <path d="M7 23l-4-4 4-4" />
-        <path d="M21 13v2a4 4 0 01-4 4H3" />
+        <path d="M12 5v14M5 12h14" />
       </svg>
     ),
   },
   {
-    id: "progress",
-    label: "Update Progress",
+    id: "board",
+    label: "Task Board",
     Component: UpdateProjectProgress,
     icon: (
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
@@ -65,22 +65,15 @@ const TABS = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function ProjectsPage() {
-  const [activeTab, setActiveTab] = useState("assign");
+  const [activeTab, setActiveTab] = useState("projects");
 
-  // Find the active tab's Component constructor — render it fresh inside JSX
   const { Component: ActiveComponent } = TABS.find((t) => t.id === activeTab);
 
   return (
-    <div className="p-6 bg-[#f8fafc] min-h-screen">
-      {/*
-        Grid (from Common_Components) — 12-column wrapper for the whole page.
-        Every direct child must have a size / col-span prop or className.
-        Heading already accepts size={12}.
-        The tab bar and content panel each sit in col-span-12 divs.
-      */}
+    <div>
       <Grid cols={12} gap={5}>
 
-        {/* ── Animated heading banner (Common_Components) ── */}
+        {/* ── Animated heading banner ── */}
         <Heading
           primaryText="Projects"
           secondaryText="Management"
@@ -88,7 +81,7 @@ export default function ProjectsPage() {
           showAnimations={true}
         />
 
-        {/* ── Tab bar — col-span-12, white pill container ── */}
+        {/* ── Tab bar ── */}
         <div className="col-span-12">
           <div
             className="flex flex-wrap gap-1 bg-white border border-slate-200 rounded-[14px] p-1.5 w-fit"
@@ -121,7 +114,7 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {/* ── Active tab content — col-span-12, fresh mount on tab change ── */}
+        {/* ── Active tab content ── */}
         <div className="col-span-12" key={activeTab} style={{ animation: "pgFadeIn 0.22s ease both" }}>
           <ActiveComponent />
         </div>

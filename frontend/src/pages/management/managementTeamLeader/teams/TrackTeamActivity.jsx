@@ -7,7 +7,7 @@ import {
   Option,
   Button,
   DataTable,
-  DashCard,
+  EnhancedDashCard,
   Modal,
   openModal,
   closeModal,
@@ -109,20 +109,10 @@ export default function TrackTeamActivity() {
         />
 
         {/* Stats */}
-        <div className="col-span-12 flex flex-row gap-4">
-          <div className="flex-1">
-            <DashCard title="Total Activities" value={String(activityLog.length)} icon={<Activity size={22} />} accentColor="#2a465a" />
-          </div>
-          <div className="flex-1">
-            <DashCard title="Completed" value={String(completed)} icon={<CheckCircle2 size={22} />} accentColor="#22c55e" />
-          </div>
-          <div className="flex-1">
-            <DashCard title="Delays Flagged" value={String(delays)} icon={<AlertTriangle size={22} />} accentColor="#f43f5e" />
-          </div>
-          <div className="flex-1">
-            <DashCard title="Updates Submitted" value={String(updates + progress)} icon={<Clock size={22} />} accentColor="#3b82f6" />
-          </div>
-        </div>
+        <EnhancedDashCard title="Total Activities" value={String(activityLog.length)} icon={<Activity size={20} />} accentColor="#3b82f6" size={3} />
+        <EnhancedDashCard title="Completed" value={String(completed)} icon={<CheckCircle2 size={20} />} accentColor="#22c55e" size={3} />
+        <EnhancedDashCard title="Delays Flagged" value={String(delays)} icon={<AlertTriangle size={20} />} accentColor="#ef4444" size={3} />
+        <EnhancedDashCard title="Updates Submitted" value={String(updates + progress)} icon={<Clock size={20} />} accentColor="#6366f1" size={3} />
 
         {/* Log New Activity */}
         <div className="col-span-12 bg-[#efefefb1] rounded-2xl p-5">

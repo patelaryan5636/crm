@@ -20,6 +20,7 @@ const COLS = [
   { key: "date",        label: "Date"      },
   { key: "projectId",   label: "Proj ID"   },
   { key: "projectName", label: "Project"   },
+  { key: "author",      label: "Author"    },
   { key: "body",        label: "Work Note" },
 ];
 

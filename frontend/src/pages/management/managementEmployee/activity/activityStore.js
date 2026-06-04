@@ -13,12 +13,15 @@ export const commentsByProject = Object.fromEntries(
 
 // ─── Work notes by project ───────────────────────────────────────────────────
 // Shape: { [projectId]: [{ date, author, body, isClientVisible }, ...] }
+// Reads the real `author` from the seed so historical entries are attributed
+// to whoever actually wrote them (TL kickoff, teammate dev work, etc.) —
+// not always the logged-in ME.
 export const workNotesByProject = Object.fromEntries(
   myProjects.map((p) => [
     p.id,
     (p.updates ?? []).map((u) => ({
       date: u.date,
-      author: currentEmployee.name,
+      author: u.author ?? "—",
       body: u.note,
       isClientVisible: u.isClientVisible ?? true,
     })),
@@ -38,7 +41,7 @@ export const allComments = myProjects.flatMap((p) =>
 export const allWorkNotes = myProjects.flatMap((p) =>
   (p.updates ?? []).map((u) => ({
     date: u.date,
-    author: currentEmployee.name,
+    author: u.author ?? "—",
     body: u.note,
     isClientVisible: u.isClientVisible ?? true,
     projectId: p.id,

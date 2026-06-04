@@ -8,20 +8,30 @@ const { sendProspectQuotationEmail } = require('../services/email.service');
 const normalizeCurrency = (value) => Number(value || 0);
 
 const mapRequirements = (prospect) => {
-  const fromFinal = (prospect.finalServices || []).map((item) => ({
-    id: item._id || `${item.name}-${item.price}`,
+  const fromFinal = (prospect.finalServices || []).map((item, idx) => ({
+    id: item._id || `final-${idx}-${item.name}`,
     title: item.name || 'Service',
-    cost: normalizeCurrency(item.price) * Math.max(1, Number(item.qty || 1)),
-    description: item.discount ? `Discount: ${item.discount}` : '',
+    cost: normalizeCurrency(item.price),
+    description: item.description || '',
+    discountMode: item.discountMode || 'None',
+    discountValue: item.discountValue || 0,
+    discountAmount: item.discountAmount || 0,
+    netCost: item.netCost || (normalizeCurrency(item.price) - (item.discountAmount || 0)),
+    isPaid: item.isPaid || false,
   }));
 
   if (fromFinal.length > 0) return fromFinal;
 
-  const fromSuggested = (prospect.suggestedServices || []).map((item) => ({
-    id: item._id || `${item.name}-${item.price}`,
+  const fromSuggested = (prospect.suggestedServices || []).map((item, idx) => ({
+    id: item._id || `suggested-${idx}-${item.name}`,
     title: item.name || 'Service',
-    cost: normalizeCurrency(item.price) * Math.max(1, Number(item.qty || 1)),
+    cost: normalizeCurrency(item.price),
     description: '',
+    discountMode: 'None',
+    discountValue: 0,
+    discountAmount: 0,
+    netCost: normalizeCurrency(item.price),
+    isPaid: false,
   }));
 
   if (fromSuggested.length > 0) return fromSuggested;
@@ -32,6 +42,11 @@ const mapRequirements = (prospect) => {
       title: prospect.requirement,
       cost: normalizeCurrency(prospect.value),
       description: prospect.notes || '',
+      discountMode: 'None',
+      discountValue: 0,
+      discountAmount: 0,
+      netCost: normalizeCurrency(prospect.value),
+      isPaid: false,
     }];
   }
 
@@ -53,11 +68,14 @@ const toDisplayLeadStatus = (status, isDumped = false) => {
   return map[normalized] || status;
 };
 
-const formatForFrontend = (p) => {
+const formatForFrontend = (p, paidAmount = 0) => {
   const client = p.client || {};
   const filledBy = p.filledBy || {};
   const requirements = mapRequirements(p);
   const selectedService = (p.finalServices || p.suggestedServices || []).map((s) => s.name).filter(Boolean).join(', ');
+
+  const totalCost = requirements.reduce((s, r) => s + r.cost, 0);
+  const totalDiscount = requirements.reduce((s, r) => s + r.discountAmount, 0);
 
   return {
     id: p._id,
@@ -76,12 +94,19 @@ const formatForFrontend = (p) => {
     requirements,
     selectedService,
     termsAndConditions: p.notes || '',
+    totalPaid: paidAmount, // Use the actual total paid from payments
+    totalUnpaid: Math.max(0, (p.finalAmount || 0) - paidAmount),
+    totalCost,
+    totalDiscount,
     discountValue: p.discount ?? 0,
-    discountMode: p.discount ? 'Rupees' : 'None',
-    paymentStatus: p.finalAmount > 0 ? 'Unpaid' : 'Unpaid',
-    advanceAmount: p.totalAmount ? String(Math.max(0, p.totalAmount - p.finalAmount)) : '',
-    advancePayments: [],
-    totalCost: p.totalAmount ?? p.value ?? 0,
+    discountMode: 'None', // Global discount is deprecated in favor of itemized
+    paymentStatus: paidAmount >= (p.finalAmount || 0) && (p.finalAmount || 0) > 0 
+      ? 'Paid' 
+      : paidAmount > 0 
+        ? 'Advance' 
+        : 'Unpaid',
+    advanceAmount: String(p.advanceAmount || 0),
+    advancePayments: p.advancePayments || [],
     netPayable: p.finalAmount ?? p.totalAmount ?? p.value ?? 0,
     sentToClientAt: p.sentToClientAt || null,
     sentToClientBy: p.sentToClientBy || null,
@@ -96,7 +121,7 @@ const formatForFrontend = (p) => {
  * Returns prospect forms for finance department (tenant-scoped)
  */
 exports.getProspects = catchAsync(async (req, res, next) => {
-  const { ProspectForm } = require("../models");
+  const { ProspectForm, Payment } = require("../models");
 
   // Role guard: finance roles only
   const allowed = ["FINANCE_MANAGER", "FINANCE_EXECUTIVE"];
@@ -131,7 +156,17 @@ exports.getProspects = catchAsync(async (req, res, next) => {
       .lean(),
   ]);
 
-  const mapped = rows.map(formatForFrontend);
+  // Aggregate successful payments for all prospects on the page
+  const prospectIds = rows.map(r => r._id);
+  const payments = await Payment.aggregate([
+    { $match: { prospectForm: { $in: prospectIds }, status: 'SUCCESS' } },
+    { $group: { _id: '$prospectForm', total: { $sum: '$amount' } } }
+  ]);
+
+  const paymentMap = {};
+  payments.forEach(p => { paymentMap[String(p._id)] = p.total; });
+
+  const mapped = rows.map(p => formatForFrontend(p, paymentMap[String(p._id)] || 0));
 
   const stats = {
     total,
@@ -161,8 +196,6 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
     selectedService,
     requirements = [],
     termsAndConditions = '',
-    discountMode = 'None',
-    discountValue = '',
     paymentStatus = 'Unpaid',
     advanceAmount = '',
     advancePayments = [],
@@ -186,32 +219,31 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
     return next(new AppError('Invalid client status', 400));
   }
 
-  const structuredRequirements = Array.isArray(requirements)
-    ? requirements
-        .map((item) => ({
-          title: String(item?.title || '').trim(),
-          cost: Number(item?.cost || 0),
-          description: String(item?.description || '').trim(),
-        }))
-        .filter((item) => item.title)
-    : [];
+  // Process requirements with itemized discounts
+  const finalServices = (requirements || []).map((item) => {
+    const cost = Number(item.cost || 0);
+    const dm = item.discountMode || 'None';
+    const dv = Number(item.discountValue || 0);
+    
+    let da = 0;
+    if (dm === 'Percentage') da = Math.round((cost * Math.min(dv, 99.99)) / 100);
+    else if (dm === 'Rupees') da = Math.min(dv, cost);
 
-  const baseCost = structuredRequirements.reduce((sum, item) => sum + (Number(item.cost) || 0), 0);
-  const discountModeValue = String(discountMode || 'None');
-  const discountRaw = Number(discountValue || 0);
-  const discountAmount = discountModeValue === 'Percentage'
-    ? Math.round((baseCost * Math.min(discountRaw, 99.99)) / 100)
-    : discountModeValue === 'Rupees'
-      ? Math.min(discountRaw, baseCost)
-      : 0;
-  const finalAmount = Math.max(0, baseCost - discountAmount);
+    return {
+      name: String(item.title || '').trim(),
+      price: cost,
+      qty: 1,
+      discountMode: dm,
+      discountValue: dv,
+      discountAmount: da,
+      netCost: Math.max(0, cost - da),
+      isPaid: Boolean(item.isPaid),
+    };
+  }).filter(s => s.name);
 
-  const finalServices = structuredRequirements.map((item) => ({
-    name: item.title,
-    price: item.cost,
-    qty: 1,
-    discount: 0,
-  }));
+  const totalCost = finalServices.reduce((sum, s) => sum + s.price, 0);
+  const totalDiscount = finalServices.reduce((sum, s) => sum + s.discountAmount, 0);
+  const finalAmount = Math.max(0, totalCost - totalDiscount);
 
   const leadStatusMap = {
     Interested: 'INTERESTED',
@@ -222,10 +254,10 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
 
   prospect.status = 'SENT_TO_FINANCE';
   prospect.finalServices = finalServices;
-  prospect.totalAmount = baseCost;
-  prospect.discount = discountAmount;
+  prospect.totalAmount = totalCost;
+  prospect.discount = totalDiscount;
   prospect.finalAmount = finalAmount;
-  prospect.paymentType = Number(advanceAmount || 0) > 0 || advancePayments.length > 0 ? 'PARTIAL' : 'FULL';
+  prospect.paymentType = Number(advanceAmount || 0) > 0 || (advancePayments && advancePayments.length > 0) ? 'PARTIAL' : 'FULL';
   prospect.paymentStatus = 'PENDING';
   prospect.paymentMethod = null;
   prospect.stage = normalizedStatus;
@@ -238,6 +270,9 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
   prospect.clientEmailMessageId = null;
   prospect.clientEmailError = null;
   prospect.requirement = notInterestedReason || conversationNotes || notTalkReason || prospect.requirement || '';
+  prospect.advanceAmount = Number(advanceAmount) || 0;
+  prospect.advancePayments = advancePayments || [];
+  
   await prospect.save();
 
   const lead = await Lead.findOne({ _id: prospect.lead, admin: req.admin._id });
@@ -259,9 +294,13 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
       clientName: prospect.client.name || 'Client',
       companyName: prospect.client.companyName || prospect.company || '',
       serviceName: selectedService || finalServices[0]?.name || 'Custom package',
-      requirements: structuredRequirements,
-      baseCost,
-      discountAmount,
+      requirements: finalServices.map(s => ({
+        title: s.name,
+        cost: s.price,
+        description: s.discountAmount > 0 ? `Discount: ₹${s.discountAmount}` : ''
+      })),
+      baseCost: totalCost,
+      discountAmount: totalDiscount,
       finalAmount,
       paymentStatus,
       termsAndConditions,

@@ -265,7 +265,7 @@ exports.getCurrentUserProfile = catchAsync(async (req, res, next) => {
     isActive: true,
     role: { $in: Array.from(DEPARTMENT_MEMBER_ROLES) },
   })
-    .populate("department", "name")
+    .populate("department", "name displayName")
 
     .populate("manager", "name email role")
     .select(

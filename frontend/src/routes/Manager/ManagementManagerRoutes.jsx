@@ -10,6 +10,7 @@ import ManagementManagerWorkOrders from "../../pages/management/managementManage
 import HRMPage                    from "../../pages/management/managementManager/hrm/HRMPage";
 import LoginLogs                  from "../../pages/management/managementManager/loginLogs/LoginLogs";
 import ManagementManagerTickets   from "../../pages/management/managementManager/ManagementManagerTickets";
+import ManagementManagerProfile   from "../../pages/management/managementManager/ManagementManagerProfile";
 
 function ManagementManagerRoutes() {
   return (
@@ -25,6 +26,7 @@ function ManagementManagerRoutes() {
         <Route path="hrm"         element={<HRMPage                  />} />
         <Route path="login-logs"  element={<LoginLogs                />} />
         <Route path="tickets"     element={<ManagementManagerTickets />} />
+        <Route path="profile"     element={<ManagementManagerProfile   />} />
 
         <Route path="*" element={<Navigate to="/management-manager" replace />} />
       </Route>

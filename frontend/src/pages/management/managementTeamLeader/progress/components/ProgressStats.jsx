@@ -16,7 +16,7 @@ export default function ProgressStats() {
             value={item.value}
             icon={<Icon size={20} />}
             accentColor={item.accent}
-            size={4}
+            size={2}
           />
         );
       })}

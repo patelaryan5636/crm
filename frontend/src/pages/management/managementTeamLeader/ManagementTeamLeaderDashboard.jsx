@@ -1,10 +1,19 @@
+/**
+ * ManagementTeamLeaderDashboard.jsx
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Task-focused dashboard for the Management Team Leader.
+ * KPIs, charts, and tables reflect task-level granularity.
+ *
+ * Hierarchy: Management Manager → Team Leader → Management Employee
+ * One team = one project. TL assigns tasks within projects to employees.
+ */
+
 import React, { useState } from "react";
 import {
   Grid,
   Heading,
   EnhancedDashCard,
   DataTable,
-  GAreaChart,
   GColumnChart,
   GPieChart,
   Button,
@@ -21,82 +30,124 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
-  Users,
-  UserCheck,
-  LifeBuoy,
+  ListTodo,
   TrendingUp,
   Eye,
   MessageSquare,
-  CheckSquare,
+  PencilLine,
 } from "lucide-react";
+import { useProjectsStore, getAvatarColor, getInitials } from "./projects/projectsStore";
 
-// ── Mock Data ──────────────────────────────────────────────────────────────
+// ── Status pill ──────────────────────────────────────────────────────────────
+function StatusPill({ status }) {
+  const map = {
+    Completed: { bg: "#dcfce7", color: "#16a34a" },
+    "In Progress": { bg: "#dbeafe", color: "#2563eb" },
+    "Not Started": { bg: "#f1f5f9", color: "#64748b" },
+    Delayed: { bg: "#fee2e2", color: "#dc2626" },
+  };
+  const s = map[status] || map["Not Started"];
+  return (
+    <span
+      className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+      style={{ background: s.bg, color: s.color }}
+    >
+      {status}
+    </span>
+  );
+}
 
-const kpis = [
-  { title: "Total Projects", value: "24", icon: <Briefcase size={20} />, accent: "#3b82f6" },
-  { title: "Delayed Tasks", value: "2", icon: <AlertTriangle size={20} />, accent: "#ef4444" },
-  { title: "Attendance Today", value: "11", icon: <UserCheck size={20} />, accent: "#10b981" },
-  { title: "Productivity", value: "94%", icon: <TrendingUp size={20} />, accent: "#06b6d4" },
-];
+// ── Priority badge ───────────────────────────────────────────────────────────
+function PriorityBadge({ priority }) {
+  const map = {
+    Critical: { bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+    High: { bg: "#fff7ed", color: "#ea580c", border: "#fed7aa" },
+    Medium: { bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+    Low: { bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
+  };
+  const s = map[priority] || map["Medium"];
+  return (
+    <span
+      className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold border"
+      style={{ background: s.bg, color: s.color, borderColor: s.border }}
+    >
+      {priority}
+    </span>
+  );
+}
 
-const initialProjects = [
-  { id: "PRJ-001", name: "Alpha CRM Update", assignee: "John Doe", status: "In Progress", priority: "High", deadline: "2026-06-15" },
-  { id: "PRJ-002", name: "Beta Web Portal", assignee: "Jane Smith", status: "Pending", priority: "Medium", deadline: "2026-06-20" },
-  { id: "PRJ-003", name: "Gamma API Integration", assignee: "Alex Johnson", status: "Completed", priority: "Low", deadline: "2026-05-10" },
-  { id: "PRJ-004", name: "Delta Migration", assignee: "Chris Lee", status: "Delayed", priority: "High", deadline: "2026-05-18" },
-];
+// ── Avatar cell ──────────────────────────────────────────────────────────────
+function AvatarCell({ name }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[9px] font-black flex-shrink-0"
+        style={{ background: getAvatarColor(name) }}
+      >
+        {getInitials(name)}
+      </div>
+      <span className="text-xs font-semibold text-[#0f172a]">{name}</span>
+    </div>
+  );
+}
 
-const teamActivity = [
-  { id: 1, name: "John Doe", task: "Working on PRJ-001 frontend", status: "Active", time: "10:30 AM" },
-  { id: 2, name: "Jane Smith", task: "Reviewing design for PRJ-002", status: "Active", time: "10:15 AM" },
-  { id: 3, name: "Alex Johnson", task: "Testing Gamma API", status: "Inactive", time: "09:45 AM" },
-  { id: 4, name: "Chris Lee", task: "Fixing PRJ-004 migration bugs", status: "Active", time: "11:00 AM" },
-];
-
+// ── Ticket data (static) ─────────────────────────────────────────────────────
 const initialTickets = [
-  { id: "TCK-101", issue: "Login Failure", priority: "High", status: "Open", assignee: "John Doe" },
-  { id: "TCK-102", issue: "Export Error", priority: "Medium", status: "Resolved", assignee: "Jane Smith" },
-  { id: "TCK-103", issue: "Slow Dashboard", priority: "Low", status: "Escalated", assignee: "Chris Lee" },
+  { id: "TCK-101", issue: "Login Failure", priority: "High", status: "Open", assignee: "Aarav Mehta" },
+  { id: "TCK-102", issue: "Export Error", priority: "Medium", status: "Resolved", assignee: "Dev Arora" },
+  { id: "TCK-103", issue: "Slow Dashboard", priority: "Low", status: "Escalated", assignee: "Kabir Sethi" },
 ];
 
-const hrmData = [
-  { id: "EMP-01", name: "John Doe", role: "Developer", checkIn: "09:00 AM", checkOut: "—", status: "Present" },
-  { id: "EMP-02", name: "Jane Smith", role: "Designer", checkIn: "09:15 AM", checkOut: "—", status: "Present" },
-  { id: "EMP-03", name: "Alex Johnson", role: "QA Engineer", checkIn: "—", checkOut: "—", status: "On Leave" },
-  { id: "EMP-04", name: "Chris Lee", role: "DevOps", checkIn: "08:45 AM", checkOut: "—", status: "Present" },
-];
-
-const progressData = [
-  { name: "Week 1", completed: 10, delayed: 2 },
-  { name: "Week 2", completed: 15, delayed: 1 },
-  { name: "Week 3", completed: 12, delayed: 4 },
-  { name: "Week 4", completed: 18, delayed: 0 },
-];
-
-const statusDistribution = [
-  { name: "Completed", value: 18 },
-  { name: "In Progress", value: 8 },
-  { name: "Pending", value: 4 },
-  { name: "Delayed", value: 2 },
-];
-
-// ── Components ──────────────────────────────────────────────────────────────
-
+// ── Component ────────────────────────────────────────────────────────────────
 export default function ManagementTeamLeaderDashboard() {
-  const [projectList, setProjectList] = useState(initialProjects);
+  const { projects, allTasks, taskStats } = useProjectsStore();
   const [ticketList, setTicketList] = useState(initialTickets);
-  const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedTask, setSelectedTask] = useState(null);
   const [selectedTicket, setSelectedTicket] = useState(null);
 
-  const handleViewProject = (row) => {
-    setSelectedProject(row);
-    openModal("project-details-modal");
-  };
+  // ── KPIs (live from store) ──────────────────────────────────────────────
+  const kpis = [
+    { title: "Total Projects", value: String(projects.length), icon: <Briefcase size={20} />, accent: "#3b82f6" },
+    { title: "Total Tasks", value: String(taskStats.total), icon: <ListTodo size={20} />, accent: "#6366f1" },
+    { title: "Completed Tasks", value: String(taskStats.completed), icon: <CheckCircle size={20} />, accent: "#10b981" },
+    { title: "Overdue / Delayed", value: String(taskStats.delayed), icon: <AlertTriangle size={20} />, accent: "#ef4444" },
+  ];
 
-  const handleCompleteProject = (row) => {
-    setProjectList((prev) =>
-      prev.map((p) => (p.id === row.id ? { ...p, status: "Completed" } : p))
-    );
+  // ── Chart data (derived from store) ─────────────────────────────────────
+  const projectTaskData = projects.map((p) => ({
+    name: p.name.length > 18 ? p.name.slice(0, 18) + "…" : p.name,
+    completed: p.tasks.filter((t) => t.status === "Completed").length,
+    remaining: p.tasks.filter((t) => t.status !== "Completed").length,
+  }));
+
+  const taskStatusDistribution = [
+    { name: "Completed", value: taskStats.completed },
+    { name: "In Progress", value: taskStats.inProgress },
+    { name: "Not Started", value: taskStats.notStarted },
+    { name: "Delayed", value: taskStats.delayed },
+  ];
+
+  // ── Recent tasks (latest 8 from all projects) ──────────────────────────
+  const recentTasks = [...allTasks]
+    .sort((a, b) => (a.deadline < b.deadline ? -1 : 1))
+    .slice(0, 8);
+
+  // ── Employee workload summary ──────────────────────────────────────────
+  const employeeMap = {};
+  allTasks.forEach((t) => {
+    if (!employeeMap[t.assignee]) {
+      employeeMap[t.assignee] = { name: t.assignee, total: 0, completed: 0, inProgress: 0, delayed: 0 };
+    }
+    employeeMap[t.assignee].total++;
+    if (t.status === "Completed") employeeMap[t.assignee].completed++;
+    if (t.status === "In Progress") employeeMap[t.assignee].inProgress++;
+    if (t.status === "Delayed") employeeMap[t.assignee].delayed++;
+  });
+  const employeeWorkload = Object.values(employeeMap);
+
+  const handleViewTask = (row) => {
+    setSelectedTask(row);
+    openModal("dash-task-modal");
   };
 
   const handleOpenTicketReply = (row) => {
@@ -124,7 +175,7 @@ export default function ManagementTeamLeaderDashboard() {
   return (
     <div className="w-full max-w-[1600px] mx-auto space-y-8 pb-10">
       
-      {/* 1. Header / Top Section */}
+      {/* 1. Header */}
       <Grid cols={12} gap={4}>
         <Heading
           primaryText="Team Leader"
@@ -133,7 +184,7 @@ export default function ManagementTeamLeaderDashboard() {
         />
       </Grid>
 
-      {/* 2. KPI Cards Section */}
+      {/* 2. KPI Cards */}
       <Grid cols={12} gap={4}>
         {kpis.map((k, i) => (
           <EnhancedDashCard
@@ -147,42 +198,54 @@ export default function ManagementTeamLeaderDashboard() {
         ))}
       </Grid>
 
-      {/* 3. Progress Tracking & Reporting Section */}
+      {/* 3. Charts Section */}
       <Grid cols={12} gap={4}>
         <GColumnChart
-          title="Weekly Task Completion"
-          subtitle="Tasks completed vs delayed over the month"
-          data={progressData}
+          title="Task Completion by Project"
+          subtitle="Completed vs remaining tasks per project"
+          data={projectTaskData}
           bars={[
             { key: "completed", label: "Completed", color: "#22c55e" },
-            { key: "delayed", label: "Delayed", color: "#ef4444" },
+            { key: "remaining", label: "Remaining", color: "#f59e0b" },
           ]}
           size={8}
           height={320}
         />
         <GPieChart
-          title="Project Status Distribution"
-          subtitle="Current statuses of all assigned projects"
-          data={statusDistribution}
-          colors={["#22c55e", "#3b82f6", "#f59e0b", "#ef4444"]}
+          title="Task Status Distribution"
+          subtitle="Current status of all tasks across projects"
+          data={taskStatusDistribution}
+          colors={["#22c55e", "#3b82f6", "#94a3b8", "#ef4444"]}
           size={4}
           height={320}
         />
       </Grid>
 
-      {/* 4. Project Management Section */}
+      {/* 4. Recent Tasks Table */}
       <Grid cols={12} gap={4}>
         <DataTable
-          title="Project Management"
+          title="Upcoming Tasks"
           columns={[
-            { key: "id", label: "ID" },
-            { key: "name", label: "Project Name" },
-            { key: "assignee", label: "Assignee" },
-            { key: "priority", label: "Priority" },
+            { key: "title", label: "Task" },
+            { key: "projectName", label: "Project" },
+            {
+              key: "assignee",
+              label: "Assignee",
+              render: (val) => <AvatarCell name={val} />,
+            },
+            {
+              key: "priority",
+              label: "Priority",
+              render: (val) => <PriorityBadge priority={val} />,
+            },
             { key: "deadline", label: "Deadline" },
-            { key: "status", label: "Status" },
+            {
+              key: "status",
+              label: "Status",
+              render: (val) => <StatusPill status={val} />,
+            },
           ]}
-          rows={projectList}
+          rows={recentTasks}
           size={12}
           pageSize={5}
           searchable
@@ -191,50 +254,37 @@ export default function ManagementTeamLeaderDashboard() {
               icon: <Eye size={16} />,
               tooltip: "View Details",
               variant: "ghost",
-              onClick: handleViewProject,
+              onClick: handleViewTask,
             },
-            {
-              icon: <CheckSquare size={16} />,
-              tooltip: "Mark Complete",
-              variant: "ghost",
-              onClick: handleCompleteProject,
-            }
           ]}
           filters={[
-            { title: "Status", type: "toggle", key: "status", options: ["Pending", "In Progress", "Completed", "Delayed"] }
+            { title: "Status", type: "toggle", key: "status", options: ["Not Started", "In Progress", "Completed", "Delayed"] }
           ]}
         />
       </Grid>
 
-      {/* 5. Team Coordination & HRM Section */}
+      {/* 5. Employee Workload */}
       <Grid cols={12} gap={4}>
         <DataTable
-          title="Team Activity & Coordination"
+          title="Employee Workload"
           columns={[
-            { key: "name", label: "Employee Name" },
-            { key: "task", label: "Current Task" },
-            { key: "time", label: "Last Update" },
-            { key: "status", label: "Status" },
+            {
+              key: "name",
+              label: "Employee",
+              render: (val) => <AvatarCell name={val} />,
+            },
+            { key: "total", label: "Total Tasks" },
+            { key: "completed", label: "Completed" },
+            { key: "inProgress", label: "In Progress" },
+            { key: "delayed", label: "Delayed" },
           ]}
-          rows={teamActivity}
-          size={12}
-          pageSize={5}
-        />
-        <DataTable
-          title="HRM & Attendance Tracking"
-          columns={[
-            { key: "name", label: "Employee" },
-            { key: "role", label: "Role" },
-            { key: "checkIn", label: "Check In" },
-            { key: "status", label: "Attendance Status" },
-          ]}
-          rows={hrmData}
+          rows={employeeWorkload}
           size={12}
           pageSize={5}
         />
       </Grid>
 
-      {/* 6. Issue Handling Section */}
+      {/* 6. Support Tickets */}
       <Grid cols={12} gap={4}>
         <DataTable
           title="Support Tickets & Issues"
@@ -260,37 +310,29 @@ export default function ManagementTeamLeaderDashboard() {
         />
       </Grid>
 
-      {/* ── Modals ────────────────────────────────────────────────────────── */}
-      <Modal id="project-details-modal" title="Project Management" size="lg">
-        {selectedProject && (
+      {/* ── Task Details Modal ── */}
+      <Modal id="dash-task-modal" title="Task Details" size="lg">
+        {selectedTask && (
           <div className="flex flex-col gap-4">
             <ModalProfile
-              name={selectedProject.name}
-              subtitle={`Assigned to: ${selectedProject.assignee}`}
-              meta={`Project ID: ${selectedProject.id} · Priority: ${selectedProject.priority}`}
+              name={selectedTask.title}
+              subtitle={selectedTask.description || "No description provided."}
+              meta={`Project: ${selectedTask.projectName} · Assigned to: ${selectedTask.assignee}`}
             />
-            <ModalGrid title="Details" cols={2}>
-              <ModalData label="Status" value={selectedProject.status} />
-              <ModalData label="Deadline" value={selectedProject.deadline} />
+            <ModalGrid title="Details" cols={3}>
+              <ModalData label="Status" value={selectedTask.status} />
+              <ModalData label="Priority" value={selectedTask.priority} />
+              <ModalData label="Deadline" value={selectedTask.deadline} />
             </ModalGrid>
-            <Grid cols={12} gap={2} className="pt-4">
-              <div className="hidden sm:block sm:col-span-6"></div>
-              <Button 
-                text="Mark Complete" 
-                variant="secondary" 
-                size={3} 
-                onClick={() => {
-                  handleCompleteProject(selectedProject);
-                  closeModal("project-details-modal");
-                }} 
-                disabled={selectedProject.status === "Completed"}
-              />
-              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("project-details-modal")} />
+            <Grid cols={12} gap={2} className="pt-2">
+              <div className="hidden sm:block sm:col-span-9"></div>
+              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("dash-task-modal")} />
             </Grid>
           </div>
         )}
       </Modal>
 
+      {/* ── Ticket Reply Modal ── */}
       <Modal id="ticket-reply-modal" title="Ticket Details" size="lg">
         {selectedTicket && (
           <div className="flex flex-col gap-4">

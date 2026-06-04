@@ -22,10 +22,10 @@ export {
 
 // Columns for the My Projects DataTable.
 // "My TL" replaces MM's "Team Leader" — the ME has exactly one TL, shown read-only.
+// Client identifying data (name/mobile) is intentionally hidden from the ME UI.
 export const PROJECT_COLS = [
   { key: "id",             label: "ID" },
   { key: "name",           label: "Project" },
-  { key: "clientName",     label: "Client" },
   { key: "assignedTLName", label: "My TL" },
   { key: "deadline",       label: "Deadline" },
   { key: "progress",       label: "Progress" },

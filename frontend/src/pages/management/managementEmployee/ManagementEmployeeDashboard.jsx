@@ -34,7 +34,6 @@ const KPI_ICONS = [
 const DEADLINE_COLS = [
   { key: "id",            label: "ID" },
   { key: "name",          label: "Project" },
-  { key: "clientName",    label: "Client" },
   { key: "deadline",      label: "Deadline" },
   { key: "progress",      label: "Progress" },
   { key: "projectStatus", label: "Project Status" },

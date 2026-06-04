@@ -64,7 +64,7 @@ export default function ProjectActivityDrawer({ project, activityState, setActiv
             const pill = isComment
               ? { label: "Comment",                      bg: "bg-blue-100",    text: "text-blue-700" }
               : isVisible
-              ? { label: "Work Note · Client-visible",   bg: "bg-emerald-100", text: "text-emerald-700" }
+              ? { label: "Work Note · Public",           bg: "bg-emerald-100", text: "text-emerald-700" }
               : { label: "Work Note · Internal",         bg: "bg-slate-100",   text: "text-slate-600" };
 
             return (
@@ -139,10 +139,10 @@ export default function ProjectActivityDrawer({ project, activityState, setActiv
                 onChange={(e) => setIsClientVisible(e.target.checked)}
                 className="w-4 h-4 accent-emerald-600"
               />
-              Show this note on the public Client Tracking Page
+              Show on the public project tracking page
             </label>
             <p className="text-xs text-slate-400 -mt-1 ml-6">
-              Client-visible notes appear on the external project tracking page.
+              Public notes appear on the external project tracking page.
             </p>
             <div className="flex gap-2 justify-end">
               <Button text="Cancel"        variant="ghost"   size={3} onClick={() => { setNoteBody(""); setActiveForm(null); }} />

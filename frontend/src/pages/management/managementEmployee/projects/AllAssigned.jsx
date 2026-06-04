@@ -181,7 +181,7 @@ export default function AllAssigned({ projects, updateProject, title = "My Proje
           <div className="flex flex-col gap-4">
             <ModalProfile
               name={viewRow.name}
-              subtitle={`${viewRow.clientName} · ${viewRow.assignedTLName}`}
+              subtitle={`TL: ${viewRow.assignedTLName}`}
               meta={`${viewRow.id} · Deadline ${viewRow.deadline}`}
             />
             <ModalGrid title="Overview" cols={3}>
@@ -191,10 +191,6 @@ export default function AllAssigned({ projects, updateProject, title = "My Proje
               <ModalData label="Start Date"   value={viewRow.startDate} />
               <ModalData label="Deadline"     value={viewRow.deadline} />
               <ModalData label="Completed On" value={viewRow.deliveredDate ?? "—"} />
-            </ModalGrid>
-            <ModalGrid title="Client" cols={2}>
-              <ModalData label="Name"   value={viewRow.clientName} />
-              <ModalData label="Mobile" value={viewRow.clientMobile} />
             </ModalGrid>
             <ModalGrid title="Links (read-only — owned by Manager)" cols={1}>
               <ModalData label="Drive Link"    value={viewRow.driveLink    ?? "—"} />
@@ -231,7 +227,7 @@ export default function AllAssigned({ projects, updateProject, title = "My Proje
                               ? "bg-slate-100 text-slate-500 border border-slate-200"
                               : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                           }`}>
-                            {u.isClientVisible === false ? "Internal" : "Client-visible"}
+                            {u.isClientVisible === false ? "Internal" : "Public"}
                           </span>
                         </div>
                       </div>
@@ -278,7 +274,7 @@ export default function AllAssigned({ projects, updateProject, title = "My Proje
             <ModalProfile
               name={statusRow.name}
               subtitle={`Current status: ${statusRow.status}`}
-              meta={`${statusRow.id} · ${statusRow.clientName}`}
+              meta={statusRow.id}
             />
             <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
               <AlertTriangle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
@@ -340,7 +336,7 @@ export default function AllAssigned({ projects, updateProject, title = "My Proje
           <div className="flex flex-col gap-4">
             <ModalProfile
               name={commentRow.name}
-              subtitle={`${commentRow.clientName} · ${commentRow.id}`}
+              subtitle={commentRow.id}
               meta="Short comment — visible to your TL and Manager"
             />
             <DataField
@@ -388,7 +384,7 @@ export default function AllAssigned({ projects, updateProject, title = "My Proje
                 onChange={(e) => setNoteForm({ ...noteForm, isClientVisible: e.target.checked })}
               />
               <span>
-                Show this note on the public <b>Client Tracking Page</b>.
+                Show on the <b>public project tracking page</b>.
                 <span className="block text-xs text-slate-500 mt-0.5">
                   Uncheck for internal-only notes (your TL and Manager will still see them).
                 </span>

@@ -543,11 +543,6 @@ const MENUS = {
             icon: FolderOpen,
           },
           { name: "Teams", path: "/management-team-leader/teams", icon: Users },
-          {
-            name: "Progress",
-            path: "/management-team-leader/progress",
-            icon: Activity,
-          },
         ],
       },
       {

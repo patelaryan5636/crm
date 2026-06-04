@@ -8,31 +8,30 @@ import {
   EnhancedDashCard,
 } from "../../../../components/shared/Common_Components";
 import { MessageSquare, Users, CheckCircle2, AlertTriangle, Send } from "lucide-react";
-import teamsStore from "./teamsStore";
-import { getAvatarColor, getInitials } from "../projects/projectsStore";
+import { useProjectsStore, getAvatarColor, getInitials } from "../projects/projectsStore";
 
 const CURRENT_USER = "Management Team Leader";
 
 export default function DailyCoordination() {
-  const [messages, setMessages] = useState(teamsStore.coordinationComments);
+  const { members, activityLog, coordinationComments, addCoordinationComment } = useProjectsStore();
+  const [messages, setMessages] = useState(coordinationComments);
   const [announcement, setAnnouncement] = useState("");
   const [selectedMembers, setSelectedMembers] = useState([]);
 
   // Stats derived from activity log
   const today = new Date().toISOString().slice(0, 10);
-  const todayActivity = teamsStore.activityLog.filter((a) =>
+  const todayActivity = activityLog.filter((a) =>
     a.timestamp.startsWith(today)
   );
-  const activeCount = teamsStore.members.filter((m) => m.status === "Active").length;
-  const delayCount = teamsStore.activityLog.filter((a) => a.type === "delay").length;
-  const completedToday = teamsStore.activityLog.filter(
+  const activeCount = members.filter((m) => m.status === "Active").length;
+  const delayCount = activityLog.filter((a) => a.type === "delay").length;
+  const completedToday = activityLog.filter(
     (a) => a.type === "completed" && a.timestamp.startsWith(today.slice(0, 7))
   ).length;
 
   const handleSend = (msg) => {
-    const updated = [...messages, msg];
-    setMessages(updated);
-    teamsStore.coordinationComments = updated;
+    addCoordinationComment(msg);
+    setMessages([...coordinationComments, { id: Date.now(), ...msg }]);
   };
 
   const toggleMember = (name) => {
@@ -42,10 +41,10 @@ export default function DailyCoordination() {
   };
 
   const selectAll = () => {
-    if (selectedMembers.length === teamsStore.members.length) {
+    if (selectedMembers.length === members.length) {
       setSelectedMembers([]);
     } else {
-      setSelectedMembers(teamsStore.members.map((m) => m.name));
+      setSelectedMembers(members.map((m) => m.name));
     }
   };
 
@@ -53,7 +52,7 @@ export default function DailyCoordination() {
     if (!announcement.trim()) return;
     const targets = selectedMembers.length > 0 ? selectedMembers : [];
     let text;
-    if (targets.length === 0 || targets.length === teamsStore.members.length) {
+    if (targets.length === 0 || targets.length === members.length) {
       text = `📢 Team Announcement: ${announcement}`;
     } else if (targets.length === 1) {
       text = `📢 @${targets[0]}: ${announcement}`;
@@ -70,17 +69,10 @@ export default function DailyCoordination() {
     setSelectedMembers([]);
   };
 
-  const allSelected = selectedMembers.length === teamsStore.members.length;
+  const allSelected = selectedMembers.length === members.length;
 
   return (
     <Grid cols={12} gap={4}>
-      <Heading
-        primaryText="Daily Coordination"
-        secondaryText="Team Hub"
-        size={12}
-        showAnimations={false}
-      />
-
       {/* Stats Row — EnhancedDashCard */}
       <EnhancedDashCard title="Active Members" value={String(activeCount)} icon={<Users size={20} />} accentColor="#3b82f6" size={3} />
       <EnhancedDashCard title="Today's Updates" value={String(todayActivity.length)} icon={<MessageSquare size={20} />} accentColor="#6366f1" size={3} />
@@ -117,7 +109,7 @@ export default function DailyCoordination() {
             </button>
 
             {/* Individual members */}
-            {teamsStore.members.map((m) => {
+            {members.map((m) => {
               const isSelected = selectedMembers.includes(m.name);
               return (
                 <button
@@ -141,7 +133,7 @@ export default function DailyCoordination() {
               );
             })}
           </div>
-          {selectedMembers.length > 0 && selectedMembers.length < teamsStore.members.length && (
+          {selectedMembers.length > 0 && selectedMembers.length < members.length && (
             <p className="text-[10px] text-slate-400 mt-1.5">
               {selectedMembers.length} member{selectedMembers.length > 1 ? "s" : ""} selected
             </p>
@@ -198,11 +190,11 @@ export default function DailyCoordination() {
         <p className="text-sm font-black text-[#2a465a] mb-4">
           Today's Activity Summary
         </p>
-        {teamsStore.activityLog.length === 0 ? (
+        {activityLog.length === 0 ? (
           <p className="text-sm text-slate-400 text-center py-6">No activity recorded today.</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {teamsStore.activityLog.map((log) => {
+            {activityLog.map((log) => {
               const typeConfig = {
                 progress:  { bg: "bg-blue-50",    text: "text-blue-700",   border: "border-blue-100",   dot: "bg-blue-500"   },
                 delay:     { bg: "bg-rose-50",    text: "text-rose-700",   border: "border-rose-100",   dot: "bg-rose-500"   },

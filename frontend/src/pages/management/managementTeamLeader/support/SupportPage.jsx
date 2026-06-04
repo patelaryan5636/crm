@@ -252,12 +252,14 @@ export default function SupportPage() {
       tooltip: "Mark Resolved",
       variant: "success",
       onClick: handleResolve,
+      show: (row) => row.status !== "Resolved" && row.status !== "Escalated",
     },
     {
       icon: <AlertTriangle size={15} />,
       tooltip: "Escalate to Manager",
       variant: "danger",
       onClick: handleEscalate,
+      show: (row) => row.status !== "Resolved" && row.status !== "Escalated",
     },
   ];
 

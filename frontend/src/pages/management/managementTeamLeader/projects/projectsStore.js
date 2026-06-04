@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 
 // ── Team members (employees under this TL) ───────────────────────────────────
 export const EMPLOYEES = [
-  { id: "EM-201", name: "Aarav Mehta", role: "Frontend Developer" },
-  { id: "EM-202", name: "Dev Arora", role: "Backend Developer" },
-  { id: "EM-203", name: "Ira Shah", role: "UI/UX Designer" },
-  { id: "EM-204", name: "Kabir Sethi", role: "Full Stack Developer" },
-  { id: "EM-205", name: "Nisha Kapoor", role: "QA Engineer" },
+  { id: "EM-201", name: "Aarav Mehta", role: "Frontend Developer", email: "aarav.mehta@graphura.com", phone: "+91 98101 11001", status: "Active", joinDate: "2024-01-15", photoUrl: null },
+  { id: "EM-202", name: "Dev Arora", role: "Backend Developer", email: "dev.arora@graphura.com", phone: "+91 98101 22002", status: "Active", joinDate: "2024-02-10", photoUrl: null },
+  { id: "EM-203", name: "Ira Shah", role: "UI/UX Designer", email: "ira.shah@graphura.com", phone: "+91 98101 33003", status: "Active", joinDate: "2024-03-05", photoUrl: null },
+  { id: "EM-204", name: "Kabir Sethi", role: "Full Stack Developer", email: "kabir.sethi@graphura.com", phone: "+91 98101 44004", status: "Active", joinDate: "2024-01-20", photoUrl: null },
+  { id: "EM-205", name: "Nisha Kapoor", role: "QA Engineer", email: "nisha.kapoor@graphura.com", phone: "+91 98101 55005", status: "Active", joinDate: "2024-04-01", photoUrl: null },
 ];
 
 export const EMPLOYEE_NAMES = EMPLOYEES.map((e) => e.name);
@@ -137,6 +137,21 @@ let globalReassignHistory = [
   },
 ];
 
+// ── Teams data ────────────────────────────────────────────────────────────────
+let globalActivityLog = [
+  { id: 1, member: "Aarav Mehta", action: "Updated project progress", project: "Employee Mobile Dashboard", detail: "Pushed UI components to 78%", timestamp: "2026-05-28 09:15", type: "progress" },
+  { id: 2, member: "Dev Arora", action: "Flagged delay", project: "Vendor Onboarding Portal", detail: "API integration blocked by third-party", timestamp: "2026-05-28 10:30", type: "delay" },
+  { id: 3, member: "Kabir Sethi", action: "Completed project", project: "Finance Approval Workflow", detail: "All modules tested and deployed", timestamp: "2026-05-27 17:45", type: "completed" },
+  { id: 4, member: "Ira Shah", action: "Submitted daily update", project: "Payroll Audit Tracker", detail: "Design review done, handoff to dev", timestamp: "2026-05-27 16:00", type: "update" },
+  { id: 5, member: "Nisha Kapoor", action: "Completed project", project: "Client Document Migration", detail: "Migration verified and signed off", timestamp: "2026-05-26 14:20", type: "completed" },
+];
+
+let globalCoordinationComments = [
+  { id: 1, sender: "Management Team Leader", time: "2026-05-28 09:00", text: "Good morning team! Please submit your daily progress updates by 6 PM today." },
+  { id: 2, sender: "Aarav Mehta", time: "2026-05-28 09:10", text: "Noted! Working on the mobile dashboard UI components today." },
+  { id: 3, sender: "Dev Arora", time: "2026-05-28 09:20", text: "Will send update by EOD. Currently blocked on vendor API — escalating." },
+];
+
 // ── Reactive store ────────────────────────────────────────────────────────────
 const listeners = new Set();
 const notify = () => listeners.forEach((fn) => fn());
@@ -252,6 +267,17 @@ export const useProjectsStore = () => {
     return entry;
   };
 
+  // ── Teams methods ─────────────────────────────────────────────────────────
+  const addCoordinationComment = (msg) => {
+    globalCoordinationComments = [...globalCoordinationComments, { id: Date.now(), ...msg }];
+    notify();
+  };
+
+  const addActivityLog = (log) => {
+    globalActivityLog = [{ id: Date.now(), ...log }, ...globalActivityLog];
+    notify();
+  };
+
   // ── Computed helpers ──────────────────────────────────────────────────────
   const allTasks = globalProjects.flatMap((p) =>
     p.tasks.map((t) => ({ ...t, projectId: p.id, projectName: p.name }))
@@ -270,11 +296,16 @@ export const useProjectsStore = () => {
     reassignHistory: globalReassignHistory,
     allTasks,
     taskStats,
+    members: EMPLOYEES,
+    activityLog: globalActivityLog,
+    coordinationComments: globalCoordinationComments,
     addProject,
     addTask,
     updateTask,
     deleteTask,
     reassignTask,
+    addCoordinationComment,
+    addActivityLog,
   };
 };
 

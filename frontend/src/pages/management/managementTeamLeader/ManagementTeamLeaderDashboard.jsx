@@ -174,7 +174,7 @@ export default function ManagementTeamLeaderDashboard() {
 
   return (
     <div className="w-full max-w-[1600px] mx-auto space-y-8 pb-10">
-      
+
       {/* 1. Header */}
       <Grid cols={12} gap={4}>
         <Heading
@@ -346,13 +346,13 @@ export default function ManagementTeamLeaderDashboard() {
             </ModalGrid>
             <div className="flex flex-col gap-1 pt-2">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Conversation</p>
-              <UserChat 
-                messages={selectedTicket.conversation || []} 
+              <UserChat
+                messages={selectedTicket.conversation || []}
                 onSend={selectedTicket.status === "Resolved" ? null : handleSendTicketReply}
-                currentUser="Team Leader" 
+                currentUser="Team Leader"
                 maxHeight="max-h-72"
-                placeholder="Type your reply… (Enter to send)" 
-                readOnly={selectedTicket.status === "Resolved"} 
+                placeholder="Type your reply… (Enter to send)"
+                readOnly={selectedTicket.status === "Resolved"}
               />
             </div>
             <Grid cols={12} gap={2} className="pt-2">

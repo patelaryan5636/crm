@@ -131,7 +131,6 @@ export default function Invoices() {
   const [stats, setStats] = useState({ total: 0, paid: 0, unpaid: 0, draft: 0, overdue: 0, totalAmount: 0 });
   const [selected, setSelected] = useState(null);
   const [company, setCompany] = useState({});
-  const [editForm, setEditForm] = useState({});
   const [sendEmail, setSendEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState("");
@@ -171,49 +170,6 @@ export default function Invoices() {
 
   // ── Actions ────────────────────────────────────────────────────────────────
   const openView = (row) => { setSelected(row); openModal("inv-view"); };
-
-  const openEdit = (row) => {
-    setSelected(row);
-    setEditForm({
-      clientName: row.client,
-      clientEmail: row.email,
-      clientMobile: row.mobile,
-      clientCompany: row.companyName,
-      amount: row.amount,
-      gstPercent: row.gstPct,
-      discount: row.discount,
-      notes: row.notes,
-      status: row.status,
-      dueDate: row.dueDate ? row.dueDate.substring(0, 10) : "",
-    });
-    openModal("inv-edit");
-  };
-
-  const saveEdit = async () => {
-    if (!selected) return;
-    setActionLoading("edit");
-    try {
-      await apiClient.put(`/finance/invoices/${selected.id}`, {
-        clientName: editForm.clientName,
-        clientEmail: editForm.clientEmail,
-        clientMobile: editForm.clientMobile,
-        clientCompany: editForm.clientCompany,
-        amount: Number(editForm.amount),
-        gstPercent: Number(editForm.gstPercent),
-        discount: Number(editForm.discount || 0),
-        notes: editForm.notes,
-        status: editForm.status,
-        dueDate: editForm.dueDate || null,
-      });
-      toast.success("Invoice updated");
-      closeModal("inv-edit");
-      await loadInvoices();
-    } catch (err) {
-      toast.error(err?.message || "Failed to update invoice");
-    } finally {
-      setActionLoading("");
-    }
-  };
 
   const handleDownload = async (row) => {
     setActionLoading(`dl-${row.id}`);
@@ -329,12 +285,6 @@ export default function Invoices() {
               onClick: openView,
             },
             {
-              icon: <Pencil size={15} />,
-              tooltip: "Edit Invoice",
-              variant: "primary",
-              onClick: openEdit,
-            },
-            {
               icon: <Download size={15} />,
               tooltip: "Download PDF",
               variant: "ghost",
@@ -435,55 +385,6 @@ export default function Invoices() {
             </div>
           );
         })()}
-      </Modal>
-
-      {/* ── Edit Modal ───────────────────────────────────────────────────── */}
-      <Modal id="inv-edit" title="Edit Invoice" size="lg">
-        {selected && (
-          <div className="flex flex-col gap-4">
-            <ModalProfile name={selected.client} subtitle={`Invoice: ${selected.invoiceNumber}`} />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <DataField label="Client Name" id="inv-client" value={editForm.clientName || ""} onChange={(e) => setEditForm((p) => ({ ...p, clientName: e.target.value }))} size={12} />
-              <DataField label="Client Email" id="inv-email" value={editForm.clientEmail || ""} onChange={(e) => setEditForm((p) => ({ ...p, clientEmail: e.target.value }))} size={12} />
-              <DataField label="Mobile" id="inv-mobile" value={editForm.clientMobile || ""} onChange={(e) => setEditForm((p) => ({ ...p, clientMobile: e.target.value }))} size={12} />
-              <DataField label="Company" id="inv-company" value={editForm.clientCompany || ""} onChange={(e) => setEditForm((p) => ({ ...p, clientCompany: e.target.value }))} size={12} />
-              <DataField label="Amount (₹)" id="inv-amount" type="number" value={editForm.amount || ""} onChange={(e) => setEditForm((p) => ({ ...p, amount: e.target.value }))} size={12} />
-              <DataField label="GST (%)" id="inv-gst" type="number" value={editForm.gstPercent || 18} onChange={(e) => setEditForm((p) => ({ ...p, gstPercent: e.target.value }))} size={12} />
-              <DataField label="Discount (₹)" id="inv-disc" type="number" value={editForm.discount || 0} onChange={(e) => setEditForm((p) => ({ ...p, discount: e.target.value }))} size={12} />
-              <DataField label="Due Date" id="inv-due" type="date" value={editForm.dueDate || ""} onChange={(e) => setEditForm((p) => ({ ...p, dueDate: e.target.value }))} size={12} />
-              <SelectField label="Status" id="inv-status" value={editForm.status || "DRAFT"} onChange={(e) => setEditForm((p) => ({ ...p, status: e.target.value }))}>
-                <Option value="DRAFT" label="Draft" />
-                <Option value="SENT" label="Sent / Unpaid" />
-                <Option value="PAID" label="Paid" />
-                <Option value="OVERDUE" label="Overdue" />
-                <Option value="CANCELLED" label="Cancelled" />
-              </SelectField>
-              <DataField label="Notes" id="inv-notes" type="textarea" value={editForm.notes || ""} onChange={(e) => setEditForm((p) => ({ ...p, notes: e.target.value }))} size={12} />
-            </div>
-
-            {/* Live total preview */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 flex justify-between items-center">
-              <span className="text-sm font-semibold text-slate-500">Calculated Total</span>
-              <span className="text-lg font-black text-[#1e293b]">
-                {fmt(
-                  Number(editForm.amount || 0) +
-                  Math.round((Number(editForm.amount || 0) * Number(editForm.gstPercent || 18)) / 100) -
-                  Number(editForm.discount || 0)
-                )}
-              </span>
-            </div>
-
-            <div className="flex gap-3 justify-end pt-2">
-              <Button text="Cancel" variant="ghost" size={3} onClick={() => closeModal("inv-edit")} />
-              <Button
-                text={actionLoading === "edit" ? "Saving…" : "Save Changes"}
-                variant="primary"
-                size={3}
-                onClick={saveEdit}
-              />
-            </div>
-          </div>
-        )}
       </Modal>
 
       {/* ── Send Email Modal ─────────────────────────────────────────────── */}

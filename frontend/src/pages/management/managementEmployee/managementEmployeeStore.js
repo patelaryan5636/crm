@@ -87,9 +87,9 @@ export const myProjects = [
     totalCost: 600000, paidAmount: 300000, paymentType: "Partial",
     woGenerated: true, woSigned: true, woSignedDate: "2026-02-17",
     updates: [
-      { date: "2026-02-18", status: "Work Started", note: "Design system locked; backend scaffolded.", isClientVisible: true },
-      { date: "2026-04-22", status: "In Progress",  note: "Auth + push notifications integrated.",     isClientVisible: true },
-      { date: "2026-05-09", status: "Review Stage", note: "Client QA round 1 in progress.",            isClientVisible: true },
+      { date: "2026-02-18", status: "Work Started", note: "Design system locked; backend scaffolded.", author: "Anjali Sinha", isClientVisible: true },
+      { date: "2026-04-22", status: "In Progress",  note: "Auth + push notifications integrated.",     author: "Rohit Bansal", isClientVisible: true },
+      { date: "2026-05-09", status: "Review Stage", note: "External QA round 1 in progress.",          author: "Sara Khan",    isClientVisible: true },
     ],
     comments: [
       { date: "2026-05-10", author: "Sara Khan", body: "Pushed the latest QA build to TestFlight." },
@@ -107,7 +107,7 @@ export const myProjects = [
     totalCost: 380000, paidAmount: 100000, paymentType: "Partial",
     woGenerated: true, woSigned: false, woSignedDate: null,
     updates: [
-      { date: "2026-04-01", status: "Work Started", note: "Project kickoff.", isClientVisible: true },
+      { date: "2026-04-01", status: "Work Started", note: "Project kickoff.", author: "Anjali Sinha", isClientVisible: true },
     ],
     comments: [],
   },
@@ -123,12 +123,12 @@ export const myProjects = [
     totalCost: 150000, paidAmount: 50000, paymentType: "Partial",
     woGenerated: true, woSigned: true, woSignedDate: "2026-04-14",
     updates: [
-      { date: "2026-04-15", status: "Work Started", note: "Brief approved; wireframes done.",    isClientVisible: true },
-      { date: "2026-05-04", status: "In Progress",  note: "Homepage + product grid built.",      isClientVisible: true },
-      { date: "2026-05-22", status: "In Progress",  note: "Internal: pending icon set from MM.", isClientVisible: false },
+      { date: "2026-04-15", status: "Work Started", note: "Brief approved; wireframes done.",    author: "Anjali Sinha", isClientVisible: true },
+      { date: "2026-05-04", status: "In Progress",  note: "Homepage + product grid built.",      author: "Sara Khan",    isClientVisible: true },
+      { date: "2026-05-22", status: "In Progress",  note: "Internal: pending icon set from MM.", author: "Sara Khan",    isClientVisible: false },
     ],
     comments: [
-      { date: "2026-05-20", author: "Sara Khan", body: "Need the final logo variants from the client." },
+      { date: "2026-05-20", author: "Sara Khan", body: "Need the final logo variants — pinging Anjali." },
       { date: "2026-05-22", author: "Sara Khan", body: "Logo received — incorporating now." },
     ],
   },
@@ -144,11 +144,11 @@ export const myProjects = [
     totalCost: 210000, paidAmount: 100000, paymentType: "Partial",
     woGenerated: true, woSigned: true, woSignedDate: "2026-02-27",
     updates: [
-      { date: "2026-02-28", status: "Work Started", note: "Kickoff.",                              isClientVisible: true },
-      { date: "2026-04-05", status: "Delayed",      note: "Client API integration blocked — TL escalating.", isClientVisible: true },
+      { date: "2026-02-28", status: "Work Started", note: "Kickoff.",                                      author: "Anjali Sinha", isClientVisible: true },
+      { date: "2026-04-05", status: "Delayed",      note: "External API integration blocked — TL escalating.", author: "Anjali Sinha", isClientVisible: true },
     ],
     comments: [
-      { date: "2026-05-02", author: "Sara Khan", body: "Still blocked on parent-auth API from client side." },
+      { date: "2026-05-02", author: "Sara Khan", body: "Still blocked on the external parent-auth API." },
     ],
   },
 
@@ -166,10 +166,10 @@ export const myProjects = [
     totalCost: 130000, paidAmount: 130000, paymentType: "Full",
     woGenerated: true, woSigned: true, woSignedDate: "2026-01-14",
     updates: [
-      { date: "2026-01-15", status: "Work Started", note: "Project kickoff.",                          isClientVisible: true },
-      { date: "2026-02-20", status: "In Progress",  note: "Email template builder done.",              isClientVisible: true },
-      { date: "2026-03-05", status: "Review Stage", note: "Client UAT round complete.",                isClientVisible: true },
-      { date: "2026-03-08", status: "Completed",    note: "Final handover; client signed off.",        isClientVisible: true },
+      { date: "2026-01-15", status: "Work Started", note: "Project kickoff.",                          author: "Anjali Sinha", isClientVisible: true },
+      { date: "2026-02-20", status: "In Progress",  note: "Email template builder done.",              author: "Sara Khan",    isClientVisible: true },
+      { date: "2026-03-05", status: "Review Stage", note: "UAT round complete.",                       author: "Sara Khan",    isClientVisible: true },
+      { date: "2026-03-08", status: "Completed",    note: "Final handover; sign-off received.",        author: "Anjali Sinha", isClientVisible: true },
     ],
     comments: [],
   },
@@ -200,9 +200,9 @@ export const myProjects = [
     totalCost: 180000, paidAmount: 180000, paymentType: "Full",
     woGenerated: true, woSigned: true, woSignedDate: "2025-12-04",
     updates: [
-      { date: "2025-12-05", status: "Work Started", note: "Kickoff with Hexane team.",          isClientVisible: true },
-      { date: "2026-01-20", status: "In Progress",  note: "Onboarding flow live in staging.",   isClientVisible: true },
-      { date: "2026-02-12", status: "Completed",    note: "Handover shared; live on prod.",     isClientVisible: true },
+      { date: "2025-12-05", status: "Work Started", note: "Project kickoff.",                   author: "Anjali Sinha", isClientVisible: true },
+      { date: "2026-01-20", status: "In Progress",  note: "Onboarding flow live in staging.",   author: "Sara Khan",    isClientVisible: true },
+      { date: "2026-02-12", status: "Completed",    note: "Handover shared; live on prod.",     author: "Anjali Sinha", isClientVisible: true },
     ],
     comments: [],
   },

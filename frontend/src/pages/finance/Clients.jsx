@@ -78,10 +78,11 @@ const paymentStatusColor = (s) => {
 const calcTotalCost = (reqs) =>
   reqs.reduce((sum, r) => sum + (parseFloat(r.cost) || 0), 0);
 
-const calcDiscountAmount = (total, mode, value) => {
+const calcItemDiscount = (cost, mode, value) => {
+  const c = parseFloat(cost) || 0;
   const v = parseFloat(value) || 0;
-  if (mode === "Percentage") return Math.round((total * Math.min(v, 99.99)) / 100);
-  if (mode === "Rupees")     return Math.min(v, total);
+  if (mode === "Percentage") return Math.round((c * Math.min(v, 99.99)) / 100);
+  if (mode === "Rupees")     return Math.min(v, c);
   return 0;
 };
 
@@ -97,7 +98,17 @@ const calcAdvAmount = (netPayable, mode, value) => {
 const blankAdv = () => ({ id: Date.now(), mode: "Percentage", value: "", method: "UPI" });
 
 // ── Blank requirement template ─────────────────────────────────────────────────
-const blankReq = () => ({ id: Date.now(), title: "", cost: "", description: "" });
+const blankReq = () => ({
+  id: Date.now(),
+  title: "",
+  cost: "",
+  description: "",
+  discountMode: "None",
+  discountValue: "",
+  discountAmt: 0,
+  netCost: 0,
+  isPaid: false
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT
@@ -113,10 +124,8 @@ export default function Clients() {
     status: "Interested",
     // Interested fields
     selectedService: "",
-    requirements: [],          // [{ id, title, cost, description }]
+    requirements: [],          // [{ id, title, cost, description, discountMode, discountValue, discountAmt, netCost, isPaid }]
     termsAndConditions: "",
-    discountMode: "None",      // "None" | "Percentage" | "Rupees"
-    discountValue: "",
     paymentStatus: "Unpaid",   // "Paid" | "Unpaid" | "Advance"
     advanceAmount: "",
     advancePayments: [],
@@ -124,6 +133,9 @@ export default function Clients() {
     notInterestedReason: "",
     conversationNotes: "",
     notTalkReason: "",
+    // Real-time payment info from backend
+    totalPaid: 0,
+    totalUnpaid: 0,
   });
 
   // ── New / editing requirement row ─────────────────────────────────────────
@@ -135,12 +147,17 @@ export default function Clients() {
   const [editingAdvId, setEditingAdvId] = useState(null);
 
   // ── Derived financials (from actionForm) ──────────────────────────────────
-  const totalCost     = calcTotalCost(actionForm.requirements);
-  const discountAmt   = calcDiscountAmount(totalCost, actionForm.discountMode, actionForm.discountValue);
-  const netPayable    = Math.max(0, totalCost - discountAmt);
+  const totalCost      = actionForm.requirements.reduce((sum, r) => sum + (parseFloat(r.cost) || 0), 0);
+  const totalDiscount  = actionForm.requirements.reduce((sum, r) => sum + (parseFloat(r.discountAmt) || 0), 0);
+  const netPayable     = actionForm.requirements.reduce((sum, r) => sum + (parseFloat(r.netCost) || 0), 0);
+  
+  // Real-time totals from actionForm (initialized from backend)
+  const totalPaid      = actionForm.totalPaid || 0;
+  const totalUnpaid    = Math.max(0, netPayable - totalPaid);
+
   const advancePayments = actionForm.advancePayments || [];
-  const advancePaid   = Math.min(netPayable, advancePayments.reduce((sum, p) => sum + calcAdvAmount(netPayable, p.mode, p.value), 0));
-  const remaining     = Math.max(0, netPayable - advancePaid);
+  const advancePaid   = Math.min(totalUnpaid, advancePayments.reduce((sum, p) => sum + calcAdvAmount(totalUnpaid, p.mode, p.value), 0));
+  const remaining     = Math.max(0, totalUnpaid - advancePaid);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -167,14 +184,15 @@ export default function Clients() {
           notes: p.termsAndConditions || p.requirement || '',
           requirements: p.requirements || [],
           selectedService: p.selectedService || '',
-          discountMode: p.discountMode || 'None',
-          discountValue: p.discountValue || '',
           paymentStatus: p.paymentStatus || 'Unpaid',
           advanceAmount: p.advanceAmount || '',
           advancePayments: p.advancePayments || [],
           termsAndConditions: p.termsAndConditions || '',
-          totalCost: p.totalCost || p.suggestedAmount || 0,
-          netPayable: p.netPayable || p.suggestedAmount || 0,
+          totalCost: p.totalCost || 0,
+          totalDiscount: p.totalDiscount || 0,
+          totalPaid: p.totalPaid || 0,
+          totalUnpaid: p.totalUnpaid || 0,
+          netPayable: p.netPayable || 0,
           clientEmailStatus: p.clientEmailStatus || 'PENDING',
           sentToClientAt: p.sentToClientAt || null,
           clientEmailMessageId: p.clientEmailMessageId || null,
@@ -216,18 +234,18 @@ export default function Clients() {
       ];
     }
     setActionForm({
-      status:             row.status          || "Interested",
-      selectedService:    row.selectedService || "",
-      requirements:       row.requirements    || [],
+      status: row.status || "Interested",
+      selectedService: row.selectedService || "",
+      requirements: row.requirements || [],
       termsAndConditions: row.termsAndConditions || row.notes || "",
-      discountMode:       row.discountMode    || "None",
-      discountValue:      row.discountValue   || "",
-      paymentStatus:      row.paymentStatus   || "Unpaid",
-      advanceAmount:      row.advanceAmount   || "",
-      advancePayments:    advancePaymentsList,
-      notInterestedReason:row.notInterestedReason || "",
-      conversationNotes:  row.conversationNotes   || "",
-      notTalkReason:      row.notTalkReason        || "",
+      paymentStatus: row.paymentStatus || "Unpaid",
+      advanceAmount: row.advanceAmount || "",
+      advancePayments: advancePaymentsList,
+      notInterestedReason: row.notInterestedReason || "",
+      conversationNotes: row.conversationNotes || "",
+      notTalkReason: row.notTalkReason || "",
+      totalPaid: row.totalPaid || 0,
+      totalUnpaid: row.totalUnpaid || 0,
     });
     setReqDraft(blankReq());
     setEditingReqId(null);
@@ -238,29 +256,47 @@ export default function Clients() {
 
   // ── Requirement CRUD ──────────────────────────────────────────────────────
   const handleAddReq = () => {
+    if (actionForm.paymentStatus === "Paid") {
+      toast.error("Service items cannot be modified once the final payment has been made.");
+      return;
+    }
     if (!reqDraft.title.trim() || !reqDraft.cost) return;
+
+    const cost = parseFloat(reqDraft.cost) || 0;
+    const da = calcItemDiscount(cost, reqDraft.discountMode, reqDraft.discountValue);
+    const nc = Math.max(0, cost - da);
+    
+    const finalReq = { ...reqDraft, discountAmt: da, netCost: nc };
 
     if (editingReqId !== null) {
       // Save edit
       af("requirements",
         actionForm.requirements.map((r) =>
-          r.id === editingReqId ? { ...reqDraft, id: editingReqId } : r
+          r.id === editingReqId ? { ...finalReq, id: editingReqId } : r
         )
       );
       setEditingReqId(null);
     } else {
       // Add new
-      af("requirements", [...actionForm.requirements, { ...reqDraft, id: Date.now() }]);
+      af("requirements", [...actionForm.requirements, { ...finalReq, id: Date.now() }]);
     }
     setReqDraft(blankReq());
   };
 
   const handleEditReq = (req) => {
+    if (actionForm.paymentStatus === "Paid") {
+      toast.error("Service items cannot be modified once the final payment has been made.");
+      return;
+    }
     setReqDraft({ ...req });
     setEditingReqId(req.id);
   };
 
   const handleDeleteReq = (id) => {
+    if (actionForm.paymentStatus === "Paid") {
+      toast.error("Service items cannot be modified once the final payment has been made.");
+      return;
+    }
     af("requirements", actionForm.requirements.filter((r) => r.id !== id));
     if (editingReqId === id) {
       setEditingReqId(null);
@@ -313,11 +349,8 @@ export default function Clients() {
   const saveActionForm = async () => {
     if (!selected) return;
 
-    const totalCostVal   = calcTotalCost(actionForm.requirements || []);
-    const discountAmtVal = calcDiscountAmount(totalCostVal, actionForm.discountMode, actionForm.discountValue);
-    const netPayableVal  = Math.max(0, totalCostVal - discountAmtVal);
     const advancePaymentsVal = actionForm.advancePayments || [];
-    const advancePaidVal = advancePaymentsVal.reduce((sum, p) => sum + calcAdvAmount(netPayableVal, p.mode, p.value), 0);
+    const advancePaidVal = advancePaymentsVal.reduce((sum, p) => sum + calcAdvAmount(totalUnpaid, p.mode, p.value), 0);
 
     try {
       const response = await apiClient.post(`/finance/prospects/${selected.id}/send`, {
@@ -325,8 +358,6 @@ export default function Clients() {
         selectedService: actionForm.selectedService,
         requirements: actionForm.requirements,
         termsAndConditions: actionForm.termsAndConditions,
-        discountMode: actionForm.discountMode,
-        discountValue: actionForm.discountValue,
         paymentStatus: actionForm.paymentStatus,
         advanceAmount: String(advancePaidVal),
         advancePayments: advancePaymentsVal,
@@ -594,148 +625,202 @@ export default function Clients() {
                   </div>
 
                   {/* ── Add / Edit requirement row ── */}
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 flex flex-col gap-3">
-                    <p className="text-xs font-bold text-slate-500">
-                      {editingReqId !== null ? "✏️ Editing requirement" : "Add requirement"}
-                    </p>
-
-                    {/* Title + Cost */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <DataField
-                        label="Title"
-                        id="req-title"
-                        placeholder="e.g. Homepage design"
-                        value={reqDraft.title}
-                        onChange={(e) =>
-                          setReqDraft((p) => ({ ...p, title: e.target.value }))
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") { e.preventDefault(); handleAddReq(); }
-                        }}
-                        size={12}
-                      />
-                      <DataField
-                        label="Cost (₹)"
-                        id="req-cost"
-                        type="number"
-                        placeholder="e.g. 15000"
-                        value={reqDraft.cost}
-                        onChange={(e) =>
-                          setReqDraft((p) => ({ ...p, cost: e.target.value }))
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") { e.preventDefault(); handleAddReq(); }
-                        }}
-                        size={12}
-                      />
+                  {actionForm.paymentStatus === "Paid" ? (
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-center gap-3">
+                      <CheckCircle size={18} className="text-emerald-600" />
+                      <p className="text-sm font-medium text-emerald-700">
+                        Service items are locked because the project is fully paid.
+                      </p>
                     </div>
+                  ) : (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 flex flex-col gap-3">
+                      <p className="text-xs font-bold text-slate-500">
+                        {editingReqId !== null ? "✏️ Editing requirement" : "Add requirement"}
+                      </p>
 
-                    {/* Description (optional) */}
-                    <DataField
-                      label="Description (optional)"
-                      id="req-desc"
-                      type="textarea"
-                      rows={2}
-                      placeholder="Brief details about this requirement…"
-                      value={reqDraft.description}
-                      onChange={(e) =>
-                        setReqDraft((p) => ({ ...p, description: e.target.value }))
-                      }
-                      size={12}
-                    />
+                      {/* Title + Cost */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <DataField
+                          label="Title"
+                          id="req-title"
+                          placeholder="e.g. Homepage design"
+                          value={reqDraft.title}
+                          onChange={(e) =>
+                            setReqDraft((p) => ({ ...p, title: e.target.value }))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); handleAddReq(); }
+                          }}
+                          size={12}
+                        />
+                        <DataField
+                          label="Cost (₹)"
+                          id="req-cost"
+                          type="number"
+                          placeholder="e.g. 15000"
+                          value={reqDraft.cost}
+                          onChange={(e) =>
+                            setReqDraft((p) => ({ ...p, cost: e.target.value }))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); handleAddReq(); }
+                          }}
+                          size={12}
+                        />
+                      </div>
 
-                    {/* Add / Save button row */}
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleAddReq}
-                        disabled={!reqDraft.title.trim() || !reqDraft.cost}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2a465a] text-white text-xs font-bold
-                          disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#1e3a52] transition active:scale-95"
-                      >
-                        {editingReqId !== null ? (
-                          <><Pencil size={13} /> Save Edit</>
-                        ) : (
-                          <><Plus size={13} /> Add</>
+                      {/* Discount for this requirement */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <SelectField
+                          label="Item Discount Type"
+                          id="req-disc-mode"
+                          value={reqDraft.discountMode}
+                          onChange={(e) => setReqDraft((p) => ({ ...p, discountMode: e.target.value, discountValue: "" }))}
+                        >
+                          <Option value="None" label="No Discount" />
+                          <Option value="Percentage" label="Percentage (%)" />
+                          <Option value="Rupees" label="Rupees (₹)" />
+                        </SelectField>
+
+                        {reqDraft.discountMode !== "None" && (
+                          <DataField
+                            label={reqDraft.discountMode === "Percentage" ? "Discount %" : "Discount ₹"}
+                            id="req-disc-val"
+                            type="number"
+                            value={reqDraft.discountValue}
+                            onChange={(e) => setReqDraft((p) => ({ ...p, discountValue: e.target.value }))}
+                            size={12}
+                          />
                         )}
-                      </button>
-                      {editingReqId !== null && (
+                      </div>
+
+                      {/* Description (optional) */}
+                      <DataField
+                        label="Description (optional)"
+                        id="req-desc"
+                        type="textarea"
+                        rows={2}
+                        placeholder="Brief details about this requirement…"
+                        value={reqDraft.description}
+                        onChange={(e) =>
+                          setReqDraft((p) => ({ ...p, description: e.target.value }))
+                        }
+                        size={12}
+                      />
+
+                      {/* Add / Save button row */}
+                      <div className="flex gap-2">
                         <button
                           type="button"
-                          onClick={handleCancelEditReq}
-                          className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600
-                            hover:bg-slate-50 transition active:scale-95"
+                          onClick={handleAddReq}
+                          disabled={!reqDraft.title.trim() || !reqDraft.cost}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2a465a] text-white text-xs font-bold
+                            disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#1e3a52] transition active:scale-95"
                         >
-                          Cancel
+                          {editingReqId !== null ? (
+                            <><Pencil size={13} /> Save Edit</>
+                          ) : (
+                            <><Plus size={13} /> Add</>
+                          )}
                         </button>
-                      )}
+                        {editingReqId !== null && (
+                          <button
+                            type="button"
+                            onClick={handleCancelEditReq}
+                            className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600
+                              hover:bg-slate-50 transition active:scale-95"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* ── Requirements list ── */}
                   {actionForm.requirements.length > 0 && (
                     <div className="rounded-2xl border border-slate-200 overflow-hidden">
                       {/* List header */}
-                      <div className="grid grid-cols-[1fr_120px_auto] gap-2 px-4 py-2 bg-[#2a465a]/5 border-b border-slate-100">
+                      <div className="grid grid-cols-[1fr_100px_100px_120px_auto] gap-2 px-4 py-2 bg-[#2a465a]/5 border-b border-slate-100">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Requirement</span>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Cost</span>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Actions</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Base</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Disc</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Net Cost</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Actions</span>
                       </div>
 
                       {actionForm.requirements.map((req, idx) => (
                         <div
                           key={req.id}
-                          className={`grid grid-cols-[1fr_120px_auto] gap-2 px-4 py-3 items-start
+                          className={`grid grid-cols-[1fr_100px_100px_120px_auto] gap-2 px-4 py-3 items-center
                             ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"}
                             ${editingReqId === req.id ? "ring-2 ring-inset ring-[#2a465a]/30" : ""}
                             border-b border-slate-100 last:border-0`}
                         >
                           {/* Title + description */}
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-[#2a465a] truncate">{req.title}</p>
+                          <div className="min-w-0 flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-bold text-[#2a465a] truncate">{req.title}</p>
+                            </div>
                             {req.description && (
-                              <p className="text-xs text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">
+                              <p className="text-xs text-slate-400 line-clamp-1 leading-relaxed">
                                 {req.description}
                               </p>
                             )}
                           </div>
 
-                          {/* Cost */}
-                          <p className="text-sm font-black text-[#2a465a] text-right pt-0.5">
+                          {/* Base Cost */}
+                          <p className="text-xs font-bold text-slate-400 text-right">
                             {fmt(req.cost)}
                           </p>
 
+                          {/* Discount */}
+                          <p className={`text-xs font-bold text-right ${req.discountAmt > 0 ? "text-rose-500" : "text-slate-300"}`}>
+                            {req.discountAmt > 0 ? `- ${fmt(req.discountAmt)}` : "—"}
+                          </p>
+
+                          {/* Net Cost */}
+                          <p className="text-sm font-black text-[#2a465a] text-right">
+                            {fmt(req.netCost)}
+                          </p>
+
                           {/* Edit / Delete */}
-                          <div className="flex gap-1.5 pt-0.5">
-                            <button
-                              type="button"
-                              onClick={() => handleEditReq(req)}
-                              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-[#2a465a] hover:text-white
-                                flex items-center justify-center transition active:scale-90 text-slate-500"
-                              title="Edit"
-                            >
-                              <Pencil size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteReq(req.id)}
-                              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-rose-500 hover:text-white
-                                flex items-center justify-center transition active:scale-90 text-slate-500"
-                              title="Delete"
-                            >
-                              <Trash2 size={12} />
-                            </button>
+                          <div className="flex gap-1.5 justify-center">
+                            {actionForm.paymentStatus !== "Paid" && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditReq(req)}
+                                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-[#2a465a] hover:text-white
+                                    flex items-center justify-center transition active:scale-90 text-slate-500"
+                                  title="Edit"
+                                >
+                                  <Pencil size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteReq(req.id)}
+                                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-rose-500 hover:text-white
+                                    flex items-center justify-center transition active:scale-90 text-slate-500"
+                                  title="Delete"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       ))}
 
-                      {/* Total cost row */}
-                      <div className="grid grid-cols-[1fr_120px_auto] gap-2 px-4 py-3 bg-[#2a465a] border-t border-[#1e3a52]">
+                      {/* Summary row */}
+                      <div className="grid grid-cols-[1fr_100px_100px_120px_auto] gap-2 px-4 py-3 bg-[#2a465a] border-t border-[#1e3a52]">
                         <span className="text-xs font-black text-white/70 uppercase tracking-widest col-span-1">
-                          Total Cost
+                          Grand Total
                         </span>
+                        <span className="text-xs font-bold text-white/50 text-right pt-0.5">{fmt(totalCost)}</span>
+                        <span className="text-xs font-bold text-rose-300 text-right pt-0.5">{totalDiscount > 0 ? `- ${fmt(totalDiscount)}` : ""}</span>
                         <span className="text-sm font-black text-white text-right">
-                          {fmt(totalCost)}
+                          {fmt(netPayable)}
                         </span>
                         <span />
                       </div>
@@ -754,84 +839,6 @@ export default function Clients() {
                   onChange={(e) => af("termsAndConditions", e.target.value)}
                   size={12}
                 />
-
-                {/* ── Discount section (only shown when there are requirements) ── */}
-                {actionForm.requirements.length > 0 && (
-                  <div className="flex flex-col gap-3">
-                    <p className="text-xs font-black text-[#2a465a] uppercase tracking-[0.18em]">
-                      Discount
-                    </p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <SelectField
-                        label="Discount Type"
-                        id="disc-mode"
-                        value={actionForm.discountMode}
-                        onChange={(e) => {
-                          af("discountMode", e.target.value);
-                          af("discountValue", "");
-                        }}
-                      >
-                        <Option value="None"       label="No Discount"   />
-                        <Option value="Percentage" label="Percentage (%)" />
-                        <Option value="Rupees"     label="Rupees (₹)"     />
-                      </SelectField>
-
-                      {actionForm.discountMode !== "None" ? (
-                        <DataField
-                          label={
-                            actionForm.discountMode === "Percentage"
-                              ? "Discount % (max 99)"
-                              : `Discount ₹ (max ${fmt(totalCost)})`
-                          }
-                          id="disc-val"
-                          type="number"
-                          placeholder={
-                            actionForm.discountMode === "Percentage" ? "e.g. 10" : "e.g. 5000"
-                          }
-                          value={actionForm.discountValue}
-                          onChange={(e) => {
-                            let v = parseFloat(e.target.value) || 0;
-                            if (actionForm.discountMode === "Percentage") v = Math.min(v, 99);
-                            else v = Math.min(v, totalCost);
-                            af("discountValue", String(v || ""));
-                          }}
-                          size={12}
-                        />
-                      ) : (
-                        <div className="hidden sm:block" />
-                      )}
-                    </div>
-
-                    {/* Discount summary */}
-                    {actionForm.discountMode !== "None" && discountAmt > 0 && (
-                      <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                        <div className="grid grid-cols-3 divide-x divide-slate-100">
-                          {[
-                            { label: "Total Cost",   value: fmt(totalCost)   },
-                            { label: "Discount",     value: `- ${fmt(discountAmt)}` },
-                            { label: "Net Payable",  value: fmt(netPayable),  highlight: true },
-                          ].map(({ label, value, highlight }) => (
-                            <div
-                              key={label}
-                              className={`flex flex-col items-center justify-center py-3 px-2 gap-0.5
-                                ${highlight ? "bg-[#2a465a]" : "bg-white"}`}
-                            >
-                              <span className={`text-[10px] font-bold uppercase tracking-widest
-                                ${highlight ? "text-white/60" : "text-slate-400"}`}>
-                                {label}
-                              </span>
-                              <span className={`text-sm font-black
-                                ${highlight ? "text-white" : "text-[#2a465a]"}`}>
-                                {value}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* ── GST section ── */}
                 {actionForm.requirements.length > 0 && (
@@ -910,10 +917,10 @@ export default function Clients() {
                           {(() => {
                             const paidOther = (actionForm.advancePayments || [])
                               .filter((p) => p.id !== editingAdvId)
-                              .reduce((sum, p) => sum + calcAdvAmount(netPayable, p.mode, p.value), 0);
-                            const maxAllowedRupees = Math.max(0, netPayable - paidOther);
-                            const maxAllowedPercent = netPayable > 0 
-                              ? Math.max(0, Math.min(100, (maxAllowedRupees / netPayable) * 100))
+                              .reduce((sum, p) => sum + calcAdvAmount(totalUnpaid, p.mode, p.value), 0);
+                            const maxAllowedRupees = Math.max(0, totalUnpaid - paidOther);
+                            const maxAllowedPercent = totalUnpaid > 0 
+                              ? Math.max(0, Math.min(100, (maxAllowedRupees / totalUnpaid) * 100))
                               : 0;
                             const labelText = advDraft.mode === "Percentage"
                               ? `Value % (max ${maxAllowedPercent.toFixed(1)}%)`
@@ -945,7 +952,7 @@ export default function Clients() {
                           <div className="text-xs font-bold text-[#2a465a] bg-white border border-slate-100 rounded-xl px-3 py-2 flex justify-between items-center">
                             <span>Calculated Transaction Amount:</span>
                             <span className="text-sm font-black text-emerald-600">
-                              {fmt(calcAdvAmount(netPayable, advDraft.mode, advDraft.value))}
+                              {fmt(calcAdvAmount(totalUnpaid, advDraft.mode, advDraft.value))}
                             </span>
                           </div>
                         )}
@@ -997,7 +1004,7 @@ export default function Clients() {
                           >
                             <span className="text-sm font-bold text-[#2a465a]">{p.method}</span>
                             <span className="text-sm font-black text-emerald-600 text-right">
-                              {p.mode === "Percentage" ? `${p.value}% (${fmt(calcAdvAmount(netPayable, p.mode, p.value))})` : fmt(p.value)}
+                              {p.mode === "Percentage" ? `${p.value}% (${fmt(calcAdvAmount(totalUnpaid, p.mode, p.value))})` : fmt(p.value)}
                             </span>
 
                             <div className="flex gap-1.5 justify-center">
@@ -1025,90 +1032,26 @@ export default function Clients() {
                       </div>
                     )}
 
-                    {/* Advance payment breakdown cards */}
-                    {actionForm.paymentStatus === "Advance" && advancePaid > 0 && (
-                      <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                        <div className="grid grid-cols-3 divide-x divide-slate-100">
-                          {[
-                            { label: "Net Payable", value: fmt(netPayable) },
-                            {
-                              label: "Advance Paid",
-                              value: fmt(advancePaid),
-                              color: "text-emerald-600",
-                            },
-                            {
-                              label: "Remaining",
-                              value: fmt(remaining),
-                              highlight: true,
-                            },
-                          ].map(({ label, value, highlight, color }) => (
-                            <div
-                              key={label}
-                              className={`flex flex-col items-center justify-center py-3 px-2 gap-0.5
-                                ${highlight ? "bg-[#2a465a]" : "bg-white"}`}
-                            >
-                              <span className={`text-[10px] font-bold uppercase tracking-widest
-                                ${highlight ? "text-white/60" : "text-slate-400"}`}>
-                                {label}
-                              </span>
-                              <span className={`text-sm font-black flex items-center gap-0.5
-                                ${highlight ? "text-white" : color || "text-[#2a465a]"}`}>
-                                <IndianRupee size={11} />
-                                {Number(value.replace(/[₹,]/g, "")).toLocaleString("en-IN")}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {/* Advance payment breakdown cards removed as per request (no due visible) */}
                   </div>
                 )}
 
-                {/* ── Cost Breakdown Summary ── */}
+                {/* ── Financial Summary ── */}
                 {actionForm.requirements.length > 0 && (
                   <div className="flex flex-col gap-3 mt-4">
                     <p className="text-xs font-black text-[#2a465a] uppercase tracking-[0.18em]">
-                      Cost Breakdown
+                      Financial Summary
                     </p>
                     <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-col gap-2.5">
-                      <div className="flex justify-between text-sm text-slate-600">
-                        <span>Requirements (Base Cost)</span>
-                        <span className="font-semibold text-[#2a465a]">{fmt(totalCost - Math.round(totalCost * 18 / 118))}</span>
+                      <div className="flex justify-between text-sm font-bold text-[#2a465a]">
+                        <span>Total Project Value</span>
+                        <span>{fmt(netPayable)}</span>
                       </div>
-                      <div className="flex justify-between text-sm text-slate-600 border-b border-slate-100 pb-2.5">
-                        <span>GST (18% Included)</span>
-                        <span className="font-semibold text-[#2a465a]">{fmt(Math.round(totalCost * 18 / 118))}</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-bold text-[#2a465a] pt-1">
-                        <span>Total Cost (Inclusive of GST)</span>
-                        <span>{fmt(totalCost)}</span>
-                      </div>
-                      {discountAmt > 0 && (
-                        <div className="flex justify-between text-sm font-semibold text-rose-600 border-b border-slate-100 pb-2.5">
-                          <span>Discount (Applied)</span>
-                          <span>- {fmt(discountAmt)}</span>
-                        </div>
-                      )}
 
-                      {advancePaid > 0 ? (
-                        <>
-                          <div className="flex justify-between text-sm font-bold text-[#2a465a] border-t border-slate-100 pt-2 pb-1">
-                            <span>Final Net Payable</span>
-                            <span>{fmt(netPayable)}</span>
-                          </div>
-                          <div className="flex justify-between text-sm font-semibold text-emerald-600 border-b border-slate-100 pb-2.5">
-                            <span>Advance Paid</span>
-                            <span>- {fmt(advancePaid)}</span>
-                          </div>
-                          <div className="flex justify-between items-center bg-[#2a465a]/5 rounded-xl px-3.5 py-3 border border-[#2a465a]/10 mt-1">
-                            <span className="text-sm font-bold text-[#2a465a]">Remaining Payment</span>
-                            <span className="text-lg font-black text-[#2a465a]">{fmt(remaining)}</span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex justify-between items-center bg-[#2a465a]/5 rounded-xl px-3.5 py-3 border border-[#2a465a]/10 mt-1">
-                          <span className="text-sm font-bold text-[#2a465a]">Final Net Payable</span>
-                          <span className="text-lg font-black text-[#2a465a]">{fmt(netPayable)}</span>
+                      {advancePaid > 0 && (
+                        <div className="flex justify-between text-sm font-semibold text-emerald-600 border-t border-slate-100 pt-2.5">
+                          <span>Advance Payment Added</span>
+                          <span>- {fmt(advancePaid)}</span>
                         </div>
                       )}
                     </div>

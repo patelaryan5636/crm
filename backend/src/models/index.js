@@ -1117,7 +1117,11 @@ const ProspectFormSchema = new Schema(
         name: String,
         price: Number,
         qty: { type: Number, default: 1 },
-        discount: { type: Number, default: 0 },
+        discountMode: { type: String, enum: ["None", "Percentage", "Rupees"], default: "None" },
+        discountValue: { type: Number, default: 0 },
+        discountAmount: { type: Number, default: 0 },
+        netCost: { type: Number, default: 0 },
+        isPaid: { type: Boolean, default: false },
         _id: false,
       },
     ],
@@ -1136,6 +1140,15 @@ const ProspectFormSchema = new Schema(
     totalAmount: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
     finalAmount: { type: Number, default: 0 },
+    advanceAmount: { type: Number, default: 0 },
+    advancePayments: [
+      {
+        mode: { type: String, enum: ["Percentage", "Rupees"], default: "Rupees" },
+        value: { type: String, default: "" },
+        method: { type: String, default: "UPI" },
+        _id: false,
+      },
+    ],
 
     // ── Payment tracking ──
     paymentStatus: {

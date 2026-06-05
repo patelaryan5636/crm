@@ -191,26 +191,29 @@ export default function Support() {
     { icon: <Pencil size={14} />, tooltip: "Edit", variant: "primary", onClick: (row) => { setForm({ ...row }); openModal("ticket-form-modal"); } },
   ];
 
-  const FormInput = ({ label, field, placeholder, multiline = false }) => (
+  const FormInput = ({ label, field, placeholder, multiline = false, disabled = false }) => (
     <div className="space-y-1.5">
       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{label}</label>
       {multiline ? (
         <textarea value={form[field]} onChange={e => handleFormChange(field, e.target.value)} rows={3}
-          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-[#2a465a] focus:outline-none focus:border-[#38bdf8] focus:ring-1 focus:ring-[#38bdf8] transition-all resize-none"
+          disabled={disabled}
+          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-[#2a465a] focus:outline-none focus:border-[#38bdf8] focus:ring-1 focus:ring-[#38bdf8] transition-all resize-none disabled:opacity-60 disabled:cursor-not-allowed"
           placeholder={placeholder} />
       ) : (
         <input type="text" value={form[field]} onChange={e => handleFormChange(field, e.target.value)}
-          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-[#2a465a] focus:outline-none focus:border-[#38bdf8] focus:ring-1 focus:ring-[#38bdf8] transition-all"
+          disabled={disabled}
+          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-[#2a465a] focus:outline-none focus:border-[#38bdf8] focus:ring-1 focus:ring-[#38bdf8] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           placeholder={placeholder || `Enter ${label.toLowerCase()}`} />
       )}
     </div>
   );
 
-  const FormSelect = ({ label, field, options }) => (
+  const FormSelect = ({ label, field, options, disabled = false }) => (
     <div className="space-y-1.5">
       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{label}</label>
       <select value={form[field]} onChange={e => handleFormChange(field, e.target.value)}
-        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-[#2a465a] focus:outline-none focus:border-[#38bdf8] focus:ring-1 focus:ring-[#38bdf8] transition-all">
+        disabled={disabled}
+        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-[#2a465a] focus:outline-none focus:border-[#38bdf8] focus:ring-1 focus:ring-[#38bdf8] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
     </div>
@@ -345,14 +348,14 @@ export default function Support() {
       <Modal id="ticket-form-modal" title={form.id ? "Edit Ticket" : "New Ticket"}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <FormInput label="Reported By" field="user" />
-            <FormSelect label="Role" field="role" options={["Sales Executive", "Sales Manager", "Finance Manager", "Finance Analyst", "Management Lead"]} />
+            <FormInput label="Reported By" field="user" disabled={!!form.id} />
+            <FormSelect label="Role" field="role" options={["Sales Executive", "Sales Manager", "Finance Manager", "Finance Analyst", "Management Lead"]} disabled={!!form.id} />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <FormSelect label="Category" field="category" options={["CRM Bug", "Lead Data Issue", "Payment Issue", "Account/Login Issue", "Report Issue"]} />
-            <FormSelect label="Priority" field="priority" options={["Low", "Medium", "High"]} />
+            <FormSelect label="Category" field="category" options={["CRM Bug", "Lead Data Issue", "Payment Issue", "Account/Login Issue", "Report Issue"]} disabled={!!form.id} />
+            <FormSelect label="Priority" field="priority" options={["Low", "Medium", "High"]} disabled={!!form.id} />
           </div>
-          <FormInput label="Issue Description" field="issue" multiline placeholder="Describe the issue in detail" />
+          <FormInput label="Issue Description" field="issue" multiline placeholder="Describe the issue in detail" disabled={!!form.id} />
           <div className="grid grid-cols-1">
             <FormSelect label="Status" field="status" options={["Open", "In Progress", "Escalated", "Resolved"]} />
           </div>

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import {
   kpiLeaves, myLeavesSeed, teamLeaveRequests, LEAVE_TYPES,
-  monthlyLeaveTrend, leaveTypeDistribution,
+  monthlyLeaveTrend, leaveTypeDistribution, attendanceRows,
 } from "./hrmStore";
 
 const KPI_ICONS   = [<Calendar size={20} />, <CheckCircle size={20} />, <Clock size={20} />, <XCircle size={20} />];
@@ -218,6 +218,7 @@ export default function Leaves() {
           exportable
           exportFileName="pending_leaves"
           filters={[
+            { title: "Employee", type: "toggle", key: "name", options: [...new Set(teamLeaveRequests.filter(r => r.status === "Pending").map(r => r.name))] },
             { title: "Leave Type", type: "toggle", key: "type", options: LEAVE_TYPES },
           ]}
           actions={[
@@ -260,6 +261,7 @@ export default function Leaves() {
           exportable
           exportFileName="leave_history"
           filters={[
+            { title: "Employee", type: "toggle", key: "name", options: [...new Set(teamLeaveRequests.filter(r => r.status !== "Pending").map(r => r.name))] },
             { title: "Leave Status", type: "toggle", key: "status", options: ["Approved", "Rejected"] },
             { title: "Leave Type", type: "toggle", key: "type", options: LEAVE_TYPES },
           ]}

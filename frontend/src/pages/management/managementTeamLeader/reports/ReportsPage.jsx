@@ -59,15 +59,15 @@ export default function ReportsPage() {
       </div>
 
       {reportType === "daily" && (
-        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white/60 p-4 shadow-sm">
+        <>
           <ReportStatsCards metrics={dailyReportMetrics} />
           <ReportCharts type="daily" completionData={completedPendingData} statusData={reportStatusData} />
           <DailyReportTable rows={projectReportRows} onSelect={setSelected} />
-        </section>
+        </>
       )}
 
       {reportType === "weekly" && (
-        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white/60 p-4 shadow-sm">
+        <>
           <ReportStatsCards metrics={weeklyReportMetrics} />
           <ReportCharts
             type="weekly"
@@ -75,7 +75,7 @@ export default function ReportsPage() {
             performanceData={weeklyEmployeePerformanceData}
           />
           <WeeklyPerformanceTable rows={weeklyPerformanceRows} />
-        </section>
+        </>
       )}
 
       <ViewReportModal report={selected} />

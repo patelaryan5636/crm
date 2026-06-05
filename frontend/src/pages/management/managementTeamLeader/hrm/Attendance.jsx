@@ -7,10 +7,12 @@ import {
 } from "../../../../components/shared/Common_Components";
 import SessionTimer from "../../../../components/shared/SessionTimer";
 import { useAttendance } from "../../../../context/AttendanceContext";
-import { Users, UserCheck, UserX, CalendarClock, Eye, Clock, TrendingUp, History } from "lucide-react";
+import { Users, UserCheck, UserX, CalendarClock, Eye, Clock, TrendingUp } from "lucide-react";
 import {
   kpiAttendance, attendanceRows, ATTENDANCE_STATUS, currentTL,
-  weeklyAttendance, attendanceDistribution, myTimingLogs, employeeAttendanceSummary,
+  tlAttendanceRows, teamMemberAttendanceRows,
+  weeklyAttendance, attendanceDistribution, employeeAttendanceSummary,
+  tlAttendanceSummary, teamMemberAttendanceSummary,
   monthlyAttendanceGraph, employeeAttendanceBar, clockInTrendGraph, leaveTypeDistribution
 } from "./hrmStore";
 
@@ -20,6 +22,18 @@ const KPI_ACCENTS = ["#3b82f6", "#22c55e", "#f43f5e", "#f59e0b"];
 const COLS = [
   { key: "teamName",   label: "Team Name" },
   { key: "name",       label: "Member" },
+  { key: "role",       label: "Role" },
+  { key: "department", label: "Department" },
+  { key: "date",       label: "Date" },
+  { key: "clockIn",    label: "Clock In" },
+  { key: "clockOut",   label: "Clock Out" },
+  { key: "hours",      label: "Total Hours" },
+  { key: "status",     label: "Status" },
+  { key: "percentage", label: "Attendance %", align: "center" },
+];
+
+const TL_COLS = [
+  { key: "name",       label: "Name" },
   { key: "role",       label: "Role" },
   { key: "department", label: "Department" },
   { key: "date",       label: "Date" },
@@ -90,8 +104,7 @@ export default function Attendance() {
   const [addAttOut, setAddAttOut] = useState("");
   const [addAttNotes, setAddAttNotes] = useState("");
 
-  const [historyEmp, setHistoryEmp] = useState("");
-  const [showHistory, setShowHistory] = useState(false);
+
 
   const summaryRowsWithBadges = employeeAttendanceSummary.map((row) => {
     const p = row.percentage;
@@ -105,14 +118,33 @@ export default function Attendance() {
     };
   });
 
-  const enhancedAttendanceRows = attendanceRows.map((row) => {
-    const summary = employeeAttendanceSummary.find((s) => s.name === row.name);
+  // TL's own attendance rows with badge
+  const enhancedTLRows = tlAttendanceRows.map((row) => {
+    const summary = tlAttendanceSummary.find((s) => s.name === row.name);
     const p = summary ? summary.percentage : 0;
     let badgeColor = "bg-slate-100 text-slate-700";
     if (p >= 95) badgeColor = "bg-emerald-100 text-emerald-700";
     else if (p >= 80 && p < 95) badgeColor = "bg-amber-100 text-amber-700";
     else if (p > 0) badgeColor = "bg-rose-100 text-rose-700";
+    return {
+      ...row,
+      teamName: row.team || "N/A",
+      percentage: summary ? (
+        <span className={`px-2 py-1 rounded-full text-xs font-bold ${badgeColor}`}>{p}%</span>
+      ) : (
+        <span className="text-slate-500 font-bold">N/A</span>
+      )
+    };
+  });
 
+  // Team members' attendance rows with badge
+  const enhancedTeamRows = teamMemberAttendanceRows.map((row) => {
+    const summary = teamMemberAttendanceSummary.find((s) => s.name === row.name);
+    const p = summary ? summary.percentage : 0;
+    let badgeColor = "bg-slate-100 text-slate-700";
+    if (p >= 95) badgeColor = "bg-emerald-100 text-emerald-700";
+    else if (p >= 80 && p < 95) badgeColor = "bg-amber-100 text-amber-700";
+    else if (p > 0) badgeColor = "bg-rose-100 text-rose-700";
     return {
       ...row,
       teamName: row.team || "N/A",
@@ -169,18 +201,41 @@ export default function Attendance() {
         />
       </Grid>
 
-      {/* ── Attendance History Button ────────────────────────────────────── */}
-      <div className="flex justify-end mt-2 mb-[-8px]">
-        <div className="w-fit">
-          <Button text="View Employee History" variant="primary" onClick={() => openModal("mtl-hrm-emp-history")} />
-        </div>
-      </div>
 
-      {/* ── Team attendance table ─────────────────────────────────────────── */}
+
+      {/* ── TL's Own Attendance Table ──────────────────────────────────────── */}
       <DataTable
-        title="Attendance Record"
+        title="My Attendance"
+        columns={TL_COLS}
+        rows={enhancedTLRows}
+        userProfile="name"
+        size={12}
+        pageSize={5}
+        searchable
+        exportable
+        exportFileName="my_attendance"
+        filters={[
+          { title: "Status", type: "toggle", key: "status", options: ["Present", "Absent", "Leave", "Half Day", "Late"] },
+        ]}
+        actions={[
+          {
+            icon: <Eye size={15} />,
+            tooltip: "View Details",
+            variant: "ghost",
+            onClick: (row) => {
+              const summary = tlAttendanceSummary.find((s) => s.name === row.name) || {};
+              setSelected({ log: row, summary });
+              openModal("mtl-hrm-att-view");
+            },
+          },
+        ]}
+      />
+
+      {/* ── Team Members Attendance Table ──────────────────────────────────── */}
+      <DataTable
+        title="Team Attendance Record"
         columns={COLS}
-        rows={enhancedAttendanceRows}
+        rows={enhancedTeamRows}
         userProfile="name"
         size={12}
         pageSize={10}
@@ -188,7 +243,7 @@ export default function Attendance() {
         exportable
         exportFileName="team_attendance"
         filters={[
-
+          { title: "Employee", type: "toggle", key: "name", options: teamMemberAttendanceRows.map(r => r.name) },
           { title: "Status", type: "toggle", key: "status", options: ["Present", "Absent", "Leave", "Half Day", "Late"] },
           { title: "Department", type: "toggle", key: "department", options: ["Engineering", "Design", "QA", "DevOps"] }
         ]}
@@ -198,7 +253,7 @@ export default function Attendance() {
             tooltip: "View Details",
             variant: "ghost",
             onClick: (row) => {
-              const summary = employeeAttendanceSummary.find((s) => s.name === row.name) || {};
+              const summary = teamMemberAttendanceSummary.find((s) => s.name === row.name) || {};
               setSelected({ log: row, summary });
               openModal("mtl-hrm-att-view");
             },
@@ -303,70 +358,6 @@ export default function Attendance() {
       </Modal>
 
 
-
-      {/* ── View Employee History Modal ───────────────────────────────────────────── */}
-      <Modal id="mtl-hrm-emp-history" title="Employee History" size="md">
-        <div className="flex flex-col gap-4">
-          {!showHistory ? (
-            <>
-              <SelectField 
-                label="Select Employee" 
-                id="emp-history-emp" 
-                placeholder="Select Employee"
-                value={historyEmp}
-                onChange={(e) => setHistoryEmp(e.target.value)}
-              >
-                {attendanceRows.map((r) => <Option key={r.id} value={r.id} label={r.name} />)}
-              </SelectField>
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-2">
-                <Button text="Cancel" variant="ghost" size={3} onClick={() => closeModal("mtl-hrm-emp-history")} />
-                <Button 
-                  text="View History" 
-                  variant="primary" 
-                  size={4} 
-                  disabled={!historyEmp}
-                  onClick={() => setShowHistory(true)} 
-                />
-              </div>
-            </>
-          ) : (
-            <div className="animate-in fade-in zoom-in-95 duration-300">
-              {historyEmp && (() => {
-                const selectedEmp = attendanceRows.find(r => r.id === historyEmp);
-                return (
-                  <div className="mb-4">
-                    <ModalProfile
-                      name={selectedEmp?.name}
-                      subtitle={selectedEmp?.role}
-                      meta={`Team: ${selectedEmp?.team || "N/A"} · Team ID: T-101`}
-                    />
-                  </div>
-                );
-              })()}
-              <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                {myTimingLogs.map((log) => (
-                  <div key={log.id} className="mb-3 p-3 rounded-xl border border-slate-100 bg-slate-50 flex justify-between items-center">
-                    <div>
-                      <p className="text-xs font-bold text-slate-500">{log.date}</p>
-                      <p className="text-sm font-semibold text-slate-800">{log.clockIn} - {log.clockOut} • {log.hours}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-bold text-slate-500">Status</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${log.late === "Yes" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
-                        {log.late === "Yes" ? "Late" : "On Time"}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-between items-center pt-4 border-t border-slate-100 mt-4">
-                <Button text="← Back" variant="ghost" size={3} onClick={() => setShowHistory(false)} />
-                <Button text="Close" variant="primary" size={3} onClick={() => { setShowHistory(false); closeModal("mtl-hrm-emp-history"); }} />
-              </div>
-            </div>
-          )}
-        </div>
-      </Modal>
 
 
     </div>

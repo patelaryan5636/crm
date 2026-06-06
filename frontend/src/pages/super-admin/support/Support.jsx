@@ -323,6 +323,7 @@ export default function Support() {
           searchable
           exportable
           exportFileName="support-tickets"
+          defaultSortKey={null}
           filters={[
             { title: "Status",   type: "toggle", key: "status",   options: ["Opened", "Closed"] },
             { title: "Priority", type: "toggle", key: "priority", options: ["High", "Medium", "Low"] },

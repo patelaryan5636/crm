@@ -283,6 +283,7 @@ export default function Support() {
         rows={tickets}
         actions={tableActions}
         size={12} pageSize={10} searchable exportable exportFileName="support-tickets-data"
+        defaultSortKey={null}
         filters={[
           { title: "Status", key: "status", type: "toggle", options: ["Open", "In Progress", "Escalated", "Resolved"] },
           { title: "Priority", key: "priority", type: "toggle", options: ["Low", "Medium", "High"] },

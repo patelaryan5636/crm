@@ -130,19 +130,22 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
     return next(new AppError('Authentication required', 401));
   }
 
+  // Ensure ObjectIds for aggregation match
+  const adminObjectId = new mongoose.Types.ObjectId(adminId);
+  const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
+
   const user = await User.findById(userId).select('role');
 
   // Build filter
-  // NOTE: TicketSchema does not use softDeletePlugin, so no isDeleted field exists
-  const filter = { admin: adminId };
+  const filter = { admin: adminObjectId };
 
   if (user?.role && !['ADMIN'].includes(user.role)) {
     if (view === 'assigned') {
       if (['SALES_MANAGER', 'FINANCE_MANAGER', 'MANAGEMENT_MANAGER'].includes(user.role)) {
         // 1. Direct subordinates of the Manager
         const directSubordinates = await User.find({
-          admin: adminId,
-          manager: userId,
+          admin: adminObjectId,
+          manager: userObjectId,
           isDeleted: false,
         }).select('_id');
         const directSubordinateIds = directSubordinates.map(u => u._id);
@@ -151,7 +154,7 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
         let indirectSubordinateIds = [];
         if (directSubordinateIds.length > 0) {
           const indirectSubordinates = await User.find({
-            admin: adminId,
+            admin: adminObjectId,
             manager: { $in: directSubordinateIds },
             isDeleted: false,
           }).select('_id');
@@ -159,9 +162,9 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
         }
 
         // 3. Teams led by the manager or any subordinate
-        const leadIds = [userId, ...directSubordinateIds, ...indirectSubordinateIds];
+        const leadIds = [userObjectId, ...directSubordinateIds, ...indirectSubordinateIds];
         const departmentTeams = await Team.find({
-          admin: adminId,
+          admin: adminObjectId,
           leader: { $in: leadIds },
           isActive: true,
           isDeleted: false
@@ -176,24 +179,24 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
         ].filter(Boolean))).map(id => new mongoose.Types.ObjectId(id));
 
         filter.$or = [
-          { assignedTo: userId },
+          { assignedTo: userObjectId },
           { assignedTo: { $in: allUnderIds } },
           { raisedBy: { $in: allUnderIds } }
         ];
-        filter.raisedBy = { $ne: userId };
+        filter.raisedBy = { $ne: userObjectId };
       } else if (['SALES_TL', 'MANAGEMENT_TL'].includes(user.role)) {
         // Team Leader views tickets of team members (from Team model or manager field)
         const teams = await Team.find({
-          admin: adminId,
-          leader: userId,
+          admin: adminObjectId,
+          leader: userObjectId,
           isActive: true,
           isDeleted: false
         });
         const teamMemberIdsFromTeams = teams.flatMap(t => (t.members || []).map(m => m.user));
 
         const teamUsers = await User.find({
-          admin: adminId,
-          manager: userId,
+          admin: adminObjectId,
+          manager: userObjectId,
           isDeleted: false,
         }).select('_id');
         const teamMemberIdsFromManager = teamUsers.map(u => u._id);
@@ -206,17 +209,17 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
         filter.raisedBy = { $in: allTeamMemberIds };
       } else {
         // Executive / Employee: only tickets assigned to them
-        filter.assignedTo = userId;
-        filter.raisedBy = { $ne: userId };
+        filter.assignedTo = userObjectId;
+        filter.raisedBy = { $ne: userObjectId };
       }
     } else if (view === 'raised') {
       // My Tickets: only tickets raised by this user
-      filter.raisedBy = userId;
+      filter.raisedBy = userObjectId;
     } else {
       // Default: tickets assigned to OR raised by this user
       filter.$or = [
-        { assignedTo: userId },
-        { raisedBy: userId },
+        { assignedTo: userObjectId },
+        { raisedBy: userObjectId },
       ];
     }
   }
@@ -241,27 +244,54 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
     filter.isEscalated = true;
   }
 
-  // Sort options
-  let sortObj = { createdAt: -1 };
-  if (sortBy === 'priority') {
-    sortObj = { priority: 1, createdAt: -1 };
-  } else if (sortBy === 'escalatedAt') {
-    sortObj = { escalatedAt: -1, createdAt: -1 };
+  // Pagination calculation
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  // Sort options — Tiered Priority (High Group > Medium Group > Low Group) then Time (Oldest First - FIFO)
+  const pipeline = [
+    { $match: filter },
+    {
+      $addFields: {
+        priorityWeight: {
+          $switch: {
+            branches: [
+              { case: { $in: [{ $toUpper: "$priority" }, ["URGENT", "HIGH"]] }, then: 3 },
+              { case: { $in: [{ $toUpper: "$priority" }, ["MEDIUM", "NORMAL"]] }, then: 2 },
+              { case: { $in: [{ $toUpper: "$priority" }, ["LOW"]] }, then: 1 },
+            ],
+            default: 2,
+          },
+        },
+      },
+    },
+  ];
+
+  // Primary Sort: priorityWeight (DESC: High first)
+  // Secondary Sort: createdAt (ASC: Oldest first - FIFO)
+  let sortObj = { priorityWeight: -1, createdAt: 1 };
+
+  // Handle specific sort requests while maintaining priority as primary
+  if (sortBy === 'escalatedAt') {
+    sortObj = { escalatedAt: -1, priorityWeight: -1, createdAt: 1 };
+  } else if (sortBy === 'createdAt') {
+    // Even if user sorts by date, we keep priority as the grouping factor
+    sortObj = { priorityWeight: -1, createdAt: 1 };
   }
 
-  // Calculate pagination
-  const skip = (page - 1) * limit;
+  pipeline.push({ $sort: sortObj });
+  pipeline.push({ $skip: skip });
+  pipeline.push({ $limit: parseInt(limit) });
 
-  // Fetch tickets with pagination
-  const tickets = await Ticket.find(filter)
-    .populate('raisedBy', 'name email role')
-    .populate('assignedTo', 'name email role')
-    .populate('resolvedBy', 'name email')
-    .populate('replies.user', 'name email role')
-    .sort(sortObj)
-    .skip(skip)
-    .limit(parseInt(limit))
-    .select('-__v');
+  // Fetch tickets with pagination using aggregation
+  const tickets = await Ticket.aggregate(pipeline);
+
+  // Populate references on aggregated results
+  await Ticket.populate(tickets, [
+    { path: 'raisedBy', select: 'name email role' },
+    { path: 'assignedTo', select: 'name email role' },
+    { path: 'resolvedBy', select: 'name email' },
+    { path: 'replies.user', select: 'name email role' },
+  ]);
 
   // Get total count for pagination
   const total = await Ticket.countDocuments(filter);

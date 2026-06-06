@@ -170,6 +170,7 @@ export default function Tickets() {
         pageSize={5} 
         searchable 
         size={12}
+        defaultSortKey={null}
         filters={[
           { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High", "Urgent"] },
           { title: "Status", type: "toggle", key: "status", options: ["Open", "In Progress", "Resolved"] },

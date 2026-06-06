@@ -435,20 +435,22 @@ const SalesExecutiveDashboard = () => {
     <div className="p-1 space-y-8 animate-in fade-in duration-700">
 
       {/* HEADING + REFRESH */}
-      <div className="flex items-center justify-between">
+      <div>
         <Heading
-          primaryText="Sales Executive "
-          secondaryText="Dashboard"
+          primaryText="Sales Executive"
+          secondaryText=" Dashboard"
           showAnimations={true}
         />
-        <button
-          onClick={handleRefresh}
-          title="Refresh dashboard"
-          className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-[#2a465a] transition-colors px-3 py-2 rounded-xl hover:bg-slate-100"
-        >
-          <RefreshCw size={15} />
-          Refresh
-        </button>
+        <div className="flex justify-end mt-2">
+          <button
+            onClick={handleRefresh}
+            title="Refresh dashboard"
+            className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-[#2a465a] transition-colors px-3 py-2 rounded-xl hover:bg-slate-100"
+          >
+            <RefreshCw size={15} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* GLOBAL ERROR BANNER */}

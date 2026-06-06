@@ -58,7 +58,7 @@ const getDepartmentByRole = (role) => {
 // DETERMINE INITIAL ASSIGNEE BASED ON ROLE HIERARCHY
 // When a ticket is raised, auto-assign to appropriate level
 // ─────────────────────────────────────────────────────────────
-const determineInitialAssignee = async (raisedBy, admin) => {
+const determineInitialAssignee = async (raisedBy, admin, targetHierarchy = 'ALL') => {
   try {
     const user = await User.findById(raisedBy).select('role department admin manager');
     if (!user) throw new Error('User not found');
@@ -69,14 +69,27 @@ const determineInitialAssignee = async (raisedBy, admin) => {
       return null;
     }
 
+    // If Admin is targeted, no specific user assignment needed (Admin sees all)
+    if (targetHierarchy === 'ADMIN') return null;
+
     // Get the hierarchy chain
     const escalationChain = ROLE_HIERARCHY[department]?.[user.role];
     if (!escalationChain || escalationChain.length === 0) {
       return null;
     }
 
-    // First level in escalation chain
-    const targetRole = escalationChain[0];
+    // Determine target role based on selection
+    let targetRole = null;
+    if (targetHierarchy === 'TL') {
+      targetRole = escalationChain.find(r => r.endsWith('_TL'));
+    } else if (targetHierarchy === 'MANAGER') {
+      targetRole = escalationChain.find(r => r.endsWith('_MANAGER'));
+    } else {
+      // Default / ALL: First level in escalation chain
+      targetRole = escalationChain[0];
+    }
+
+    if (!targetRole || targetRole === 'ADMIN') return null;
 
     // Check if the user's manager matches the target role
     if (user.manager) {

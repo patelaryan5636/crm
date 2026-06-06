@@ -20,7 +20,7 @@ const notificationService = require('../services/notification.service');
 // Auto-assigns to appropriate level based on hierarchy
 // ─────────────────────────────────────────────────────────────
 exports.createTicket = catchAsync(async (req, res, next) => {
-  const { subject, message, priority, refType, refId } = req.body;
+  const { subject, message, priority, refType, refId, targetHierarchy } = req.body;
   const userId = req.user?._id;
   const adminId = req.admin?._id;
 
@@ -40,8 +40,8 @@ exports.createTicket = catchAsync(async (req, res, next) => {
     return next(new AppError('User not found or is inactive', 404));
   }
 
-  // Determine initial assignee based on role hierarchy
-  const assigneeId = await ticketService.determineInitialAssignee(userId, req.admin);
+  // Determine initial assignee based on role hierarchy and target selection
+  const assigneeId = await ticketService.determineInitialAssignee(userId, req.admin, targetHierarchy);
 
   // Create ticket
   const newTicket = await Ticket.create({
@@ -53,6 +53,7 @@ exports.createTicket = catchAsync(async (req, res, next) => {
     priority: priority || 'NORMAL',
     refType: refType || null,
     refId: refId || null,
+    targetHierarchy: targetHierarchy || 'ALL',
     status: 'OPEN',
   });
 
@@ -192,17 +193,26 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
 
         // Sales Manager View:
         // - Tickets assigned to ME
-        // - Tickets assigned to anyone UNDER me
-        // - Tickets raised by anyone UNDER me
-        // (Excluding tickets raised by ME, as those go to "My Tickets" table)
+        // - Tickets assigned to anyone UNDER me (if target is ALL)
+        // - Tickets raised by anyone UNDER me AND targeted to MANAGER or ALL
         filter.$and = [
           { admin: adminObjectId },
           { raisedBy: { $ne: userObjectId } },
           {
             $or: [
               { assignedTo: userObjectId },
-              { assignedTo: { $in: allUnderIds } },
-              { raisedBy: { $in: allUnderIds } }
+              {
+                $and: [
+                  { raisedBy: { $in: allUnderIds } },
+                  { targetHierarchy: { $in: ['MANAGER', 'ALL'] } }
+                ]
+              },
+              {
+                $and: [
+                  { assignedTo: { $in: allUnderIds } },
+                  { targetHierarchy: 'ALL' }
+                ]
+              }
             ]
           }
         ];
@@ -232,14 +242,19 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
 
         // Team Leader View:
         // - Tickets assigned to ME
-        // - Tickets raised by my TEAM members
+        // - Tickets raised by my TEAM members AND targeted to TL or ALL
         filter.$and = [
           { admin: adminObjectId },
           { raisedBy: { $ne: userObjectId } },
           {
             $or: [
               { assignedTo: userObjectId },
-              { raisedBy: { $in: allTeamMemberIds } }
+              {
+                $and: [
+                  { raisedBy: { $in: allTeamMemberIds } },
+                  { targetHierarchy: { $in: ['TL', 'ALL'] } }
+                ]
+              }
             ]
           }
         ];

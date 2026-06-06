@@ -25,7 +25,7 @@ const ticketCols = [
   { key: "raisedTo", label: "Raised To" },
 ];
 
-const blankForm = { title: "", category: "", priority: "Medium", description: "" };
+const blankForm = { title: "", category: "", priority: "Medium", description: "", targetHierarchy: "ALL" };
 
 export default function AllTickets({ tickets, setTickets }) {
   const [selected, setSelected] = useState(null);
@@ -63,7 +63,8 @@ export default function AllTickets({ tickets, setTickets }) {
       status: "Open",
       createdDate: new Date().toISOString().slice(0, 10),
       lastReply: new Date().toISOString().slice(0, 10),
-      raisedTo: TICKET_ROLES.defaultSendTo,
+      raisedTo: form.targetHierarchy || TICKET_ROLES.defaultSendTo,
+      targetHierarchy: form.targetHierarchy || "ALL",
       description: form.description.trim(),
       conversation: [
         { id: `${Date.now()}-m`, sender: TICKET_ROLES.currentUser, time: `${new Date().toISOString().slice(0, 10)} 09:00`, text: form.description.trim() },
@@ -170,6 +171,19 @@ export default function AllTickets({ tickets, setTickets }) {
                 placeholder="Briefly describe the issue"
               />
               {formErr.title && <p className="text-xs text-rose-600 mt-1 px-1">{formErr.title}</p>}
+            </div>
+            <div className="col-span-12">
+              <SelectField
+                label="Raise To"
+                id="me-ticket-target"
+                value={form.targetHierarchy}
+                onChange={(e) => setField("targetHierarchy", e.target.value)}
+                placeholder="Select an option (Default: All)"
+              >
+                <Option value="ALL" label="All" />
+                <Option value="TL" label="Team Lead" />
+                <Option value="MANAGER" label="Manager" />
+              </SelectField>
             </div>
             <div className="col-span-6">
               <SelectField

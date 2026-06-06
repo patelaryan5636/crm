@@ -46,6 +46,7 @@ const mapBackendTicketToAdminShape = (t) => {
     issue: t.message || "",
     priority: priorityMap[t.priority] || "Medium",
     status: statusMap[t.status] || "Open",
+    targetHierarchy: (t.targetHierarchy || "ALL").toUpperCase(),
     time,
     sla: t.isEscalated ? "Escalated" : (t.status === "RESOLVED" || t.status === "CLOSED" ? "Resolved" : "Active"),
   };
@@ -319,6 +320,7 @@ export default function Support() {
               {[
                 { label: "Role", val: selectedTicket.role },
                 { label: "Category", val: selectedTicket.category },
+                { label: "Raised To", val: { TL: 'Team Lead', MANAGER: 'Manager', ADMIN: 'Admin', ALL: 'All' }[selectedTicket.targetHierarchy] || selectedTicket.targetHierarchy || "All" },
                 { label: "Last Activity", val: selectedTicket.time },
               ].map(({ label, val }) => (
                 <div key={label}>

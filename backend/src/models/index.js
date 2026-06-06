@@ -1700,9 +1700,15 @@ const TicketSchema = new Schema(
       default: null,
     },
     refId: { type: Schema.Types.ObjectId, default: null },
+    targetHierarchy: {
+      type: String,
+      enum: ["TL", "MANAGER", "ADMIN", "ALL"],
+      default: "ALL",
+    },
     replies: [
       {
         user: { type: Schema.Types.ObjectId, ref: "User" },
+        
         message: String,
         createdAt: { type: Date, default: Date.now },
         _id: false,

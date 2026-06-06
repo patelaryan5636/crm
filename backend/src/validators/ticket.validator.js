@@ -56,6 +56,13 @@ const createTicketSchema = Joi.object({
     .messages({
       'string.pattern.base': 'Invalid reference ID format',
     }),
+
+  targetHierarchy: Joi.string()
+    .valid('TL', 'MANAGER', 'ADMIN', 'ALL')
+    .default('ALL')
+    .messages({
+      'any.only': 'Target must be one of: TL, MANAGER, ADMIN, ALL',
+    }),
 });
 
 // ─────────────────────────────────────────────────────────────

@@ -8,13 +8,14 @@ import apiClient from './apiClient';
 const BASE = '/support-tickets';
 
 // ─── Create a new ticket (auto-routes to next level in hierarchy) ────────────
-export const createTicket = async ({ subject, message, priority, category }) => {
+export const createTicket = async ({ subject, message, priority, category, targetHierarchy }) => {
   const { data } = await apiClient.post(BASE, {
     subject,
     message,
     // Map frontend priority labels to backend enum values
     priority: mapPriorityToBackend(priority),
     refType: category || null,
+    targetHierarchy: targetHierarchy || 'ALL',
   });
   return data.data.ticket;
 };
@@ -113,6 +114,7 @@ export const mapTicket = (t) => ({
   })),
   assignedTo:   t.assignedTo?.name || '',
   assignedToId: t.assignedTo?._id ? String(t.assignedTo._id) : null,
+  targetHierarchy: t.targetHierarchy || 'ALL',
 });
 
 // ─── Status label mapping (backend → display) ───────────────────────────────

@@ -36,7 +36,7 @@ const myCols = [
   { key: 'lastReply',   label: 'Last Reply' },
 ];
 
-const blankForm = { title: '', category: '', priority: '', description: '' };
+const blankForm = { title: '', category: '', priority: '', description: '', targetHierarchy: 'ALL' };
 
 export default function AllTickets() {
   const [teamTickets,  setTeamTickets]  = useState([]);
@@ -134,6 +134,7 @@ export default function AllTickets() {
         message:  form.description.trim(),
         priority: form.priority || 'Medium',
         category: form.category || null,
+        targetHierarchy: form.targetHierarchy || 'ALL',
       });
       setForm(blankForm);
       setFormErr({});
@@ -191,6 +192,14 @@ export default function AllTickets() {
                 value={form.title} onChange={e => setField('title', e.target.value)}
                 placeholder="Enter a clear, concise ticket title" />
               {formErr.title && <p className="text-xs text-rose-600 mt-1 px-1">{formErr.title}</p>}
+            </div>
+            <div className="col-span-12 flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Raise To</label>
+              <Select value={form.targetHierarchy} onChange={e => setField('targetHierarchy', e.target.value)} 
+                placeholder="Select an option (Default: All)" size={12}>
+                <Option value="ALL"   label="All" />
+                <Option value="ADMIN" label="Admin Only" />
+              </Select>
             </div>
             <div className="col-span-6 flex flex-col gap-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Category</label>
@@ -305,10 +314,12 @@ function ReadOnlyTicketContent({ selected, onClose, currentUser }) {
       time: selected.createdDate ? `${selected.createdDate} 00:00` : '', text: selected.description }, ...msgs];
   })();
 
+  const targetLabels = { TL: 'Team Lead', MANAGER: 'Manager', ADMIN: 'Admin', ALL: 'All' };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2.5">
-        {[['Raised By', currentUser],
+        {[['Raised By', currentUser], ['Raised To', targetLabels[selected.targetHierarchy] || selected.targetHierarchy],
           ['Priority', selected.priority], ['Status', selected.status]].map(([label, value]) => (
           <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>

@@ -72,6 +72,7 @@ const blankForm = {
   issueType: "",
   priority: "",
   description: "",
+  targetHierarchy: "ALL",
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -223,6 +224,7 @@ export default function SupportPage() {
       ticketType: form.ticketType,
       issueType: form.issueType,
       assignedTo,
+      targetHierarchy: form.targetHierarchy || "ALL",
       description: form.description.trim(),
       conversation: [
         {
@@ -429,6 +431,19 @@ function CreateTicketModal({
             onChange={(event) => onFieldChange("project", event.target.value)}
             placeholder="Project name or ID"
           />
+
+          <div className="col-span-12 flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Raise To</label>
+            <SelectField
+              id="mtl-ticket-target"
+              value={form.targetHierarchy}
+              onChange={(event) => onFieldChange("targetHierarchy", event.target.value)}
+              placeholder="Select an option (Default: All)"
+            >
+              <Option value="ALL" label="All" />
+              <Option value="ADMIN" label="Admin Only" />
+            </SelectField>
+          </div>
 
           <SelectField
             label="Ticket Type *"

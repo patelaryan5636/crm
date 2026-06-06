@@ -28,7 +28,7 @@ const ticketCols = [
   { key: "lastReply",   label: "Last Updated" },
 ];
 
-const blankForm = { title: "", category: "", priority: "Medium", description: "" };
+const blankForm = { title: "", category: "", priority: "Medium", description: "", targetHierarchy: "ALL" };
 
 export default function Support() {
   const [tickets,    setTickets]    = useState([]);
@@ -94,6 +94,7 @@ export default function Support() {
         message:  form.description.trim(),
         priority: form.priority,
         category: form.category || null,
+        targetHierarchy: form.targetHierarchy || "ALL",
       });
       setForm(blankForm);
       setFormErr({});
@@ -176,6 +177,16 @@ export default function Support() {
               {formErr.title && <p className="text-xs text-rose-600 mt-1 px-1">{formErr.title}</p>}
             </div>
 
+            <div className="col-span-12 flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Raise To</label>
+              <Select value={form.targetHierarchy} onChange={e => setField('targetHierarchy', e.target.value)} 
+                placeholder="Select an option (Default: All)" size={12}>
+                <Option value="ALL"     label="All" />
+                <Option value="TL"      label="Team Lead" />
+                <Option value="MANAGER" label="Manager" />
+              </Select>
+            </div>
+
             <div className="col-span-6 flex flex-col gap-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Category</label>
               <Select value={form.category} onChange={e => setField('category', e.target.value)}
@@ -238,6 +249,8 @@ function SETicketDetail({ selected, onClose }) {
     'Closed':      'bg-slate-100 text-slate-600',
   };
 
+  const targetLabels = { TL: 'Team Lead', MANAGER: 'Manager', ADMIN: 'Admin', ALL: 'All' };
+
   const conversation = (() => {
     const msgs = selected.conversation || [];
     if (!selected.description?.trim()) return msgs;
@@ -254,6 +267,7 @@ function SETicketDetail({ selected, onClose }) {
       <div className="grid grid-cols-2 gap-2.5">
         {[
           { label: 'Raised By', value: 'Sales Executive' },
+          { label: 'Raised To', value: targetLabels[selected.targetHierarchy] || selected.targetHierarchy },
           { label: 'Priority',  value: selected.priority },
           { label: 'Status',    value: selected.status },
         ].map(({ label, value }) => (

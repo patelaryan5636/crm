@@ -1696,7 +1696,7 @@ const TicketSchema = new Schema(
     },
     refType: {
       type: String,
-      enum: ["CLIENT_DATA", "SALES_MANAGER", "SALES_TL", "EXECUTIVE", "SYSTEM"],
+      enum: ["CLIENT_DATA", "SALES_MANAGER", "SALES_TL", "EXECUTIVE", "SYSTEM", "PROJECT_ISSUE", "TEAM_ISSUE", "CLIENT_ESCALATION", "RESOURCE_REQUEST", "TECHNICAL_ISSUE", "OTHER", "MANAGEMENT"],
       default: null,
     },
     refId: { type: Schema.Types.ObjectId, default: null },

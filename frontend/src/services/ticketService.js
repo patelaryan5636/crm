@@ -122,6 +122,7 @@ export const mapTicket = (t) => ({
   createdDate: t.createdAt ? new Date(t.createdAt).toISOString().slice(0, 10) : '',
   lastReply:   t.updatedAt ? new Date(t.updatedAt).toISOString().slice(0, 10) : '',
   description: t.message || '',
+  category:    mapCategory(t.refType),
   conversation: (t.replies || []).map((r) => ({
     sender: r.user?.name || 'Unknown',
     time:   r.createdAt
@@ -143,6 +144,23 @@ const STATUS_MAP = {
   ESCALATED:   'Escalated',
 };
 export const mapStatus = (s) => STATUS_MAP[s] || s;
+
+// ─── Category mapping (backend → display) ──────────────────────────────────
+const CATEGORY_MAP = {
+  CLIENT_DATA:       'Client Data',
+  SALES_MANAGER:     'Sales Manager',
+  SALES_TL:          'Sales Team Lead',
+  EXECUTIVE:         'Executive Issue',
+  SYSTEM:            'System Issue',
+  PROJECT_ISSUE:     'Project Issue',
+  TEAM_ISSUE:        'Team Issue',
+  CLIENT_ESCALATION: 'Client Escalation',
+  RESOURCE_REQUEST:  'Resource Request',
+  TECHNICAL_ISSUE:   'Technical Issue',
+  OTHER:             'Other',
+  MANAGEMENT:        'Management Issue',
+};
+export const mapCategory = (c) => CATEGORY_MAP[c] || c || 'None';
 
 // ─── Priority capitalise ─────────────────────────────────────────────────────
 const capitalise = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';

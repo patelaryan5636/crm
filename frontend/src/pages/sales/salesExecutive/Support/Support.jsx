@@ -285,6 +285,7 @@ function SETicketDetail({ selected, onSend, loading, onClose }) {
         {[
           { label: 'Raised By', value: 'Sales Executive' },
           { label: 'Raised To', value: targetLabels[selected.targetHierarchy] || selected.targetHierarchy },
+          { label: 'Category',  value: selected.category },
           { label: 'Priority',  value: selected.priority },
           { label: 'Status',    value: selected.status },
         ].map(({ label, value }) => (

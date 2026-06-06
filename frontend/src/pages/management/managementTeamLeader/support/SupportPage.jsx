@@ -436,6 +436,7 @@ function TicketConversation({ selected, currentUser, readOnly = false, onSend, l
         {[
           ["Raised By", selected.raisedBy],
           ["Raised To", targetLabels[selected.targetHierarchy] || selected.targetHierarchy],
+          ["Category", selected.category],
           ["Priority", selected.priority],
           ["Status", selected.status],
         ].map(([label, value]) => (

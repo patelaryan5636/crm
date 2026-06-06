@@ -266,12 +266,12 @@ export default function AllTickets() {
             <div className="col-span-6 flex flex-col gap-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Category</label>
               <Select value={form.category} onChange={(e) => setField("category", e.target.value)} placeholder="Select category" size={12}>
-                <Option value="Project Issue"     label="Project Issue" />
-                <Option value="Team Issue"        label="Team Issue" />
-                <Option value="Client Escalation" label="Client Escalation" />
-                <Option value="Resource Request"  label="Resource Request" />
-                <Option value="Technical Issue"   label="Technical Issue" />
-                <Option value="Other"             label="Other" />
+                <Option value="PROJECT_ISSUE"     label="Project Issue" />
+                <Option value="TEAM_ISSUE"        label="Team Issue" />
+                <Option value="CLIENT_ESCALATION" label="Client Escalation" />
+                <Option value="RESOURCE_REQUEST"  label="Resource Request" />
+                <Option value="TECHNICAL_ISSUE"   label="Technical Issue" />
+                <Option value="OTHER"             label="Other" />
               </Select>
             </div>
 
@@ -364,7 +364,7 @@ function ReplyTicketContent({ selected, onSendMsg, onClose, loading, currentUser
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2.5">
-        {[['Raised By', selected.raisedBy],
+        {[['Raised By', selected.raisedBy], ['Category', selected.category],
           ['Priority', selected.priority], ['Status', selected.status]].map(([label, value]) => (
           <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
@@ -411,7 +411,7 @@ function ReadOnlyTicketContent({ selected, onClose, currentUser }) {
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2.5">
         {[['Raised By', currentUser], ['Raised To', targetLabels[selected.targetHierarchy] || selected.targetHierarchy],
-          ['Priority', selected.priority], ['Status', selected.status]].map(([label, value]) => (
+          ['Category', selected.category], ['Priority', selected.priority], ['Status', selected.status]].map(([label, value]) => (
           <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
             <p className={`text-xs font-bold ${label === 'Status'

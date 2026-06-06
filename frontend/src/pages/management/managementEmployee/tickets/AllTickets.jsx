@@ -238,6 +238,7 @@ export default function AllTickets() {
             <div className="grid grid-cols-2 gap-2.5">
               {[
                 { label: "Raised By", value: "Me" },
+                { label: "Category", value: selected.category },
                 { label: "Priority", value: selected.priority },
                 { label: "Status", value: selected.status },
               ].map((item) => (

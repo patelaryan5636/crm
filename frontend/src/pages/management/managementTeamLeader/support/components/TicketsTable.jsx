@@ -15,14 +15,35 @@ const columns = [
 ];
 
 export default function TicketsTable({ onSelect }) {
+  const getPriorityWeight = (priority) => {
+    if (!priority) return 2;
+    const p = priority.toUpperCase();
+    if (p === 'CRITICAL' || p === 'URGENT' || p === 'HIGH') return 3;
+    if (p === 'MEDIUM' || p === 'NORMAL') return 2;
+    if (p === 'LOW') return 1;
+    return 2;
+  };
+
+  const sortFn = (a, b) => {
+    const weightA = getPriorityWeight(a.priority);
+    const weightB = getPriorityWeight(b.priority);
+    if (weightB !== weightA) return weightB - weightA;
+    const dateA = new Date(a.createdDate || a.createdAt || 0);
+    const dateB = new Date(b.createdDate || b.createdAt || 0);
+    return dateA - dateB;
+  };
+
+  const sortedTickets = [...tickets].sort(sortFn);
+
   return (
     <DataTable
       title="Team Support Tickets"
       columns={columns}
-      rows={tickets}
+      rows={sortedTickets}
       size={12}
       pageSize={8}
       searchable
+      defaultSortKey={null}
       filters={[
         { title: "Status", type: "toggle", key: "status", options: ["Open", "Pending", "Escalated", "Resolved"] },
         { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High", "Critical"] },

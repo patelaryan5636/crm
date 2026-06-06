@@ -297,36 +297,65 @@ export default function SupportPage() {
         />
       </div>
 
-      <DataTable
-        title="My Tickets"
-        columns={myColumns}
-        rows={myTickets}
-        actions={myActions}
-        size={12}
-        pageSize={5}
-        searchable
-        filters={[
-          { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High", "Critical"] },
-          { title: "Status", type: "toggle", key: "status", options: ["Open", "Pending", "In Progress", "Resolved", "Escalated"] },
-          { title: "Ticket Type", type: "select", key: "ticketType", options: ticketTypeOptions },
-        ]}
-      />
+      {(() => {
+        const getPriorityWeight = (priority) => {
+          if (!priority) return 2;
+          const p = priority.toUpperCase();
+          if (p === 'CRITICAL' || p === 'URGENT' || p === 'HIGH') return 3;
+          if (p === 'MEDIUM' || p === 'NORMAL') return 2;
+          if (p === 'LOW') return 1;
+          return 2;
+        };
 
-      <DataTable
-        title="Employee Tickets"
-        columns={teamColumns}
-        rows={teamTickets}
-        actions={teamActions}
-        size={12}
-        pageSize={8}
-        searchable
-        filters={[
-          { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High", "Critical"] },
-          { title: "Status", type: "toggle", key: "status", options: ["Open", "Pending", "In Progress", "Resolved", "Escalated"] },
-          { title: "Ticket Type", type: "select", key: "ticketType", options: ticketTypeOptions },
-          { title: "Issue Type", type: "select", key: "issueType", options: Object.keys(assignedToByIssueType) },
-        ]}
-      />
+        const sortFn = (a, b) => {
+          const weightA = getPriorityWeight(a.priority);
+          const weightB = getPriorityWeight(b.priority);
+          if (weightB !== weightA) return weightB - weightA;
+          const dateA = new Date(a.createdDate || a.createdAt || 0);
+          const dateB = new Date(b.createdDate || b.createdAt || 0);
+          return dateA - dateB;
+        };
+
+        const sortedMyTickets = [...myTickets].sort(sortFn);
+        const sortedTeamTickets = [...teamTickets].sort(sortFn);
+
+        return (
+          <>
+            <DataTable
+              title="My Tickets"
+              columns={myColumns}
+              rows={sortedMyTickets}
+              actions={myActions}
+              size={12}
+              pageSize={5}
+              searchable
+              defaultSortKey={null}
+              filters={[
+                { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High", "Critical"] },
+                { title: "Status", type: "toggle", key: "status", options: ["Open", "Pending", "In Progress", "Resolved", "Escalated"] },
+                { title: "Ticket Type", type: "select", key: "ticketType", options: ticketTypeOptions },
+              ]}
+            />
+
+            <DataTable
+              title="Employee Tickets"
+              columns={teamColumns}
+              rows={sortedTeamTickets}
+              actions={teamActions}
+              size={12}
+              pageSize={8}
+              searchable
+              defaultSortKey={null}
+              filters={[
+                { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High", "Critical"] },
+                { title: "Status", type: "toggle", key: "status", options: ["Open", "Pending", "In Progress", "Resolved", "Escalated"] },
+                { title: "Ticket Type", type: "select", key: "ticketType", options: ticketTypeOptions },
+                { title: "Issue Type", type: "select", key: "issueType", options: Object.keys(assignedToByIssueType) },
+              ]}
+            />
+          </>
+        );
+      })()}
 
       <CreateTicketModal
         form={form}

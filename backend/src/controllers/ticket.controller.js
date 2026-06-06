@@ -134,7 +134,7 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
   const adminObjectId = new mongoose.Types.ObjectId(adminId);
   const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
 
-  const user = await User.findById(userId).select('role');
+  const user = await User.findById(userId).select('role department');
 
   // Build filter
   const filter = { admin: adminObjectId };
@@ -142,7 +142,7 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
   if (user?.role && !['ADMIN'].includes(user.role)) {
     if (view === 'assigned') {
       if (['SALES_MANAGER', 'FINANCE_MANAGER', 'MANAGEMENT_MANAGER'].includes(user.role)) {
-        // 1. Direct subordinates of the Manager
+        // 1. Direct subordinates of the Manager (usually TLs)
         const directSubordinates = await User.find({
           admin: adminObjectId,
           manager: userObjectId,
@@ -161,30 +161,54 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
           indirectSubordinateIds = indirectSubordinates.map(u => u._id);
         }
 
-        // 3. Teams led by the manager or any subordinate
+        // 3. Department users (all users in the manager's department)
+        const departmentUsers = await User.find({
+          admin: adminObjectId,
+          department: user.department,
+          isDeleted: false,
+        }).select('_id');
+        const departmentUserIds = departmentUsers.map(u => u._id);
+
+        // 4. Teams led by the manager or any subordinate, or within the department
         const leadIds = [userObjectId, ...directSubordinateIds, ...indirectSubordinateIds];
         const departmentTeams = await Team.find({
           admin: adminObjectId,
-          leader: { $in: leadIds },
+          $or: [
+            { leader: { $in: leadIds } },
+            { department: user.department }
+          ],
           isActive: true,
           isDeleted: false
         });
         const teamMemberIds = departmentTeams.flatMap(t => (t.members || []).map(m => m.user));
 
-        // Combine all subordinate/team member IDs
+        // Combine all subordinate/team member IDs into a unique list of ObjectIds
         const allUnderIds = Array.from(new Set([
           ...directSubordinateIds.map(id => id.toString()),
           ...indirectSubordinateIds.map(id => id.toString()),
+          ...departmentUserIds.map(id => id.toString()),
           ...teamMemberIds.map(id => id && id.toString())
         ].filter(Boolean))).map(id => new mongoose.Types.ObjectId(id));
 
-        filter.$or = [
-          { assignedTo: userObjectId },
-          { assignedTo: { $in: allUnderIds } },
-          { raisedBy: { $in: allUnderIds } }
+        // Sales Manager View:
+        // - Tickets assigned to ME
+        // - Tickets assigned to anyone UNDER me
+        // - Tickets raised by anyone UNDER me
+        // (Excluding tickets raised by ME, as those go to "My Tickets" table)
+        filter.$and = [
+          { admin: adminObjectId },
+          { raisedBy: { $ne: userObjectId } },
+          {
+            $or: [
+              { assignedTo: userObjectId },
+              { assignedTo: { $in: allUnderIds } },
+              { raisedBy: { $in: allUnderIds } }
+            ]
+          }
         ];
-        filter.raisedBy = { $ne: userObjectId };
-      } else if (['SALES_TL', 'MANAGEMENT_TL'].includes(user.role)) {
+        // Remove top-level admin as it's now in $and
+        delete filter.admin;
+      } else if (['SALES_TL', 'MANAGEMENT_TL', 'FINANCE_TL'].includes(user.role)) {
         // Team Leader views tickets of team members (from Team model or manager field)
         const teams = await Team.find({
           admin: adminObjectId,
@@ -206,7 +230,20 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
           ...teamMemberIdsFromManager.map(id => id.toString())
         ].filter(Boolean))).map(id => new mongoose.Types.ObjectId(id));
 
-        filter.raisedBy = { $in: allTeamMemberIds };
+        // Team Leader View:
+        // - Tickets assigned to ME
+        // - Tickets raised by my TEAM members
+        filter.$and = [
+          { admin: adminObjectId },
+          { raisedBy: { $ne: userObjectId } },
+          {
+            $or: [
+              { assignedTo: userObjectId },
+              { raisedBy: { $in: allTeamMemberIds } }
+            ]
+          }
+        ];
+        delete filter.admin;
       } else {
         // Executive / Employee: only tickets assigned to them
         filter.assignedTo = userObjectId;

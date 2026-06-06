@@ -231,6 +231,28 @@ export default function Support() {
   const [tickets, setTickets] = useState(initialTickets);
   const [selectedTicket, setSelectedTicket] = useState(initialTickets[0]);
 
+  const sortedTickets = useMemo(() => {
+    const getPriorityWeight = (priority) => {
+      if (!priority) return 2;
+      const p = priority.toUpperCase();
+      if (p === 'CRITICAL' || p === 'URGENT' || p === 'HIGH') return 3;
+      if (p === 'MEDIUM' || p === 'NORMAL') return 2;
+      if (p === 'LOW') return 1;
+      return 2;
+    };
+
+    const sortFn = (a, b) => {
+      const weightA = getPriorityWeight(a.priority);
+      const weightB = getPriorityWeight(b.priority);
+      if (weightB !== weightA) return weightB - weightA;
+      const dateA = new Date(a.createdAt || 0);
+      const dateB = new Date(b.createdAt || 0);
+      return dateA - dateB;
+    };
+
+    return [...tickets].sort(sortFn);
+  }, [tickets]);
+
   const stats = useMemo(() => {
     const openedTickets = tickets.filter((ticket) => ticket.status === "Opened");
     const highPriority = tickets.filter((ticket) => ticket.priority === "High");
@@ -316,7 +338,7 @@ export default function Support() {
         <DataTable
           title="Admin Support Tickets"
           columns={ticketColumns}
-          rows={tickets}
+          rows={sortedTickets}
           actions={actions}
           size={12}
           pageSize={5}

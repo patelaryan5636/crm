@@ -239,34 +239,63 @@ export default function AllTickets({ tickets, setTickets }) {
       </div>
 
       {/* ── My Tickets table (MM → Admin) ─────────────────────────────────── */}
-      <DataTable
-        title="My Tickets"
-        columns={myTicketCols}
-        rows={myTickets}
-        actions={myActions}
-        size={12}
-        pageSize={5}
-        searchable
-        filters={[
-          { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High"] },
-          { title: "Status",   type: "toggle", key: "status",   options: ["In Progress", "Replied", "Resolved", "Escalated"] },
-        ]}
-      />
+      {(() => {
+        const getPriorityWeight = (priority) => {
+          if (!priority) return 2;
+          const p = priority.toUpperCase();
+          if (p === 'CRITICAL' || p === 'URGENT' || p === 'HIGH') return 3;
+          if (p === 'MEDIUM' || p === 'NORMAL') return 2;
+          if (p === 'LOW') return 1;
+          return 2;
+        };
 
-      {/* ── Team Tickets table (TLs/Employees → MM) ──────────────────────── */}
-      <DataTable
-        title="Team Tickets"
-        columns={ticketCols}
-        rows={tickets}
-        actions={actions}
-        size={12}
-        pageSize={10}
-        searchable
-        filters={[
-          { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High"] },
-          { title: "Status",   type: "toggle", key: "status",   options: ["In Progress", "Replied", "Resolved", "Escalated"] },
-        ]}
-      />
+        const sortFn = (a, b) => {
+          const weightA = getPriorityWeight(a.priority);
+          const weightB = getPriorityWeight(b.priority);
+          if (weightB !== weightA) return weightB - weightA;
+          const dateA = new Date(a.createdDate || a.createdAt || 0);
+          const dateB = new Date(b.createdDate || b.createdAt || 0);
+          return dateA - dateB;
+        };
+
+        const sortedMyTickets = [...myTickets].sort(sortFn);
+        const sortedTeamTickets = [...tickets].sort(sortFn);
+
+        return (
+          <>
+            <DataTable
+              title="My Tickets"
+              columns={myTicketCols}
+              rows={sortedMyTickets}
+              actions={myActions}
+              size={12}
+              pageSize={5}
+              searchable
+              defaultSortKey={null}
+              filters={[
+                { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High"] },
+                { title: "Status",   type: "toggle", key: "status",   options: ["In Progress", "Replied", "Resolved", "Escalated"] },
+              ]}
+            />
+
+            {/* ── Team Tickets table (TLs/Employees → MM) ──────────────────────── */}
+            <DataTable
+              title="Team Tickets"
+              columns={ticketCols}
+              rows={sortedTeamTickets}
+              actions={actions}
+              size={12}
+              pageSize={10}
+              searchable
+              defaultSortKey={null}
+              filters={[
+                { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High"] },
+                { title: "Status",   type: "toggle", key: "status",   options: ["In Progress", "Replied", "Resolved", "Escalated"] },
+              ]}
+            />
+          </>
+        );
+      })()}
 
       {/* ── Create Ticket Modal ──────────────────────────────────────────── */}
       <Modal id="mm-ticket-create" title="Create New Ticket" size="lg">

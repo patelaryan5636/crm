@@ -169,14 +169,14 @@ export default function AllTickets() {
       </div>
 
       <DataTable title="My Tickets" columns={myCols} rows={myTickets} actions={myActions}
-        size={12} pageSize={5} searchable loading={loading}
+        size={12} pageSize={5} searchable loading={loading} defaultSortKey={null}
         filters={[
           { title: 'Priority', type: 'toggle', key: 'priority', options: ['Low', 'Medium', 'High'] },
           { title: 'Status',   type: 'toggle', key: 'status',   options: ['Open', 'In Progress', 'Resolved', 'Escalated'] },
         ]} />
 
       <DataTable title="All Tickets" columns={allCols} rows={allTickets} actions={allActions}
-        size={12} pageSize={10} searchable loading={loading}
+        size={12} pageSize={10} searchable loading={loading} defaultSortKey={null}
         filters={[
           { title: 'Priority', type: 'toggle', key: 'priority', options: ['Low', 'Medium', 'High'] },
           { title: 'Status',   type: 'toggle', key: 'status',   options: ['Open', 'In Progress', 'Resolved', 'Escalated'] },

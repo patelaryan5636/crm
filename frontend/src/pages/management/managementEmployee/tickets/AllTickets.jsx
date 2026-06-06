@@ -86,6 +86,28 @@ export default function AllTickets({ tickets, setTickets }) {
     setSelected(updated);
   };
 
+  const sortedTickets = useMemo(() => {
+    const getPriorityWeight = (priority) => {
+      if (!priority) return 2;
+      const p = priority.toUpperCase();
+      if (p === 'CRITICAL' || p === 'URGENT' || p === 'HIGH') return 3;
+      if (p === 'MEDIUM' || p === 'NORMAL') return 2;
+      if (p === 'LOW') return 1;
+      return 2;
+    };
+
+    return [...tickets].sort((a, b) => {
+      const weightA = getPriorityWeight(a.priority);
+      const weightB = getPriorityWeight(b.priority);
+      if (weightB !== weightA) {
+        return weightB - weightA;
+      }
+      const dateA = new Date(a.createdDate || a.createdAt || 0);
+      const dateB = new Date(b.createdDate || b.createdAt || 0);
+      return dateA - dateB;
+    });
+  }, [tickets]);
+
   return (
     <div className="flex flex-col gap-6">
       <Heading primaryText="Support Tickets" secondaryText="My Tickets" size={12} />
@@ -115,7 +137,7 @@ export default function AllTickets({ tickets, setTickets }) {
       <DataTable
         title="My Tickets"
         columns={ticketCols}
-        rows={tickets}
+        rows={sortedTickets}
         actions={[
           {
             icon: <Eye size={15} />,
@@ -129,6 +151,7 @@ export default function AllTickets({ tickets, setTickets }) {
         searchable
         exportable
         exportFileName="my_tickets"
+        defaultSortKey={null}
         filters={[
           { title: "Priority", type: "toggle", key: "priority", options: ["Low", "Medium", "High"] },
           { title: "Status", type: "toggle", key: "status", options: ["Open", "In Progress", "Resolved", "Escalated"] },

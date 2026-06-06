@@ -158,6 +158,7 @@ export default function Support() {
         pageSize={10}
         searchable
         loading={loading}
+        defaultSortKey={null}
         filters={[
           { title: 'Priority', type: 'toggle', key: 'priority', options: ['Low', 'Medium', 'High'] },
           { title: 'Status',   type: 'toggle', key: 'status',   options: ['Open', 'In Progress', 'Resolved', 'Escalated', 'Closed'] },

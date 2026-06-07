@@ -42,7 +42,7 @@ const createTicketSchema = Joi.object({
     }),
 
   refType: Joi.string()
-    .valid('CLIENT_DATA', 'SALES_MANAGER', 'SALES_TL', 'EXECUTIVE', 'SYSTEM')
+    .valid('CLIENT_DATA', 'SALES_MANAGER', 'SALES_TL', 'EXECUTIVE', 'SYSTEM', 'PROJECT_ISSUE', 'TEAM_ISSUE', 'CLIENT_ESCALATION', 'RESOURCE_REQUEST', 'TECHNICAL_ISSUE', 'OTHER', 'MANAGEMENT')
     .optional()
     .allow(null)
     .messages({
@@ -55,6 +55,13 @@ const createTicketSchema = Joi.object({
     .regex(/^[0-9a-fA-F]{24}$/)
     .messages({
       'string.pattern.base': 'Invalid reference ID format',
+    }),
+
+  targetHierarchy: Joi.string()
+    .valid('TL', 'MANAGER', 'ADMIN', 'ALL')
+    .default('ALL')
+    .messages({
+      'any.only': 'Target must be one of: TL, MANAGER, ADMIN, ALL',
     }),
 });
 
@@ -249,6 +256,22 @@ const validate = (schema, source = 'body') => {
 };
 
 // ─────────────────────────────────────────────────────────────
+// SCHEMA: Update Status
+// ─────────────────────────────────────────────────────────────
+const updateStatusSchema = Joi.object({
+  status: Joi.string()
+    .valid('OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'ESCALATED')
+    .required()
+    .messages({
+      'any.only': 'Status must be one of: OPEN, IN_PROGRESS, RESOLVED, CLOSED, ESCALATED',
+    }),
+  message: Joi.string().optional().allow(''),
+  reason: Joi.string().optional().allow(''),
+  closureNotes: Joi.string().optional().allow(''),
+  resolutionMessage: Joi.string().optional().allow(''),
+});
+
+// ─────────────────────────────────────────────────────────────
 // EXPORTS
 // ─────────────────────────────────────────────────────────────
 module.exports = {
@@ -259,6 +282,7 @@ module.exports = {
   validateCloseTicket: validate(closeTicketSchema, 'body'),
   validateReassignTicket: validate(reassignTicketSchema, 'body'),
   validateFilterTickets: validate(filterTicketsSchema, 'query'),
+  validateUpdateStatus: validate(updateStatusSchema, 'body'),
 
   // Export schemas for direct use if needed
   schemas: {
@@ -269,5 +293,6 @@ module.exports = {
     closeTicketSchema,
     reassignTicketSchema,
     filterTicketsSchema,
+    updateStatusSchema,
   },
 };

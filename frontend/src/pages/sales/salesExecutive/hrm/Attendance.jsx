@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Heading, DashGrid, EnhancedDashCard, DataTable,
   openModal, closeModal, Modal, ModalData, ModalGrid, Button,
@@ -46,47 +46,63 @@ export default function Attendance() {
   const [selected, setSelected] = useState(null);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [attDate, setAttDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
 
-  const fetchMyAttendance = async () => {
+  const { status: attStatus } = useAttendance();
+
+  const fetchMyAttendance = useCallback(async (filters = {}) => {
     setLoading(true);
     try {
-      const res = await hrmService.getMyAttendanceHistory();
-      if (res.success) {
-        const mapped = res.data.map(r => {
-          const formatTime = (date) => {
-            if (!date) return "—";
-            return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          };
+      const params = { ...filters };
+      if (!params.startDate) params.startDate = attDate;
+      if (!params.endDate)   params.endDate   = attDate;
 
-          const d = new Date(r.date);
-          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const res = await hrmService.getMyAttendanceHistory(params);
+      const data = res.data || [];
+      
+      const mapped = data.map(r => {
+        const formatTime = (date) => {
+          if (!date) return "—";
+          return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        };
 
-          let status = "Present";
-          if (r.clockIn && !r.clockOut) status = "Active";
-          if (r.isHalfDay) status = "Half Day";
-          if (r.isAbsent) status = "Absent";
+        const formatHours = (hours) => {
+          const h = Math.floor(hours || 0);
+          const m = Math.round(((hours || 0) % 1) * 60);
+          return `${h}h ${m}m`;
+        };
 
-          return {
-            ...r,
-            date: dateStr,
-            clockIn: formatTime(r.clockIn),
-            clockOut: formatTime(r.clockOut),
-            hours: r.hoursWorked ? `${r.hoursWorked}h` : "—",
-            status: status
-          };
-        });
-        setRecords(mapped);
-      }
+        const d = new Date(r.date);
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+        let status = "Present";
+        if (r.clockIn && !r.clockOut) status = "Active";
+        if (r.isHalfDay) status = "Half Day";
+        if (r.isAbsent) status = "Absent";
+
+        return {
+          ...r,
+          date: dateStr,
+          clockIn: formatTime(r.clockIn),
+          clockOut: formatTime(r.clockOut),
+          hours: r.clockOut ? formatHours(r.hoursWorked) : (r.clockIn ? "Working..." : "—"),
+          status: status
+        };
+      });
+      setRecords(mapped);
     } catch (err) {
       console.error("Failed to fetch attendance history:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [attDate]);
 
   useEffect(() => {
     fetchMyAttendance();
-  }, []);
+  }, [fetchMyAttendance, attStatus]);
 
   const totalDays = records.length;
   const presentDays = records.filter(r => r.status === "Present" || r.status === "Active").length;
@@ -122,10 +138,12 @@ export default function Attendance() {
 
       {/* ── Attendance Table ── */}
       <DataTable
-        title="Attendance Records"
+        title={`Attendance for ${attDate}`}
         columns={COLS}
         rows={records}
         loading={loading}
+        onDateFilter={true}
+        onApplyFilters={(f) => { if (f.startDate) setAttDate(f.startDate); }}
         actions={[
           {
             icon: <Eye size={15} />,
@@ -137,10 +155,8 @@ export default function Attendance() {
         size={12}
         pageSize={10}
         searchable
-        onDateFilter={true}
-        date
         exportable
-        exportFileName="attendance-report"
+        exportFileName={`attendance_${attDate}`}
         filters={[
           { title: "Status", type: "toggle", key: "status", options: ["Present", "Absent", "Active", "Half Day"] },
         ]}

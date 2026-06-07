@@ -16,9 +16,10 @@ import {
   getMyRaisedTickets,
   getTicketStats,
   getTicketById,
+  addReply,
   mapTicket,
 } from "../../../../services/ticketService";
-import { Ticket, Clock, MessageSquare as MsgIcon, CheckCircle2 as CheckIcon } from "lucide-react";
+import { Ticket, Clock, MessageSquare as MsgIcon, CheckCircle2 as CheckIcon, Shield, AlertTriangle } from "lucide-react";
 
 const ticketCols = [
   { key: "title",       label: "Subject"      },
@@ -28,7 +29,7 @@ const ticketCols = [
   { key: "lastReply",   label: "Last Updated" },
 ];
 
-const blankForm = { title: "", category: "", priority: "Medium", description: "" };
+const blankForm = { title: "", category: "", priority: "Medium", description: "", targetHierarchy: "ALL" };
 
 export default function Support() {
   const [tickets,    setTickets]    = useState([]);
@@ -38,6 +39,7 @@ export default function Support() {
   const [formErr,    setFormErr]    = useState({});
   const [loading,    setLoading]    = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [replyLoading, setReplyLoading] = useState(false);
   const [error,      setError]      = useState(null);
 
   // ── Fetch tickets raised by this SE ──────────────────────────────────────
@@ -53,7 +55,7 @@ export default function Support() {
       const total      = mapped.length;
       const inProgress = mapped.filter(t => t.status === 'In Progress').length;
       const replied    = mapped.filter(t => t.status === 'In Progress').length;
-      const resolved   = mapped.filter(t => t.status === 'Resolved').length;
+      const resolved   = mapped.filter(t => t.status === 'Resolved' || t.status === 'Closed').length;
       setStats({ total, inProgress, replied, resolved });
     } catch (err) {
       setError(err?.message || 'Failed to load tickets');
@@ -94,6 +96,7 @@ export default function Support() {
         message:  form.description.trim(),
         priority: form.priority,
         category: form.category || null,
+        targetHierarchy: form.targetHierarchy || "ALL",
       });
       setForm(blankForm);
       setFormErr({});
@@ -107,6 +110,17 @@ export default function Support() {
     }
   };
 
+  const handleReply = async (msg) => {
+    if (!selected) return;
+    setReplyLoading(true);
+    try {
+      const updated = mapTicket(await addReply(selected._id, msg.text));
+      setTickets(prev => prev.map(t => t._id === updated._id ? updated : t));
+      setSelected(updated);
+    } catch (err) { alert(err?.message || 'Failed to send reply'); }
+    finally { setReplyLoading(false); }
+  };
+
   const statCards = [
     { title: 'Total Tickets', value: String(stats.total),      color: '#3b82f6', icon: Ticket    },
     { title: 'In Progress',   value: String(stats.inProgress), color: '#f59e0b', icon: Clock     },
@@ -115,7 +129,7 @@ export default function Support() {
   ];
 
   const actions = [
-    { icon: <MessageSquare size={15} />, tooltip: 'View', variant: 'primary', onClick: openView },
+    { icon: <MessageSquare size={15} />, tooltip: 'View & Reply', variant: 'primary', onClick: openView },
   ];
 
   return (
@@ -158,6 +172,7 @@ export default function Support() {
         pageSize={10}
         searchable
         loading={loading}
+        defaultSortKey={null}
         filters={[
           { title: 'Priority', type: 'toggle', key: 'priority', options: ['Low', 'Medium', 'High'] },
           { title: 'Status',   type: 'toggle', key: 'status',   options: ['Open', 'In Progress', 'Resolved', 'Escalated', 'Closed'] },
@@ -173,6 +188,16 @@ export default function Support() {
                 value={form.title} onChange={e => setField('title', e.target.value)}
                 placeholder="Briefly describe the issue" />
               {formErr.title && <p className="text-xs text-rose-600 mt-1 px-1">{formErr.title}</p>}
+            </div>
+
+            <div className="col-span-12 flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Raise To</label>
+              <Select value={form.targetHierarchy} onChange={e => setField('targetHierarchy', e.target.value)} 
+                placeholder="Select an option (Default: All)" size={12}>
+                <Option value="ALL"     label="All" />
+                <Option value="TL"      label="Team Lead" />
+                <Option value="MANAGER" label="Manager" />
+              </Select>
             </div>
 
             <div className="col-span-6 flex flex-col gap-1.5">
@@ -217,17 +242,21 @@ export default function Support() {
         </div>
       </Modal>
 
-      {/* ── View Modal (read-only) ── */}
+      {/* ── View Modal ── */}
       <Modal id="se-ticket-view-modal" title="My Ticket Details" size="lg">
         {selected && (
-          <SETicketDetail selected={selected} onClose={() => closeModal('se-ticket-view-modal')} />
+          <SETicketDetail 
+            selected={selected} 
+            onSend={handleReply} 
+            loading={replyLoading}
+            onClose={() => closeModal('se-ticket-view-modal')} />
         )}
       </Modal>
     </div>
   );
 }
 
-function SETicketDetail({ selected, onClose }) {
+function SETicketDetail({ selected, onSend, loading, onClose }) {
   const statusColors = {
     'Open':        'bg-amber-100 text-amber-700',
     'In Progress': 'bg-purple-100 text-purple-700',
@@ -236,6 +265,8 @@ function SETicketDetail({ selected, onClose }) {
     'Escalated':   'bg-rose-100 text-rose-700',
     'Closed':      'bg-slate-100 text-slate-600',
   };
+
+  const targetLabels = { TL: 'Team Lead', MANAGER: 'Manager', ADMIN: 'Admin', ALL: 'All' };
 
   const conversation = (() => {
     const msgs = selected.conversation || [];
@@ -253,6 +284,8 @@ function SETicketDetail({ selected, onClose }) {
       <div className="grid grid-cols-2 gap-2.5">
         {[
           { label: 'Raised By', value: 'Sales Executive' },
+          { label: 'Raised To', value: targetLabels[selected.targetHierarchy] || selected.targetHierarchy },
+          { label: 'Category',  value: selected.category },
           { label: 'Priority',  value: selected.priority },
           { label: 'Status',    value: selected.status },
         ].map(({ label, value }) => (
@@ -271,8 +304,8 @@ function SETicketDetail({ selected, onClose }) {
 
       <div className="flex flex-col gap-1">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Conversation</p>
-        <UserChat messages={conversation} onSend={null} currentUser="Sales Executive"
-          maxHeight="max-h-72" readOnly />
+        <UserChat messages={conversation} onSend={onSend} currentUser="Sales Executive"
+          maxHeight="max-h-72" loading={loading} />
       </div>
 
       <div className="flex justify-end pt-1 border-t border-slate-100">

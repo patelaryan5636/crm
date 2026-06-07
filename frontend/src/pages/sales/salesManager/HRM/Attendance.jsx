@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Heading, DashGrid, EnhancedDashCard, DataTable,
   openModal, closeModal, Modal, ModalData, ModalProfile, ModalGrid, Button,
@@ -45,72 +45,109 @@ export default function Attendance() {
   const [selected, setSelected] = useState(null);
   const [teamAttendance, setTeamAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [attDate, setAttDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
   const [currentFilters, setCurrentFilters] = useState({});
 
-  const fetchTeam = async (filters = {}) => {
+  const { status: attStatus } = useAttendance();
+
+  const fetchTeam = useCallback(async (filters = {}) => {
     setLoading(true);
     try {
-      // If no date range is provided, default to today (Local)
       const params = { ...filters };
-      if (!params.startDate && !params.endDate) {
-        const today = new Date();
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-        params.startDate = todayStr;
-        params.endDate = todayStr;
-      }
+      if (!params.startDate) params.startDate = attDate;
+      if (!params.endDate)   params.endDate   = attDate;
 
-      const res = await hrmService.getTeamAttendance(params);
-      if (res.success) {
-        const mapped = res.data.map(u => {
-          const att = u.attendance;
-          const status = u.status || "Absent";
+      // Fetch Team and Self in parallel
+      const [res, selfRes] = await Promise.all([
+        hrmService.getTeamAttendance(params),
+        hrmService.getMyAttendanceHistory(params)
+      ]);
 
-          const formatTime = (date) => {
-             if (!date) return "—";
-             const d = new Date(date);
-             return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          };
+      let combined = [];
 
-          const formatRole = (str) => {
-            if (!str) return "";
-            // Remove SALES_, FINANCE_, MANAGEMENT_ prefixes
-            const clean = str.replace(/^(SALES|FINANCE|MANAGEMENT)_/, '');
-            if (clean === 'TL') return "Team Leader";
-            return clean.toLowerCase().split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-          };
+      const formatTime = (date) => {
+        if (!date) return "—";
+        const d = new Date(date);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      };
 
-          const d = new Date(u.date);
-          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const formatHours = (hours) => {
+        const h = Math.floor(hours || 0);
+        const m = Math.round(((hours || 0) % 1) * 60);
+        return `${h}h ${m}m`;
+      };
 
-          return {
-            id: u.id,
-            name: u.name,
-            role: formatRole(u.role),
-            teamLeader: u.teamLeader || "Unknown",
-            date: dateStr,
-            clockIn: formatTime(att?.clockIn),
-            clockOut: formatTime(att?.clockOut),
-            hours: att?.hoursWorked ? `${att.hoursWorked}h` : "—",
-            status: status,
-            raw: u
-          };
+      const formatRole = (str) => {
+        if (!str) return "";
+        const clean = str.replace(/^(SALES|FINANCE|MANAGEMENT)_/, '');
+        if (clean === 'TL') return "Team Leader";
+        return clean.toLowerCase().split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      };
+
+      // 1. Process Self data
+      const selfData = selfRes.data || [];
+      selfData.forEach(r => {
+        const d = new Date(r.date);
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        
+        let status = "Present";
+        if (r.clockIn && !r.clockOut) status = "Active";
+        if (r.isHalfDay) status = "Half Day";
+        if (r.isAbsent) status = "Absent";
+
+        combined.push({
+          id: 'self-' + (r._id || r.id || Date.now()),
+          name: "Self",
+          role: "Sales Manager",
+          teamLeader: "Admin",
+          date: dateStr,
+          clockIn: formatTime(r.clockIn),
+          clockOut: formatTime(r.clockOut),
+          hours: r.clockOut ? formatHours(r.hoursWorked) : (r.clockIn ? "Working..." : "—"),
+          status: status,
+          raw: r
         });
-        setTeamAttendance(mapped);
-      }
+      });
+
+      // 2. Process Team data
+      const teamData = res.data || [];
+      const mapped = teamData.map(u => {
+        const att = u.attendance;
+        const status = u.status || "Absent";
+        const d = new Date(u.date);
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+        return {
+          id: u.id,
+          name: u.name,
+          role: formatRole(u.role),
+          teamLeader: u.teamLeader || "Unknown",
+          date: dateStr,
+          clockIn: formatTime(att?.clockIn),
+          clockOut: formatTime(att?.clockOut),
+          hours: att?.clockOut ? formatHours(att.hoursWorked) : (att?.clockIn ? "Working..." : "—"),
+          status: status,
+          raw: u
+        };
+      });
+      combined = [...combined, ...mapped];
+      setTeamAttendance(combined);
     } catch (err) {
       console.error("Failed to fetch team attendance:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [attDate]);
 
   useEffect(() => {
     fetchTeam(currentFilters);
-    const interval = setInterval(() => fetchTeam(currentFilters), 60000); // Auto-refresh every 60s
-    return () => clearInterval(interval);
-  }, [currentFilters]);
+  }, [fetchTeam, currentFilters, attStatus]);
 
   const handleApplyFilters = (filters) => {
+    if (filters.startDate) setAttDate(filters.startDate);
     setCurrentFilters(filters);
   };
 
@@ -158,11 +195,13 @@ export default function Attendance() {
 
       {/* ── Attendance Table ── */}
       <DataTable
-        title="Attendance Records"
+        title={`Attendance Records for ${attDate}`}
         userProfile="name"
         columns={COLS}
         rows={teamAttendance}
         loading={loading}
+        onDateFilter={true}
+        onApplyFilters={handleApplyFilters}
         actions={[
           {
             icon: <Eye size={15} />,
@@ -180,16 +219,13 @@ export default function Attendance() {
         size={12}
         pageSize={10}
         searchable
-        onDateFilter={true}
-        date
         exportable
-        exportFileName="attendance-report"
+        exportFileName={`attendance-report_${attDate}`}
         filters={[
           { title: "Status", type: "toggle", key: "status", options: ["Present", "Active", "Absent", "Leave"] },
           { title: "Role", type: "toggle", key: "role", options: roles },
           { title: "Team Leader", type: "select", key: "teamLeader", options: teamLeaders },
         ]}
-        onApplyFilters={handleApplyFilters}
       />
 
       {/* View modal */}

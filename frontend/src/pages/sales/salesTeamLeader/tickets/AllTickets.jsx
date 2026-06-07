@@ -11,9 +11,9 @@ import {
 } from "../../../../components/shared/Common_Components";
 import {
   createTicket, getMyRaisedTickets, getAssignedTickets,
-  getTicketById, addReply, escalateTicket, resolveTicket, mapTicket,
+  getTicketById, addReply, escalateTicket, resolveTicket, closeTicket, mapTicket,
 } from "../../../../services/ticketService";
-import { Ticket, CheckCircle, AlertCircle, Clock, MessageSquare, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Ticket, CheckCircle, AlertCircle, Clock, MessageSquare, AlertTriangle, CheckCircle2, Shield } from "lucide-react";
 
 const kpiIcons   = [<Ticket size={22}/>, <AlertCircle size={22}/>, <Clock size={22}/>, <CheckCircle size={22}/>];
 const kpiAccents = ['#3b82f6', '#f59e0b', '#8b5cf6', '#22c55e'];
@@ -36,7 +36,7 @@ const myCols = [
   { key: 'lastReply',   label: 'Last Reply' },
 ];
 
-const blankForm = { title: '', category: '', priority: '', description: '' };
+const blankForm = { title: '', category: '', priority: '', description: '', targetHierarchy: 'ALL' };
 
 export default function AllTickets() {
   const [teamTickets,  setTeamTickets]  = useState([]);
@@ -49,6 +49,7 @@ export default function AllTickets() {
   const [loading,      setLoading]      = useState(false);
   const [submitting,   setSubmitting]   = useState(false);
   const [replyLoading, setReplyLoading] = useState(false);
+  const [confirmData, setConfirmData] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -68,7 +69,7 @@ export default function AllTickets() {
         all.length,
         all.filter(t => t.status === 'In Progress').length,
         all.filter(t => t.status === 'In Progress').length,
-        all.filter(t => t.status === 'Resolved').length,
+        all.filter(t => t.status === 'Resolved' || t.status === 'Closed').length,
       ]);
     } catch (err) {
       console.error('Failed to load tickets:', err);
@@ -108,17 +109,40 @@ export default function AllTickets() {
   };
 
   const handleEscalate = async (row) => {
-    try {
-      await escalateTicket(row._id, 'Escalated by Team Leader to Sales Manager');
-      await fetchData();
-    } catch (err) { alert(err?.message || 'Could not escalate'); }
+    setConfirmData({
+      message: "Are you sure you want to escalate this ticket?",
+      confirmText: "Escalate",
+      confirmVariant: "danger",
+      onConfirm: async () => {
+        try {
+          await escalateTicket(row._id, 'Escalated by Team Leader to Sales Manager');
+          await fetchData();
+        } catch (err) { alert(err?.message || 'Could not escalate'); }
+      }
+    });
+    openModal("confirm-action-modal");
   };
 
   const handleResolveTeamTicket = async (row) => {
+    setConfirmData({
+      message: "Are you sure you want to resolve this ticket?",
+      confirmText: "Resolve",
+      confirmVariant: "success",
+      onConfirm: async () => {
+        try {
+          await resolveTicket(row._id);
+          await fetchData();
+        } catch (err) { alert(err?.message || 'Could not resolve ticket'); }
+      }
+    });
+    openModal("confirm-action-modal");
+  };
+
+  const handleCloseTeamTicket = async (row) => {
     try {
-      await resolveTicket(row._id);
+      await closeTicket(row._id, 'Closed by Sales Team Leader');
       await fetchData();
-    } catch (err) { alert(err?.message || 'Could not resolve ticket'); }
+    } catch (err) { alert(err?.message || 'Could not close ticket'); }
   };
 
   const handleCreateSubmit = async () => {
@@ -134,6 +158,7 @@ export default function AllTickets() {
         message:  form.description.trim(),
         priority: form.priority || 'Medium',
         category: form.category || null,
+        targetHierarchy: form.targetHierarchy || 'ALL',
       });
       setForm(blankForm);
       setFormErr({});
@@ -146,8 +171,8 @@ export default function AllTickets() {
 
   const teamActions = [
     { icon: <MessageSquare size={15}/>, tooltip: 'View & Reply',        variant: 'primary', onClick: openTeamView },
-    { icon: <CheckCircle2  size={15}/>, tooltip: 'Mark Resolved',        variant: 'success', onClick: handleResolveTeamTicket },
-    { icon: <AlertTriangle size={15}/>, tooltip: 'Escalate to Manager',  variant: 'danger',  onClick: handleEscalate },
+    { icon: <CheckCircle2  size={15}/>, tooltip: 'Mark Resolved',        variant: 'success', onClick: handleResolveTeamTicket, show: (r) => r.status !== 'Resolved' && r.status !== 'Closed' },
+    { icon: <AlertTriangle size={15}/>, tooltip: 'Escalate to Manager',  variant: 'danger',  onClick: handleEscalate, show: (r) => r.status !== 'Escalated' && r.status !== 'Resolved' && r.status !== 'Closed' },
   ];
   const myActions = [
     { icon: <MessageSquare size={15}/>, tooltip: 'View', variant: 'primary', onClick: openMyView },
@@ -169,14 +194,14 @@ export default function AllTickets() {
       </div>
 
       <DataTable title="My Tickets" columns={myCols} rows={myTickets} actions={myActions}
-        size={12} pageSize={5} searchable loading={loading}
+        size={12} pageSize={5} searchable loading={loading} defaultSortKey={null}
         filters={[
           { title: 'Priority', type: 'toggle', key: 'priority', options: ['Low', 'Medium', 'High'] },
           { title: 'Status',   type: 'toggle', key: 'status',   options: ['Open', 'In Progress', 'Resolved', 'Escalated'] },
         ]} />
 
       <DataTable title="Team Tickets" columns={teamCols} rows={teamTickets} actions={teamActions}
-        size={12} pageSize={10} searchable loading={loading}
+        size={12} pageSize={10} searchable loading={loading} defaultSortKey={null}
         filters={[
           { title: 'Priority', type: 'toggle', key: 'priority', options: ['Low', 'Medium', 'High'] },
           { title: 'Status',   type: 'toggle', key: 'status',   options: ['Open', 'In Progress', 'Resolved', 'Escalated'] },
@@ -191,6 +216,14 @@ export default function AllTickets() {
                 value={form.title} onChange={e => setField('title', e.target.value)}
                 placeholder="Enter a clear, concise ticket title" />
               {formErr.title && <p className="text-xs text-rose-600 mt-1 px-1">{formErr.title}</p>}
+            </div>
+            <div className="col-span-12 flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Raise To</label>
+              <Select value={form.targetHierarchy} onChange={e => setField('targetHierarchy', e.target.value)} 
+                placeholder="Select an option (Default: All)" size={12}>
+                <Option value="ALL"   label="All" />
+                <Option value="ADMIN" label="Admin Only" />
+              </Select>
             </div>
             <div className="col-span-6 flex flex-col gap-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em]">Category</label>
@@ -242,6 +275,28 @@ export default function AllTickets() {
           <ReadOnlyTicketContent selected={mySelected}
             onClose={() => closeModal('tl-my-ticket-view')} currentUser="Sales Team Leader" />
         )}
+      </Modal>
+
+      {/* ══ CONFIRM ACTION MODAL ═════════════════════════════════════════════ */}
+      <Modal id="confirm-action-modal" title="Confirm Action" size="md">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-600 font-medium">
+            {confirmData?.message || "Are you sure you want to perform this action?"}
+          </p>
+          <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+            <Button text="Cancel" variant="secondary" size={3} onClick={() => {
+              closeModal("confirm-action-modal");
+              setConfirmData(null);
+            }} />
+            <Button text={confirmData?.confirmText || "Confirm"} variant={confirmData?.confirmVariant || "primary"} size={3} onClick={async () => {
+              if (confirmData?.onConfirm) {
+                await confirmData.onConfirm();
+              }
+              closeModal("confirm-action-modal");
+              setConfirmData(null);
+            }} />
+          </div>
+        </div>
       </Modal>
     </div>
   );
@@ -305,10 +360,12 @@ function ReadOnlyTicketContent({ selected, onClose, currentUser }) {
       time: selected.createdDate ? `${selected.createdDate} 00:00` : '', text: selected.description }, ...msgs];
   })();
 
+  const targetLabels = { TL: 'Team Lead', MANAGER: 'Manager', ADMIN: 'Admin', ALL: 'All' };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2.5">
-        {[['Raised By', currentUser],
+        {[['Raised By', currentUser], ['Raised To', targetLabels[selected.targetHierarchy] || selected.targetHierarchy],
           ['Priority', selected.priority], ['Status', selected.status]].map(([label, value]) => (
           <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>

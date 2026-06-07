@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Heading, DashGrid, EnhancedDashCard, DataTable,
   Modal, ModalGrid, ModalData, ModalProfile, Button,
@@ -45,69 +45,108 @@ function MyAttendanceWidget() {
 export default function Attendance() {
   const [selected, setSelected] = useState(null);
   const [teamAttendance, setTeamAttendance] = useState([]);
+  const [attDate, setAttDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
   const [currentFilters, setCurrentFilters] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const fetchTeam = async (filters = {}) => {
+  const { status: attStatus } = useAttendance();
+
+  const fetchTeam = useCallback(async (filters = {}) => {
     setLoading(true);
     try {
       const params = { ...filters };
-      if (!params.startDate && !params.endDate) {
-        const today = new Date();
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-        params.startDate = todayStr;
-        params.endDate = todayStr;
-      }
-      const res = await hrmService.getTeamAttendance(params);
-      if (res.success) {
-        const mapped = res.data.map(u => {
-          const att = u.attendance;
-          const status = u.status || "Absent";
+      if (!params.startDate) params.startDate = attDate;
+      if (!params.endDate)   params.endDate   = attDate;
 
-          const formatTime = (date) => {
-             if (!date) return "—";
-             const d = new Date(date);
-             return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          };
+      // Fetch Team and Self in parallel
+      const [res, selfRes] = await Promise.all([
+        hrmService.getTeamAttendance(params),
+        hrmService.getMyAttendanceHistory(params)
+      ]);
 
-          const formatRole = (str) => {
-            if (!str) return "";
-            const clean = str.replace(/^(SALES|FINANCE|MANAGEMENT)_/, '');
-            if (clean === 'TL') return "Team Leader";
-            return clean.toLowerCase().split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-          };
+      let combined = [];
 
-          const d = new Date(u.date);
-          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const formatTime = (date) => {
+        if (!date) return "—";
+        const d = new Date(date);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      };
 
-          return {
-            id: u.id,
-            name: u.name,
-            role: formatRole(u.role),
-            date: dateStr,
-            clockIn: formatTime(att?.clockIn),
-            clockOut: formatTime(att?.clockOut),
-            hours: att?.hoursWorked ? `${att.hoursWorked}h` : "—",
-            status: status,
-            raw: u // Keep raw data for modal
-          };
+      const formatHours = (hours) => {
+        const h = Math.floor(hours || 0);
+        const m = Math.round(((hours || 0) % 1) * 60);
+        return `${h}h ${m}m`;
+      };
+
+      const formatRole = (str) => {
+        if (!str) return "";
+        const clean = str.replace(/^(SALES|FINANCE|MANAGEMENT)_/, '');
+        if (clean === 'TL') return "Team Leader";
+        return clean.toLowerCase().split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      };
+
+      // 1. Process Self data
+      const selfData = selfRes.data || [];
+      selfData.forEach(r => {
+        const d = new Date(r.date);
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        
+        let status = "Present";
+        if (r.clockIn && !r.clockOut) status = "Active";
+        if (r.isHalfDay) status = "Half Day";
+        if (r.isAbsent) status = "Absent";
+
+        combined.push({
+          id: 'self-' + (r._id || r.id || Date.now()),
+          name: "Self",
+          role: "Sales Team Leader",
+          date: dateStr,
+          clockIn: formatTime(r.clockIn),
+          clockOut: formatTime(r.clockOut),
+          hours: r.clockOut ? formatHours(r.hoursWorked) : (r.clockIn ? "Working..." : "—"),
+          status: status,
+          raw: r
         });
-        setTeamAttendance(mapped);
-      }
+      });
+
+      // 2. Process Team data
+      const teamData = res.data || [];
+      const mapped = teamData.map(u => {
+        const att = u.attendance;
+        const status = u.status || "Absent";
+        const d = new Date(u.date);
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+        return {
+          id: u.id,
+          name: u.name,
+          role: formatRole(u.role),
+          date: dateStr,
+          clockIn: formatTime(att?.clockIn),
+          clockOut: formatTime(att?.clockOut),
+          hours: att?.clockOut ? formatHours(att.hoursWorked) : (att?.clockIn ? "Working..." : "—"),
+          status: status,
+          raw: u // Keep raw data for modal
+        };
+      });
+      combined = [...combined, ...mapped];
+      setTeamAttendance(combined);
     } catch (err) {
       console.error("Failed to fetch team attendance:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [attDate]);
 
   useEffect(() => {
     fetchTeam(currentFilters);
-    const interval = setInterval(() => fetchTeam(currentFilters), 60000); // Auto-refresh every 60s
-    return () => clearInterval(interval);
-  }, [currentFilters]);
+  }, [fetchTeam, currentFilters, attStatus]);
 
   const handleApplyFilters = (filters) => {
+    if (filters.startDate) setAttDate(filters.startDate);
     setCurrentFilters(filters);
   };
 
@@ -154,22 +193,22 @@ export default function Attendance() {
 
       {/* ── Team executives' attendance log ───────────────────────────────── */}
       <DataTable
-        title="Team Attendance"
+        title={`Team Attendance for ${attDate}`}
         columns={COLS}
         rows={teamAttendance}
         userProfile="name"
         size={12}
         pageSize={10}
         searchable
-        date
+        onDateFilter={true}
+        onApplyFilters={handleApplyFilters}
         exportable
         loading={loading}
-        exportFileName="team_attendance"
+        exportFileName={`team_attendance_${attDate}`}
         filters={[
           { title: "Status",    type: "toggle", key: "status", options: ["Present", "Active", "Absent", "Leave"] },
           { title: "Executive", type: "select", key: "name",   options: executiveNames },
         ]}
-        onApplyFilters={handleApplyFilters}
         actions={[
           {
             icon: <Eye size={15} />, tooltip: "View Details", variant: "ghost",

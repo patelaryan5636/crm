@@ -8,13 +8,14 @@ import apiClient from './apiClient';
 const BASE = '/support-tickets';
 
 // ─── Create a new ticket (auto-routes to next level in hierarchy) ────────────
-export const createTicket = async ({ subject, message, priority, category }) => {
+export const createTicket = async ({ subject, message, priority, category, targetHierarchy }) => {
   const { data } = await apiClient.post(BASE, {
     subject,
     message,
     // Map frontend priority labels to backend enum values
     priority: mapPriorityToBackend(priority),
     refType: category || null,
+    targetHierarchy: targetHierarchy || 'ALL',
   });
   return data.data.ticket;
 };
@@ -79,6 +80,23 @@ export const closeTicket = async (ticketId, closureNotes = '') => {
   return data.data.ticket;
 };
 
+// ─── Update ticket status ───────────────────────────────────────────────────
+export const updateTicketStatus = async (ticketId, status, additionalData = {}) => {
+  const statusMap = {
+    "Open": "OPEN",
+    "In Progress": "IN_PROGRESS",
+    "Resolved": "RESOLVED",
+    "Closed": "CLOSED",
+    "Escalated": "ESCALATED",
+  };
+  const backendStatus = statusMap[status] || status.toUpperCase();
+  const { data } = await apiClient.patch(`${BASE}/${ticketId}/status`, {
+    status: backendStatus,
+    ...additionalData
+  });
+  return data.data.ticket;
+};
+
 // ─── Map frontend priority label → backend enum ──────────────────────────────
 export const mapPriorityToBackend = (p) => {
   if (!p) return 'NORMAL';
@@ -104,6 +122,7 @@ export const mapTicket = (t) => ({
   createdDate: t.createdAt ? new Date(t.createdAt).toISOString().slice(0, 10) : '',
   lastReply:   t.updatedAt ? new Date(t.updatedAt).toISOString().slice(0, 10) : '',
   description: t.message || '',
+  category:    mapCategory(t.refType),
   conversation: (t.replies || []).map((r) => ({
     sender: r.user?.name || 'Unknown',
     time:   r.createdAt
@@ -113,6 +132,7 @@ export const mapTicket = (t) => ({
   })),
   assignedTo:   t.assignedTo?.name || '',
   assignedToId: t.assignedTo?._id ? String(t.assignedTo._id) : null,
+  targetHierarchy: t.targetHierarchy || 'ALL',
 });
 
 // ─── Status label mapping (backend → display) ───────────────────────────────
@@ -124,6 +144,23 @@ const STATUS_MAP = {
   ESCALATED:   'Escalated',
 };
 export const mapStatus = (s) => STATUS_MAP[s] || s;
+
+// ─── Category mapping (backend → display) ──────────────────────────────────
+const CATEGORY_MAP = {
+  CLIENT_DATA:       'Client Data',
+  SALES_MANAGER:     'Sales Manager',
+  SALES_TL:          'Sales Team Lead',
+  EXECUTIVE:         'Executive Issue',
+  SYSTEM:            'System Issue',
+  PROJECT_ISSUE:     'Project Issue',
+  TEAM_ISSUE:        'Team Issue',
+  CLIENT_ESCALATION: 'Client Escalation',
+  RESOURCE_REQUEST:  'Resource Request',
+  TECHNICAL_ISSUE:   'Technical Issue',
+  OTHER:             'Other',
+  MANAGEMENT:        'Management Issue',
+};
+export const mapCategory = (c) => CATEGORY_MAP[c] || c || 'None';
 
 // ─── Priority capitalise ─────────────────────────────────────────────────────
 const capitalise = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';

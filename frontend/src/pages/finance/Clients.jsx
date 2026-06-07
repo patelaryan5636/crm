@@ -27,6 +27,8 @@ import {
   PenLine,
   Trash2,
   Plus,
+  Paperclip,
+  X,
   IndianRupee,
 } from "lucide-react";
 
@@ -145,6 +147,7 @@ export default function Clients() {
   // States for advance payment drafting inside action modal
   const [advDraft, setAdvDraft]         = useState(blankAdv());
   const [editingAdvId, setEditingAdvId] = useState(null);
+  const [tcFile, setTcFile]             = useState(null);
 
   // ── Derived financials (from actionForm) ──────────────────────────────────
   const totalCost      = actionForm.requirements.reduce((sum, r) => sum + (parseFloat(r.cost) || 0), 0);
@@ -196,6 +199,7 @@ export default function Clients() {
           totalPaid: p.totalPaid || 0,
           totalUnpaid: p.totalUnpaid || 0,
           netPayable: p.netPayable || 0,
+          termsAndConditionsPdf: p.termsAndConditionsPdf || null,
           clientEmailStatus: p.clientEmailStatus || 'PENDING',
           sentToClientAt: p.sentToClientAt || null,
           clientEmailMessageId: p.clientEmailMessageId || null,
@@ -225,6 +229,7 @@ export default function Clients() {
   // Open action modal
   const openAction = (row) => {
     setSelected(row);
+    setTcFile(null);
     let advancePaymentsList = row.advancePayments || [];
     if (advancePaymentsList.length === 0 && row.advanceAmount && parseFloat(row.advanceAmount) > 0) {
       advancePaymentsList = [
@@ -356,17 +361,23 @@ export default function Clients() {
     const advancePaidVal = advancePaymentsVal.reduce((sum, p) => sum + calcAdvAmount(totalUnpaid, p.mode, p.value), 0);
 
     try {
-      const response = await apiClient.post(`/finance/prospects/${selected.id}/send`, {
-        status: actionForm.status,
-        selectedService: actionForm.selectedService,
-        requirements: actionForm.requirements,
-        termsAndConditions: actionForm.termsAndConditions,
-        paymentStatus: actionForm.paymentStatus,
-        advanceAmount: String(advancePaidVal),
-        advancePayments: advancePaymentsVal,
-        notInterestedReason: actionForm.notInterestedReason,
-        conversationNotes: actionForm.conversationNotes,
-        notTalkReason: actionForm.notTalkReason,
+      const formData = new FormData();
+      formData.append("status", actionForm.status);
+      formData.append("selectedService", actionForm.selectedService);
+      formData.append("requirements", JSON.stringify(actionForm.requirements));
+      formData.append("termsAndConditions", actionForm.termsAndConditions);
+      formData.append("paymentStatus", actionForm.paymentStatus);
+      formData.append("advanceAmount", String(advancePaidVal));
+      formData.append("advancePayments", JSON.stringify(advancePaymentsVal));
+      formData.append("notInterestedReason", actionForm.notInterestedReason);
+      formData.append("conversationNotes", actionForm.conversationNotes);
+      formData.append("notTalkReason", actionForm.notTalkReason);
+      if (tcFile) {
+        formData.append("tcFile", tcFile);
+      }
+
+      const response = await apiClient.post(`/finance/prospects/${selected.id}/send`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       const updatedProspect = response?.data?.data?.prospect;
@@ -403,6 +414,26 @@ export default function Clients() {
       render: (v) => fmt(v),
     },
     { key: "salesExec", label: "Sales Executive" },
+    {
+      key: "termsAndConditionsPdf",
+      label: "Attached PDF",
+      render: (v) => {
+        if (!v) return <span className="text-slate-300">—</span>;
+        const filename = v.split(/[\\/]/).pop();
+        const url = `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/uploads/${filename}`;
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline transition"
+          >
+            <Paperclip size={12} />
+            PDF
+          </a>
+        );
+      }
+    },
     {
       key: "status",
       label: "Status",
@@ -522,6 +553,32 @@ export default function Clients() {
             <ModalGrid title="Internal Notes" cols={1}>
               <ModalData label="Sales Notes" value={selected.notes || "—"} />
             </ModalGrid>
+
+            {selected.termsAndConditionsPdf && (
+              <ModalGrid title="Attachments" cols={1}>
+                <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 p-3 rounded-2xl">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                    <Paperclip size={20} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-[#2a465a] truncate">
+                      {selected.termsAndConditionsPdf.split(/[\\/]/).pop()}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                      Terms and Conditions PDF
+                    </p>
+                  </div>
+                  <a
+                    href={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/uploads/${selected.termsAndConditionsPdf.split(/[\\/]/).pop()}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-4 py-2 rounded-xl bg-[#2a465a] text-white text-xs font-bold hover:bg-[#1e3a52] transition"
+                  >
+                    View / Download
+                  </a>
+                </div>
+              </ModalGrid>
+            )}
 
             {selected.status === "Interested" && (
               <>
@@ -842,6 +899,58 @@ export default function Clients() {
                   onChange={(e) => af("termsAndConditions", e.target.value)}
                   size={12}
                 />
+
+                {/* ── PDF Attachment ── */}
+                <div className="flex flex-col gap-2 -mt-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
+                    Attach PDF Document (Optional)
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 
+                      text-slate-600 text-xs font-bold cursor-pointer transition active:scale-95 border border-slate-200">
+                      <Paperclip size={14} />
+                      {tcFile ? "Change PDF" : "Choose PDF"}
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => setTcFile(e.target.files[0])}
+                      />
+                    </label>
+
+                    {tcFile && (
+                      <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-2 rounded-xl border border-emerald-100 animate-in fade-in slide-in-from-left-2">
+                        <span className="text-xs font-bold truncate max-w-[200px]">
+                          {tcFile.name || (typeof tcFile === 'string' ? tcFile.split(/[\\/]/).pop() : 'Attached PDF')}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setTcFile(null)}
+                          className="hover:text-rose-500 transition p-0.5"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
+
+                    {!tcFile && selected?.termsAndConditionsPdf && (
+                      <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-2 rounded-xl border border-blue-100">
+                        <span className="text-xs font-bold truncate max-w-[200px]">
+                          Existing: {selected.termsAndConditionsPdf.split(/[\\/]/).pop()}
+                        </span>
+                        <a
+                          href={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/uploads/${selected.termsAndConditionsPdf.split(/[\\/]/).pop()}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="hover:text-blue-900 transition p-0.5"
+                          title="View existing PDF"
+                        >
+                          <Eye size={14} />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* ── GST section ── */}
                 {actionForm.requirements.length > 0 && (

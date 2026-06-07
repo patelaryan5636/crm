@@ -1098,6 +1098,7 @@ const ProspectFormSchema = new Schema(
     budget: { type: Number, default: 0 },
     expectedClosing: Date,
     notes: { type: String, trim: true },
+    termsAndConditionsPdf: { type: String, default: null },
 
     // Services suggested by Sales Executive (references Service catalog)
     suggestedServices: [

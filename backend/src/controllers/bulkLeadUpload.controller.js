@@ -28,7 +28,10 @@ exports.previewUpload = catchAsync(async (req, res, next) => {
     return next(new AppError('No file uploaded.', 400));
   }
 
-  const fileType = req.file.mimetype === 'text/csv' || req.file.originalname.endsWith('.csv') ? 'CSV' : 'EXCEL';
+  const ext = req.file.originalname.toLowerCase();
+  let fileType = 'EXCEL';
+  if (req.file.mimetype === 'text/csv' || ext.endsWith('.csv')) fileType = 'CSV';
+  else if (req.file.mimetype === 'application/pdf' || ext.endsWith('.pdf')) fileType = 'PDF';
 
   const newUpload = new BulkLeadUpload({
     admin: req.admin._id,

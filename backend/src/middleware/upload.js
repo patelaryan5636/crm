@@ -13,7 +13,7 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const uniqueSuffix = Date.now() + '-' + Math.round(1E9 * Math.random());
     cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
@@ -21,10 +21,11 @@ const storage = multer.diskStorage({
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
   if (file.mimetype === 'text/csv' || ext === '.csv' || 
-      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || ext === '.xlsx') {
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || ext === '.xlsx' ||
+      file.mimetype === 'application/pdf' || ext === '.pdf') {
     cb(null, true);
   } else {
-    cb(new Error('Only CSV and Excel files are allowed'), false);
+    cb(new Error('Only CSV, Excel and PDF files are allowed'), false);
   }
 };
 

@@ -1,5 +1,6 @@
 "use strict";
 
+const path = require('path');
 const catchAsync = require("../utils/catchAsync");
 const ApiResponse = require("../utils/apiResponse");
 const AppError = require("../utils/appError");
@@ -112,6 +113,7 @@ const formatForFrontend = (p, paidAmount = 0) => {
     sentToClientBy: p.sentToClientBy || null,
     clientEmailStatus: p.clientEmailStatus || 'PENDING',
     clientEmailMessageId: p.clientEmailMessageId || null,
+    termsAndConditionsPdf: p.termsAndConditionsPdf || null,
     createdAt: p.createdAt,
   };
 };
@@ -191,7 +193,7 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
   }
 
   const { prospectId } = req.params;
-  const {
+  let {
     status,
     selectedService,
     requirements = [],
@@ -203,6 +205,14 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
     conversationNotes = '',
     notTalkReason = '',
   } = req.body || {};
+
+  // If sent via FormData, arrays/objects might be JSON strings
+  if (typeof requirements === 'string') {
+    try { requirements = JSON.parse(requirements); } catch (e) { requirements = []; }
+  }
+  if (typeof advancePayments === 'string') {
+    try { advancePayments = JSON.parse(advancePayments); } catch (e) { advancePayments = []; }
+  }
 
   const prospect = await ProspectForm.findOne({
     _id: prospectId,
@@ -275,6 +285,10 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
   prospect.advanceAmount = Number(advanceAmount) || 0;
   prospect.advancePayments = advancePayments || [];
   
+  if (req.file) {
+    prospect.termsAndConditionsPdf = req.file.path;
+  }
+  
   await prospect.save();
 
   const lead = await Lead.findOne({ _id: prospect.lead, admin: req.admin._id });
@@ -291,6 +305,11 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
       throw new AppError('Client email is missing. Please update the client record before sending the quotation.', 400);
     }
 
+    const baseUrl = process.env.BACKEND_PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
+    const pdfUrl = prospect.termsAndConditionsPdf 
+      ? `${baseUrl}/uploads/${path.basename(prospect.termsAndConditionsPdf)}`
+      : null;
+
     emailResult = await sendProspectQuotationEmail({
       email: recipientEmail,
       clientName: prospect.client.name || 'Client',
@@ -306,6 +325,8 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
       finalAmount,
       paymentStatus,
       termsAndConditions,
+      pdfPath: prospect.termsAndConditionsPdf,
+      pdfUrl,
     });
 
     prospect.clientEmailStatus = 'SENT';

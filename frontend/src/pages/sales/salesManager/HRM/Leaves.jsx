@@ -328,28 +328,6 @@ export default function Leaves() {
         ]}
       />
 
-      {/* ── Pending Leaves ─────────────────────────────────────────────────── */}
-      <DataTable
-        title="Pending Leaves"
-        userProfile="name"
-        columns={PENDING_COLS}
-        rows={pending}
-        loading={loading}
-        defaultSortKey="appliedOn"
-        defaultSortDir="desc"
-        actions={pendingActions}
-        ellipse={3}
-        size={12}
-        pageSize={10}
-        searchable
-        exportable
-        exportFileName="pending-leaves"
-        filters={[
-          { title: "Leave Type", type: "toggle", key: "leaveType",       options: LEAVE_TYPES },
-          { title: "Role",        type: "toggle", key: "role",       options: [...new Set(pending.map(l => l.role))] },
-        ]}
-      />
-
       {/* ── Leave History ───────────────────────────────────────────────────── */}
       <DataTable
         title="Leave History"

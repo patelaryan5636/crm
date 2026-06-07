@@ -4,6 +4,8 @@
  * Can fallback to nodemailer for development
  */
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const logger = require('../utils/logger');
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
@@ -271,6 +273,8 @@ const sendPasswordResetConfirmationEmail = async (email, name = 'User') => {
  * @param {number} payload.finalAmount
  * @param {string} payload.paymentStatus
  * @param {string} payload.termsAndConditions
+ * @param {string} [payload.pdfPath]
+ * @param {string} [payload.pdfUrl]
  */
 const sendProspectQuotationEmail = async (payload) => {
   try {
@@ -290,13 +294,11 @@ const sendProspectQuotationEmail = async (payload) => {
         </tr>`)
       .join('');
 
-    const response = await axios.post(
-      'https://api.brevo.com/v3/smtp/email',
-      {
-        sender: getSender(),
-        to: [{ email: payload.email, name: payload.clientName || 'Client' }],
-        subject: `${payload.companyName || payload.clientName || 'Your'} quotation from Graphura CRM`,
-        htmlContent: `
+    const emailPayload = {
+      sender: getSender(),
+      to: [{ email: payload.email, name: payload.clientName || 'Client' }],
+      subject: `${payload.companyName || payload.clientName || 'Your'} quotation from Graphura CRM`,
+      htmlContent: `
           <div style="font-family:Arial,sans-serif;max-width:720px;margin:0 auto;padding:24px;color:#1f2937;">
             <div style="background:#0f172a;color:#fff;padding:20px 24px;border-radius:14px 14px 0 0;">
               <h2 style="margin:0;font-size:22px;">Quotation from Graphura CRM</h2>
@@ -335,11 +337,32 @@ const sendProspectQuotationEmail = async (payload) => {
 
               ${payload.termsAndConditions ? `<div style="margin-top:24px;padding:16px;border-left:4px solid #2563eb;background:#eff6ff;border-radius:8px;"><strong>Terms & Conditions</strong><div style="margin-top:8px;white-space:pre-line;line-height:1.6;">${payload.termsAndConditions}</div></div>` : ''}
 
+              ${payload.pdfUrl ? `
+              <div style="margin-top:20px; text-align: center;">
+                <a href="${payload.pdfUrl}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; display: inline-block; font-size: 14px; font-weight: bold;">
+                  View Detailed Terms (PDF)
+                </a>
+              </div>` : ''}
+
               <p style="margin:24px 0 0;line-height:1.6;color:#475569;">Please review and reply if you would like any adjustments. Our team will coordinate the next step promptly.</p>
             </div>
           </div>
         `,
-      },
+    };
+
+    if (payload.pdfPath && fs.existsSync(payload.pdfPath)) {
+      const b64 = fs.readFileSync(payload.pdfPath).toString('base64');
+      emailPayload.attachment = [
+        {
+          content: b64,
+          name: path.basename(payload.pdfPath),
+        },
+      ];
+    }
+
+    const response = await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      emailPayload,
       {
         headers: {
           'api-key': process.env.BREVO_API_KEY.trim(),

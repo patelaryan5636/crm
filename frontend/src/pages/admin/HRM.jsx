@@ -17,6 +17,7 @@ import {
   Button
 } from '../../components/shared/Common_Components';
 import { hrmService } from '../../services/hrmService';
+import { userService } from '../../services/userService';
 import { toast } from 'react-hot-toast';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 
@@ -209,6 +210,19 @@ export default function HRM() {
 
   const [attendance, setAttendance] = useState([]);
   const [attLoading, setAttLoading] = useState(false);
+  const [totalEmp, setTotalEmp] = useState(0);
+
+  const fetchStats = async () => {
+    try {
+      const res = await userService.getUserStats();
+      if (res.success) {
+        setTotalEmp(res.data.totalEmployees);
+      }
+    } catch (err) {
+      console.error("Failed to fetch user stats:", err);
+    }
+  };
+
   const [attDateRange, setAttDateRange] = useState(() => {
     const d = new Date();
     const formatted = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -302,6 +316,7 @@ export default function HRM() {
 
   useEffect(() => {
     fetchLeaves();
+    fetchStats();
   }, []);
 
   useEffect(() => {
@@ -322,7 +337,6 @@ export default function HRM() {
     { name: 'Rejected', value: allLeaves.filter(l => l.status === 'REJECTED').length },
   ];
 
-  const totalEmp = 135; // Still using static for now, or could fetch all users count
   const presentToday = attendance.filter(r => r.date === todayStr && ["Present", "Active", "Late", "Present"].includes(r.status)).length;
   const absentToday  = attendance.filter(r => r.date === todayStr && r.status === "Absent").length;
 

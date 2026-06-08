@@ -9,8 +9,7 @@ function ClientRoutes() {
   return (
     <Routes>
       <Route element={<MainLayout />}>
-        <Route index          element={<ClientPanel />} />
-        <Route path="projects" element={<ClientPanel />} />
+        <Route index element={<ClientPanel />} />
         <Route path="support"  element={<ClientSupport />} />
         <Route path="invoices" element={<ClientInvoices />} />
         <Route path="profile"  element={<ClientProfile />} />

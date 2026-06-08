@@ -584,32 +584,6 @@ const MENUS = {
       },
     ],
   },
-  client: {
-    title: "Client",
-    initials: "CL",
-    sections: [
-      {
-        label: "Overview",
-        items: [
-          {
-            name: "Dashboard",
-            path: "/client",
-            icon: LayoutDashboard,
-            end: true,
-          },
-        ],
-      },
-      {
-        label: "My Account",
-        items: [
-          { name: "My Projects", path: "/client/projects", icon: FolderOpen },
-          { name: "Invoices", path: "/client/invoices", icon: FileText },
-          { name: "Support", path: "/client/support", icon: LifeBuoy },
-          { name: "Profile", path: "/client/profile", icon: User2 },
-        ],
-      },
-    ],
-  },
 };
 
 function useRole() {

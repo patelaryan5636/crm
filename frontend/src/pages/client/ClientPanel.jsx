@@ -292,12 +292,12 @@ function ProjectList({ onSelect }) {
   ];
 
   return (
-    <main className="flex flex-col gap-6">
+    <main className="space-y-6">
 
       {/* Heading banner */}
       <Heading
-        primaryText="Your"
-        secondaryText="Projects"
+        primaryText="Track Your "
+        secondaryText={"Projects"}
         size={12}
         fontSize="2xl"
       />
@@ -435,7 +435,7 @@ function ProjectDetail({ project: p, onBack }) {
   }));
 
   return (
-    <main className="flex flex-col gap-6">
+    <main className="space-y-6">
 
       {/* Back */}
       <button

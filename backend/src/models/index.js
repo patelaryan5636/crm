@@ -829,6 +829,36 @@ TeamSchema.index({ admin: 1, department: 1, isDeleted: 1 });
 TeamSchema.index({ admin: 1, leader: 1 });
 
 // ════════════════════════════════════════════════════════════
+// MODEL 19A — MANAGEMENT TEAM
+// Different from Sales Team:
+//   - A MANAGEMENT_EMPLOYEE can belong to MULTIPLE management teams
+//     (under different MANAGEMENT_TLs simultaneously).
+//   - No uniqueness constraint on members across teams.
+// ════════════════════════════════════════════════════════════
+const ManagementTeamSchema = new Schema(
+  {
+    admin:      { type: Schema.Types.ObjectId, ref: "Admin",      required: true },
+    department: { type: Schema.Types.ObjectId, ref: "Department", required: true },
+    name:       { type: String, required: true, trim: true },
+    leader:     { type: Schema.Types.ObjectId, ref: "User",       default: null },
+    members: [
+      {
+        user:     { type: Schema.Types.ObjectId, ref: "User" },
+        joinedAt: { type: Date, default: Date.now },
+        _id: false,
+      },
+    ],
+    isActive:   { type: Boolean, default: true },
+  },
+  { timestamps: true },
+);
+
+ManagementTeamSchema.plugin(softDeletePlugin);
+ManagementTeamSchema.index({ admin: 1, department: 1, isDeleted: 1 });
+ManagementTeamSchema.index({ admin: 1, leader: 1 });
+// NOTE: No unique constraint on members — employees CAN be in multiple teams.
+
+// ════════════════════════════════════════════════════════════
 // MODEL 20 — CLIENT
 // PRIMARY IDENTIFIER = mobile (unique per admin — NOT globally).
 // Used in Sales (leads) and Finance (payments/projects).
@@ -2028,6 +2058,7 @@ module.exports = {
   Department: mongoose.model("Department", DepartmentSchema),
   Service: mongoose.model("Service", ServiceSchema),
   Team: mongoose.model("Team", TeamSchema),
+  ManagementTeam: mongoose.model("ManagementTeam", ManagementTeamSchema),
 
   // ── Users ──
   User: mongoose.model("User", UserSchema),

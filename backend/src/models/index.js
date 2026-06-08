@@ -1685,7 +1685,17 @@ ExpenseSchema.pre("validate", async function () {
 const TicketSchema = new Schema(
   {
     admin: { type: Schema.Types.ObjectId, ref: "Admin", required: true },
-    raisedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    raisedBy: { 
+      type: Schema.Types.ObjectId, 
+      required: true,
+      refPath: "raisedByType" 
+    },
+    raisedByType: {
+      type: String,
+      required: true,
+      enum: ["User", "Admin"],
+      default: "User"
+    },
     assignedTo: { type: Schema.Types.ObjectId, ref: "User", default: null },
     subject: { type: String, required: true, trim: true },
     message: { type: String, required: true },
@@ -1697,7 +1707,12 @@ const TicketSchema = new Schema(
     },
     refType: {
       type: String,
-      enum: ["CLIENT_DATA", "SALES_MANAGER", "SALES_TL", "EXECUTIVE", "SYSTEM", "PROJECT_ISSUE", "TEAM_ISSUE", "CLIENT_ESCALATION", "RESOURCE_REQUEST", "TECHNICAL_ISSUE", "OTHER", "MANAGEMENT"],
+      enum: [
+        "CLIENT_DATA", "SALES_MANAGER", "SALES_TL", "EXECUTIVE", "SYSTEM", 
+        "PROJECT_ISSUE", "TEAM_ISSUE", "CLIENT_ESCALATION", "RESOURCE_REQUEST", 
+        "TECHNICAL_ISSUE", "OTHER", "MANAGEMENT",
+        "CRM Bug", "Lead Data Issue", "Payment Issue", "Account/Login Issue", "Report Issue"
+      ],
       default: null,
     },
     refId: { type: Schema.Types.ObjectId, default: null },

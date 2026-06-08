@@ -128,13 +128,18 @@ exports.createTicket = catchAsync(async (req, res, next) => {
     return next(new AppError('Authentication required', 401));
   }
 
-  // Validate user exists and is active
-  const raiser = await User.findOne({
-    _id: userId,
-    admin: adminId,
-    isDeleted: false,
-    isActive: true,
-  }).select('_id name email role department');
+  let raiser;
+  if (req.userType === 'ADMIN') {
+    raiser = req.user;
+  } else {
+    // Validate user exists and is active
+    raiser = await User.findOne({
+      _id: userId,
+      admin: adminId,
+      isDeleted: false,
+      isActive: true,
+    }).select('_id name email role department');
+  }
 
   if (!raiser) {
     return next(new AppError('User not found or is inactive', 404));
@@ -147,6 +152,7 @@ exports.createTicket = catchAsync(async (req, res, next) => {
   const newTicket = await Ticket.create({
     admin: adminId,
     raisedBy: userId,
+    raisedByType: req.userType === 'ADMIN' ? 'Admin' : 'User',
     assignedTo: assigneeId,
     subject: subject.trim(),
     message: message.trim(),
@@ -404,6 +410,7 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
     { $match: filter },
     {
       $addFields: {
+        raisedByType: { $ifNull: ["$raisedByType", "User"] },
         priorityWeight: {
           $switch: {
             branches: [
@@ -438,12 +445,34 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
   const tickets = await Ticket.aggregate(pipeline);
 
   // Populate references on aggregated results
+  // We use separate population for User and Admin to be 100% sure for aggregation results
+  const adminTickets = tickets.filter(t => t.raisedByType === 'Admin');
+  const userTickets = tickets.filter(t => t.raisedByType === 'User');
+
+  if (adminTickets.length > 0) {
+    await Ticket.populate(adminTickets, { path: 'raisedBy', model: 'Admin', select: 'name email' });
+  }
+  if (userTickets.length > 0) {
+    await Ticket.populate(userTickets, { path: 'raisedBy', model: 'User', select: 'name email role' });
+  }
+
+  // Populate common fields
   await Ticket.populate(tickets, [
-    { path: 'raisedBy', select: 'name email role' },
     { path: 'assignedTo', select: 'name email role' },
     { path: 'resolvedBy', select: 'name email' },
     { path: 'replies.user', select: 'name email role' },
   ]);
+
+  // Ensure raisedBy details are visible even if role is missing (for Admins)
+  tickets.forEach(t => {
+    if (t.raisedBy && typeof t.raisedBy === 'object') {
+      if (!t.raisedBy.role && t.raisedByType === 'Admin') {
+        t.raisedBy.role = 'ADMIN';
+      }
+    }
+  });
+
+  console.log(`[DEBUG] Fetched ${tickets.length} tickets. First ticket raisedBy:`, tickets[0]?.raisedBy);
 
   // Get total count for pagination
   const total = await Ticket.countDocuments(filter);
@@ -496,6 +525,11 @@ exports.getTicketById = catchAsync(async (req, res, next) => {
 
   if (!ticket) {
     return next(new AppError('Ticket not found', 404));
+  }
+
+  // Handle Admin raiser role
+  if (ticket.raisedBy && !ticket.raisedBy.role && ticket.raisedByType === 'Admin') {
+    ticket.raisedBy.role = 'ADMIN';
   }
 
   // Authorization: User can only view their own tickets (unless admin)

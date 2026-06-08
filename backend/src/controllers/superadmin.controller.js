@@ -6,7 +6,8 @@ const {
   SuperAdminLoginLog, 
   AdminLoginLog,
   Admin,
-  AuditLog
+  AuditLog,
+  SuperAdminTicket
 } = require('../models/index');
 const { 
   comparePassword, 
@@ -231,5 +232,61 @@ exports.getAdminById = catchAsync(async (req, res, next) => {
 
   res.status(200).json(
     new ApiResponse(200, { admin }, 'Admin retrieved successfully')
+  );
+});
+
+/**
+ * GET ALL SUPER ADMIN SUPPORT TICKETS (From Admins)
+ */
+exports.getSupportTickets = catchAsync(async (req, res, next) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 100;
+  const skip = (page - 1) * limit;
+
+  const tickets = await SuperAdminTicket.find()
+    .populate('raisedBy', 'name email company.name')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const total = await SuperAdminTicket.countDocuments();
+
+  res.status(200).json(
+    new ApiResponse(200, {
+      tickets,
+      pagination: { total, page, pages: Math.ceil(total / limit) }
+    }, 'Support tickets retrieved successfully')
+  );
+});
+
+/**
+ * UPDATE SUPPORT TICKET STATUS
+ */
+exports.updateTicketStatus = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { status, resolutionMessage } = req.body;
+
+  const ticket = await SuperAdminTicket.findById(id);
+  if (!ticket) {
+    return next(new AppError('Ticket not found', 404));
+  }
+
+  if (status) ticket.status = status.toUpperCase();
+  if (resolutionMessage) {
+    ticket.replies.push({
+      senderType: 'SUPER_ADMIN',
+      senderId: req.user._id,
+      message: resolutionMessage,
+      createdAt: new Date()
+    });
+    if (status === 'RESOLVED') {
+      ticket.resolvedAt = new Date();
+    }
+  }
+
+  await ticket.save();
+
+  res.status(200).json(
+    new ApiResponse(200, { ticket }, 'Ticket status updated successfully')
   );
 });

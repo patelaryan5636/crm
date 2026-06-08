@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -18,204 +18,27 @@ import {
   closeModal,
   openModal,
 } from "../../../components/shared/Common_Components";
+import { getSupportTickets, updateTicketStatus } from "../../../services/superAdminService";
 
-const initialTickets = [
-  {
-    ticketId: "SUP-1001",
-    requester: "Aarav Mehta",
-    company: "Nexus Corp",
-    subject: "Unable to access sales pipeline",
-    priority: "High",
-    assignedTo: "Admin Team",
-    status: "Opened",
-    createdAt: "29 Apr 2026",
-    category: "Access",
-    lastUpdate: "10 min ago",
-    description: "Requester can sign in but cannot open the sales pipeline module from the CRM sidebar.",
-  },
-  {
-    ticketId: "SUP-1002",
-    requester: "Neha Singh",
-    company: "Globex Inc",
-    subject: "Invoice export is missing GST column",
-    priority: "Medium",
-    assignedTo: "Finance Admin",
-    status: "Opened",
-    createdAt: "28 Apr 2026",
-    category: "Billing",
-    lastUpdate: "1 hr ago",
-    description: "The exported invoice report does not include GST details required by the finance team.",
-  },
-  {
-    ticketId: "SUP-1003",
-    requester: "Rohan Iyer",
-    company: "BlueWave Tech",
-    subject: "Lead assignment rule needs approval",
-    priority: "Low",
-    assignedTo: "CRM Admin",
-    status: "Closed",
-    createdAt: "27 Apr 2026",
-    category: "Workflow",
-    lastUpdate: "Yesterday",
-    description: "New territory-based lead assignment rule was reviewed and enabled for the west region.",
-  },
-  {
-    ticketId: "SUP-1004",
-    requester: "Priya Nair",
-    company: "Stark Industries",
-    subject: "Customer profile duplicate merge request",
-    priority: "High",
-    assignedTo: "Admin Team",
-    status: "Opened",
-    createdAt: "26 Apr 2026",
-    category: "Customer Data",
-    lastUpdate: "2 days ago",
-    description: "Two customer profiles need to be reviewed and merged after admin verification.",
-  },
-  {
-    ticketId: "SUP-1005",
-    requester: "Rahul Sharma",
-    company: "TechNova Solutions",
-    subject: "API Rate Limit Exceeded",
-    priority: "High",
-    assignedTo: "Developer Team",
-    status: "Opened",
-    createdAt: "25 Apr 2026",
-    category: "API",
-    lastUpdate: "3 hrs ago",
-    description: "The customer is hitting the rate limit continuously despite having a premium plan. Needs backend investigation.",
-  },
-  {
-    ticketId: "SUP-1006",
-    requester: "Kavya Patel",
-    company: "Zenith Retail",
-    subject: "Dashboard data not syncing",
-    priority: "Medium",
-    assignedTo: "Support Team",
-    status: "Closed",
-    createdAt: "24 Apr 2026",
-    category: "Analytics",
-    lastUpdate: "1 day ago",
-    description: "Analytics dashboard is showing data from 48 hours ago. Real-time sync seems to have stalled.",
-  },
-  {
-    ticketId: "SUP-1007",
-    requester: "Amit Verma",
-    company: "Verma Logistics",
-    subject: "Unable to add new user",
-    priority: "Medium",
-    assignedTo: "Admin Team",
-    status: "Opened",
-    createdAt: "24 Apr 2026",
-    category: "User Management",
-    lastUpdate: "5 hrs ago",
-    description: "Getting a 500 Internal Error when trying to invite a new team member to the workspace.",
-  },
-  {
-    ticketId: "SUP-1008",
-    requester: "Sneha Reddy",
-    company: "Reddy Designs",
-    subject: "Subscription renewal failed",
-    priority: "High",
-    assignedTo: "Finance Admin",
-    status: "Closed",
-    createdAt: "23 Apr 2026",
-    category: "Billing",
-    lastUpdate: "2 days ago",
-    description: "Credit card was charged but the system still shows the account as suspended. Payment gateway issue resolved.",
-  },
-  {
-    ticketId: "SUP-1009",
-    requester: "Vikas Kumar",
-    company: "CloudCore",
-    subject: "Custom domain SSL certificate error",
-    priority: "High",
-    assignedTo: "DevOps",
-    status: "Opened",
-    createdAt: "22 Apr 2026",
-    category: "Security",
-    lastUpdate: "30 min ago",
-    description: "Customer's custom domain is showing an invalid SSL certificate warning for their CRM portal.",
-  },
-  {
-    ticketId: "SUP-1010",
-    requester: "Anjali Gupta",
-    company: "Gupta Associates",
-    subject: "Report download returns blank PDF",
-    priority: "Low",
-    assignedTo: "Support Team",
-    status: "Opened",
-    createdAt: "21 Apr 2026",
-    category: "Reporting",
-    lastUpdate: "12 hrs ago",
-    description: "When downloading the monthly performance report as PDF, the file is completely blank.",
-  },
-  {
-    ticketId: "SUP-1011",
-    requester: "David Smith",
-    company: "Global Ventures",
-    subject: "Webhook delivery failing",
-    priority: "Medium",
-    assignedTo: "Developer Team",
-    status: "Closed",
-    createdAt: "20 Apr 2026",
-    category: "Integrations",
-    lastUpdate: "4 days ago",
-    description: "Webhooks for 'lead.created' event are failing with timeout errors on the customer's endpoint.",
-  },
-  {
-    ticketId: "SUP-1012",
-    requester: "Pooja Desai",
-    company: "Desai Info",
-    subject: "Mobile app crashing on login",
-    priority: "High",
-    assignedTo: "Mobile Team",
-    status: "Opened",
-    createdAt: "19 Apr 2026",
-    category: "Mobile",
-    lastUpdate: "1 hr ago",
-    description: "The iOS application crashes immediately upon entering credentials for users with 2FA enabled.",
-  },
-  {
-    ticketId: "SUP-1013",
-    requester: "Suresh Pillai",
-    company: "Pillai Traders",
-    subject: "Bulk import stuck at 99%",
-    priority: "Low",
-    assignedTo: "Support Team",
-    status: "Closed",
-    createdAt: "18 Apr 2026",
-    category: "Data Management",
-    lastUpdate: "5 days ago",
-    description: "A CSV import of 10,000 leads was stuck. Cleared the cache and restarted the background job successfully.",
-  },
-  {
-    ticketId: "SUP-1014",
-    requester: "Meera Joshi",
-    company: "Joshi Enterprises",
-    subject: "Email templates formatting broken",
-    priority: "Medium",
-    assignedTo: "Support Team",
-    status: "Opened",
-    createdAt: "17 Apr 2026",
-    category: "Email",
-    lastUpdate: "2 hrs ago",
-    description: "HTML email templates are rendering incorrectly in Outlook clients after the recent editor update.",
-  },
-  {
-    ticketId: "SUP-1015",
-    requester: "Karan Malhotra",
-    company: "Malhotra Group",
-    subject: "Cannot delete custom fields",
-    priority: "Low",
-    assignedTo: "Admin Team",
-    status: "Closed",
-    createdAt: "16 Apr 2026",
-    category: "Configuration",
-    lastUpdate: "1 week ago",
-    description: "User was trying to delete a custom field that was still mapped in an active workflow. Resolved.",
-  },
-];
+const mapBackendTicket = (t) => ({
+  id: t._id,
+  ticketId: `SUP-${t._id.slice(-4).toUpperCase()}`,
+  requester: t.raisedBy?.name || "Unknown",
+  company: t.raisedBy?.company?.name || "—",
+  subject: t.subject,
+  priority: t.priority.charAt(0).toUpperCase() + t.priority.slice(1).toLowerCase(),
+  status: t.status === 'OPEN' ? 'Opened' : t.status.charAt(0).toUpperCase() + t.status.slice(1).toLowerCase(),
+  createdAt: new Date(t.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+  lastUpdate: new Date(t.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+  description: t.message,
+  email: t.raisedBy?.email || "—",
+  category: "General",
+  conversation: (t.replies || []).map(r => ({
+    sender: r.senderType === 'SUPER_ADMIN' ? 'Super Admin' : (t.raisedBy?.name || 'Admin'),
+    time: new Date(r.createdAt).toLocaleString(),
+    message: r.message
+  }))
+});
 
 const ticketColumns = [
   { key: "requester", label: "Requester" },
@@ -228,8 +51,25 @@ const ticketColumns = [
 
 
 export default function Support() {
-  const [tickets, setTickets] = useState(initialTickets);
-  const [selectedTicket, setSelectedTicket] = useState(initialTickets[0]);
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+
+  const fetchTickets = async () => {
+    try {
+      setLoading(true);
+      const res = await getSupportTickets();
+      setTickets((res.tickets || []).map(mapBackendTicket));
+    } catch (err) {
+      console.error("Failed to fetch tickets:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
 
   const sortedTickets = useMemo(() => {
     const getPriorityWeight = (priority) => {
@@ -247,16 +87,16 @@ export default function Support() {
       if (weightB !== weightA) return weightB - weightA;
       const dateA = new Date(a.createdAt || 0);
       const dateB = new Date(b.createdAt || 0);
-      return dateA - dateB;
+      return dateB - dateA;
     };
 
     return [...tickets].sort(sortFn);
   }, [tickets]);
 
   const stats = useMemo(() => {
-    const openedTickets = tickets.filter((ticket) => ticket.status === "Opened");
-    const highPriority = tickets.filter((ticket) => ticket.priority === "High");
-    const closedTickets = tickets.filter((ticket) => ticket.status === "Closed");
+    const openedTickets = tickets.filter((ticket) => ticket.status === "Opened" || ticket.status === "Open" || ticket.status === "In Progress");
+    const highPriority = tickets.filter((ticket) => ticket.priority === "High" || ticket.priority === "Urgent");
+    const closedTickets = tickets.filter((ticket) => ticket.status === "Closed" || ticket.status === "Resolved");
 
     return {
       total: tickets.length,
@@ -271,14 +111,16 @@ export default function Support() {
     openModal("support-ticket-details");
   };
 
-  const handleCloseTicket = (ticket) => {
-    setTickets((current) =>
-      current.map((item) =>
-        item.ticketId === ticket.ticketId
-          ? { ...item, status: "Closed", lastUpdate: "Just now" }
-          : item,
-      ),
-    );
+  const handleCloseTicket = async (ticket) => {
+    try {
+      await updateTicketStatus(ticket.id, "CLOSED", "Ticket closed by Super Admin.");
+      await fetchTickets();
+      if (selectedTicket?.id === ticket.id) {
+        setSelectedTicket(prev => ({ ...prev, status: "Closed", lastUpdate: "Just now" }));
+      }
+    } catch (err) {
+      console.error("Failed to close ticket:", err);
+    }
   };
 
   const actions = [
@@ -308,28 +150,28 @@ export default function Support() {
 
         <EnhancedDashCard
           title="Total Tickets"
-          value={stats.total}
+          value={String(stats.total)}
           icon={<Ticket size={22} />}
           accentColor="#2563eb"
           size={3}
         />
         <EnhancedDashCard
           title="Open Tickets"
-          value={stats.opened}
+          value={String(stats.opened)}
           icon={<Clock3 size={22} />}
           accentColor="#f59e0b"
           size={3}
         />
         <EnhancedDashCard
           title="High Priority"
-          value={stats.high}
+          value={String(stats.high)}
           icon={<AlertTriangle size={22} />}
           accentColor="#e11d48"
           size={3}
         />
         <EnhancedDashCard
           title="Closed"
-          value={stats.closed}
+          value={String(stats.closed)}
           icon={<CheckCircle2 size={22} />}
           accentColor="#16a34a"
           size={3}
@@ -346,10 +188,11 @@ export default function Support() {
           exportable
           exportFileName="support-tickets"
           defaultSortKey={null}
+          loading={loading}
           filters={[
-            { title: "Status",   type: "toggle", key: "status",   options: ["Opened", "Closed"] },
+            { title: "Status",   type: "toggle", key: "status",   options: ["Opened", "Closed", "In Progress", "Resolved"] },
             { title: "Priority", type: "toggle", key: "priority", options: ["High", "Medium", "Low"] },
-            { title: "Category", type: "toggle", key: "category", options: ["Access", "Billing", "Workflow", "API", "Security", "Mobile", "Email"] },
+            { title: "Category", type: "toggle", key: "category", options: ["General"] },
           ]}
         />
       </Grid>
@@ -381,7 +224,6 @@ export default function Support() {
                   variant="primary"
                   onClick={() => {
                     handleCloseTicket(selectedTicket);
-                    setSelectedTicket((prev) => ({ ...prev, status: "Closed", lastUpdate: "Just now" }));
                   }}
                 />
               )}

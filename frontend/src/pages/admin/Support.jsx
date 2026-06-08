@@ -38,10 +38,16 @@ const mapBackendTicketToAdminShape = (t) => {
     ESCALATED: "Escalated"
   };
 
+  const formatRole = (r) => {
+    if (!r) return "—";
+    if (r === 'ADMIN') return "Administrator";
+    return r.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+  };
+
   return {
     id: t._id,
     user: t.raisedBy?.name || "Unknown",
-    role: t.raisedBy?.role || "",
+    role: formatRole(t.raisedBy?.role),
     category: t.refType || "System",
     issue: t.message || "",
     priority: priorityMap[t.priority] || "Medium",
@@ -197,7 +203,12 @@ export default function Support() {
   const handleFormChange = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
   const handleSave = async () => {
-    if (!form.user.trim() || !form.issue.trim()) return;
+    if (!form.issue.trim()) return;
+    if (form.issue.trim().length < 3) {
+      alert("Description must be at least 3 characters");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       if (form.id) {
@@ -207,10 +218,11 @@ export default function Support() {
           await fetchTickets();
         }
       } else {
+        const reportedBy = form.user.trim() || "Admin";
         await createTicket({
-          subject: form.user.trim() + " - " + form.issue.slice(0, 30),
-          message: form.issue,
-          priority: form.priority,
+          subject: reportedBy + " - " + form.issue.slice(0, 30),
+          message: form.issue.trim(),
+          priority: form.priority.toUpperCase(),
           category: form.category || "SYSTEM",
           targetHierarchy: form.targetHierarchy || "ALL",
         });
@@ -218,7 +230,8 @@ export default function Support() {
       }
       closeModal("ticket-form-modal");
     } catch (err) {
-      alert(err?.message || "Failed to save ticket");
+      const msg = err.errors ? err.errors.join(", ") : (err.message || "Failed to save ticket");
+      alert(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -396,10 +409,6 @@ export default function Support() {
       <Modal id="ticket-form-modal" title={form.id ? "Edit Ticket" : "New Ticket"}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <FormInput label="Reported By" field="user" disabled={!!form.id} />
-            <FormSelect label="Role" field="role" options={["Sales Executive", "Sales Manager", "Finance Manager", "Finance Analyst", "Management Lead"]} disabled={!!form.id} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <FormSelect label="Category" field="category" options={["CRM Bug", "Lead Data Issue", "Payment Issue", "Account/Login Issue", "Report Issue"]} disabled={!!form.id} />
             <FormSelect label="Priority" field="priority" options={["Low", "Medium", "High"]} disabled={!!form.id} />
           </div>
@@ -411,7 +420,7 @@ export default function Support() {
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
             <Button text="Cancel" variant="ghost" size={3} onClick={() => closeModal("ticket-form-modal")} disabled={isSubmitting} />
             <Button text={isSubmitting ? "Saving..." : form.id ? "Update" : "Create"} variant="primary" size={3}
-              onClick={handleSave} disabled={isSubmitting || !form.user || !form.issue} />
+              onClick={handleSave} disabled={isSubmitting || !form.issue} />
           </div>
 
           {form.id && (

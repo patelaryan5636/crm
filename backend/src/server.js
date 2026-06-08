@@ -4,6 +4,7 @@
  * Comprehensive registration, authentication, and tenant management
  */
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -101,6 +102,7 @@ app.use('/api/payments/webhook', paymentWebhookRoutes);
 app.use(express.json({ limit: '64kb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ limit: '64kb', extended: true, verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(morgan('dev')); // HTTP request logging
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // ────────────────────────────────────────────────────────────
 // HEALTH CHECK ENDPOINT

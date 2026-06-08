@@ -42,7 +42,12 @@ const createTicketSchema = Joi.object({
     }),
 
   refType: Joi.string()
-    .valid('CLIENT_DATA', 'SALES_MANAGER', 'SALES_TL', 'EXECUTIVE', 'SYSTEM', 'PROJECT_ISSUE', 'TEAM_ISSUE', 'CLIENT_ESCALATION', 'RESOURCE_REQUEST', 'TECHNICAL_ISSUE', 'OTHER', 'MANAGEMENT')
+    .valid(
+      'CLIENT_DATA', 'SALES_MANAGER', 'SALES_TL', 'EXECUTIVE', 'SYSTEM', 
+      'PROJECT_ISSUE', 'TEAM_ISSUE', 'CLIENT_ESCALATION', 'RESOURCE_REQUEST', 
+      'TECHNICAL_ISSUE', 'OTHER', 'MANAGEMENT',
+      'CRM Bug', 'Lead Data Issue', 'Payment Issue', 'Account/Login Issue', 'Report Issue'
+    )
     .optional()
     .allow(null)
     .messages({

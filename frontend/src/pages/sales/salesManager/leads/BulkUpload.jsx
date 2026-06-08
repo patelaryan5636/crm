@@ -140,7 +140,7 @@ export default function BulkUpload() {
               <input 
                 ref={fileRef} 
                 type="file" 
-                accept=".csv,.xlsx,.xls" 
+                accept=".csv,.xlsx,.xls,.pdf" 
                 className="hidden" 
                 onChange={handleFileUpload} 
                 disabled={loading}

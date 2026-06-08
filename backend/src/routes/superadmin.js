@@ -18,4 +18,8 @@ router.post('/admins', superAdminController.createAdmin);
 router.get('/admins/:id', superAdminController.getAdminById);
 router.patch('/admins/:id/status', superAdminController.toggleAdminStatus);
 
+// Support Ticket Management
+router.get('/support-tickets', superAdminController.getSupportTickets);
+router.patch('/support-tickets/:id/status', superAdminController.updateTicketStatus);
+
 module.exports = router;

@@ -2103,6 +2103,48 @@ const ApiConfigSchema = new Schema(
 ApiConfigSchema.index({ admin: 1, key: 1 }, { unique: true });
 
 // ════════════════════════════════════════════════════════════
+// MODEL 43A — PROJECT TASK
+// Tasks created by MANAGEMENT_TL within a project.
+// Each task belongs to exactly one Project and is assigned
+// to one MANAGEMENT_EMPLOYEE.
+// Status lifecycle: NOT_STARTED → IN_PROGRESS → REVIEW → COMPLETED | DELAYED
+// progressPercent (0-100): TL manually sets or updated by assignee.
+// ════════════════════════════════════════════════════════════
+const TASK_STATUS = ["NOT_STARTED", "IN_PROGRESS", "REVIEW", "COMPLETED", "DELAYED"];
+const TASK_PRIORITY = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+
+const ProjectTaskSchema = new Schema(
+  {
+    admin:      { type: Schema.Types.ObjectId, ref: "Admin",   required: true },
+    project:    { type: Schema.Types.ObjectId, ref: "Project", required: true },
+    createdBy:  { type: Schema.Types.ObjectId, ref: "User",    required: true }, // MANAGEMENT_TL
+
+    title:       { type: String, required: true, trim: true },
+    description: { type: String, trim: true, default: "" },
+
+    assignedTo:  { type: Schema.Types.ObjectId, ref: "User", default: null }, // MANAGEMENT_EMPLOYEE
+    priority:    { type: String, enum: TASK_PRIORITY, default: "MEDIUM" },
+    status:      { type: String, enum: TASK_STATUS,   default: "NOT_STARTED" },
+
+    deadline:    { type: Date, default: null },
+    completedAt: { type: Date, default: null },
+
+    // Progress 0-100 (can be set by TL or updated by employee)
+    progressPercent: { type: Number, default: 0, min: 0, max: 100 },
+
+    // Status change notes
+    statusNote: { type: String, trim: true, default: "" },
+  },
+  { timestamps: true },
+);
+
+ProjectTaskSchema.plugin(softDeletePlugin);
+ProjectTaskSchema.index({ admin: 1, project: 1, isDeleted: 1 });
+ProjectTaskSchema.index({ admin: 1, assignedTo: 1, isDeleted: 1 });
+ProjectTaskSchema.index({ admin: 1, status: 1, isDeleted: 1 });
+ProjectTaskSchema.index({ project: 1, assignedTo: 1 });
+
+// ════════════════════════════════════════════════════════════
 // MODEL 43 — CLIENT PROJECT TRACKING TOKEN
 // Public-facing page. No login required.
 // Client gets unique token linked to their project.
@@ -2194,6 +2236,7 @@ module.exports = {
   Project: mongoose.model("Project", ProjectSchema),
   ProjectCounter: mongoose.model("ProjectCounter", ProjectCounterSchema),
   ProjectUpdate: mongoose.model("ProjectUpdate", ProjectUpdateSchema),
+  ProjectTask: mongoose.model("ProjectTask", ProjectTaskSchema),
   ProjectTrackingToken: mongoose.model(
     "ProjectTrackingToken",
     ProjectTrackingTokenSchema,

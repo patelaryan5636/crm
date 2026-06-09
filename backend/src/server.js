@@ -172,8 +172,8 @@ try {
 	console.log('✓ /api/management/work-orders routes registered');
 	app.use('/api/management/teams', managementTeamRoutes);
 	console.log('✓ /api/management/teams routes registered');
-	app.use('/api/management-tl/teams', managementTLRoutes);
-	console.log('✓ /api/management-tl/teams routes registered');
+	app.use('/api/management-tl', managementTLRoutes);
+	console.log('✓ /api/management-tl routes registered');
 	app.use('/api/management/projects', managementProjectRoutes);
 	console.log('✓ /api/management/projects routes registered');
 	app.use('/api/management', managementRoutes);

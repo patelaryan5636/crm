@@ -834,6 +834,36 @@ TeamSchema.index({ admin: 1, department: 1, isDeleted: 1 });
 TeamSchema.index({ admin: 1, leader: 1 });
 
 // ════════════════════════════════════════════════════════════
+// MODEL 19A — MANAGEMENT TEAM
+// Different from Sales Team:
+//   - A MANAGEMENT_EMPLOYEE can belong to MULTIPLE management teams
+//     (under different MANAGEMENT_TLs simultaneously).
+//   - No uniqueness constraint on members across teams.
+// ════════════════════════════════════════════════════════════
+const ManagementTeamSchema = new Schema(
+  {
+    admin:      { type: Schema.Types.ObjectId, ref: "Admin",      required: true },
+    department: { type: Schema.Types.ObjectId, ref: "Department", required: true },
+    name:       { type: String, required: true, trim: true },
+    leader:     { type: Schema.Types.ObjectId, ref: "User",       default: null },
+    members: [
+      {
+        user:     { type: Schema.Types.ObjectId, ref: "User" },
+        joinedAt: { type: Date, default: Date.now },
+        _id: false,
+      },
+    ],
+    isActive:   { type: Boolean, default: true },
+  },
+  { timestamps: true },
+);
+
+ManagementTeamSchema.plugin(softDeletePlugin);
+ManagementTeamSchema.index({ admin: 1, department: 1, isDeleted: 1 });
+ManagementTeamSchema.index({ admin: 1, leader: 1 });
+// NOTE: No unique constraint on members — employees CAN be in multiple teams.
+
+// ════════════════════════════════════════════════════════════
 // MODEL 20 — CLIENT
 // PRIMARY IDENTIFIER = mobile (unique per admin — NOT globally).
 // Used in Sales (leads) and Finance (payments/projects).
@@ -1181,6 +1211,8 @@ const ProspectFormSchema = new Schema(
     paymentFailureReason: { type: String, default: null },
     paymentNote: { type: String, default: null },
 
+    payments: [{ type: Schema.Types.ObjectId, ref: 'Payment' }],
+
     // ── Razorpay fields ──
     razorpayLinkToken: { type: String, default: null },
     razorpayLinkUrl: { type: String, default: null },
@@ -1363,6 +1395,24 @@ const ProjectSchema = new Schema(
 
     // ── Progress ──
     progressPercent: { type: Number, default: 0, min: 0, max: 100 },
+
+    // ── Project number (auto-generated, e.g. PRJ-000001) ──
+    projectNumber: { type: String, default: null },
+
+    // ── Work Order link (set when project is created from a WO) ──
+    workOrder: { type: Schema.Types.ObjectId, ref: "WorkOrder", default: null },
+
+    // ── Project Updates timeline ──
+    // inline array (lightweight — full detail in ProjectUpdate model)
+    updates: [
+      {
+        date: { type: Date, default: Date.now },
+        status: { type: String, default: "" },
+        note: { type: String, default: "" },
+        isClientVisible: { type: Boolean, default: true },
+        _id: false,
+      },
+    ],
   },
   { timestamps: true },
 );
@@ -1373,6 +1423,20 @@ ProjectSchema.index({ admin: 1, client: 1 });
 ProjectSchema.index({ admin: 1, teamLeader: 1 });
 ProjectSchema.index({ admin: 1, assignedTo: 1 });
 ProjectSchema.index({ admin: 1, soldBy: 1 });
+ProjectSchema.index({ admin: 1, workOrder: 1 });
+
+// ════════════════════════════════════════════════════════════
+// MODEL 29A — PROJECT COUNTER
+// Atomic project number per admin (PRJ-000001, PRJ-000002 …)
+// ════════════════════════════════════════════════════════════
+const ProjectCounterSchema = new Schema(
+  {
+    admin:  { type: Schema.Types.ObjectId, ref: "Admin", required: true, unique: true },
+    seq:    { type: Number, default: 0 },
+    prefix: { type: String, default: "PRJ", trim: true },
+  },
+  { timestamps: true },
+);
 
 // ════════════════════════════════════════════════════════════
 // MODEL 30 — PROJECT UPDATE (Progress Tracker)
@@ -2100,6 +2164,7 @@ module.exports = {
   Department: mongoose.model("Department", DepartmentSchema),
   Service: mongoose.model("Service", ServiceSchema),
   Team: mongoose.model("Team", TeamSchema),
+  ManagementTeam: mongoose.model("ManagementTeam", ManagementTeamSchema),
 
   // ── Users ──
   User: mongoose.model("User", UserSchema),
@@ -2127,6 +2192,7 @@ module.exports = {
 
   // ── Projects ──
   Project: mongoose.model("Project", ProjectSchema),
+  ProjectCounter: mongoose.model("ProjectCounter", ProjectCounterSchema),
   ProjectUpdate: mongoose.model("ProjectUpdate", ProjectUpdateSchema),
   ProjectTrackingToken: mongoose.model(
     "ProjectTrackingToken",

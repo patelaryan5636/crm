@@ -1,15 +1,52 @@
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useState, memo, useCallback } from "react";
+import { LogOut } from "lucide-react";
 import GlobalCallModal from "../components/shared/GlobalCallModal";
 import { AttendanceProvider } from "../context/AttendanceContext";
 import usePageTitle from "../hooks/usePageTitle";
+import GraphuraLogo from "../assets/Logo/Graphura_Logo.webp";
 
 const MemoNavbar = memo(Navbar);
 
+// Custom header for client panel
+function ClientHeader() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    sessionStorage.clear();
+    localStorage.clear();
+    navigate("/login");
+  };
+
+  return (
+    <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
+      <div className="flex items-center gap-3">
+        <img
+          src={GraphuraLogo}
+          alt="Graphura"
+          className="h-16 w-auto"
+        />
+      </div>
+      <button
+        onClick={handleLogout}
+        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500 text-white text-sm font-bold hover:bg-rose-600 transition-colors active:scale-95 shadow-md shadow-rose-500/20"
+      >
+        <LogOut size={16} />
+        Logout
+      </button>
+    </div>
+  );
+}
+
 function MainLayout() {
+  const { pathname } = useLocation();
   usePageTitle(); // sets browser tab title based on current route
+  
+  // Check if current route is client panel
+  const isClientPanel = pathname.startsWith("/client");
+  
   // Desktop: expand (w-64) vs collapse (w-14 icon rail)
   const [expanded, setExpanded] = useState(true);
 
@@ -45,37 +82,48 @@ function MainLayout() {
       {/* ── Sidebar ─────────────────────────────────────────────────────────
           DESKTOP (lg+): always in flow, width animates between 256px / 56px
           MOBILE/TABLET (<lg): fixed drawer, slides in from left
+          Hidden for client panel
           ──────────────────────────────────────────────────────────────────── */}
 
-      {/* Desktop rail — hidden on mobile */}
-      <div
-        className="hidden lg:block flex-shrink-0 h-full overflow-hidden"
-        style={{
-          width: expanded ? "240px" : "58px",
-          transition: "width 220ms cubic-bezier(0.4, 0, 0.2, 1)",
-          willChange: "width",
-        }}
-      >
-        <Sidebar expanded={expanded} onExpand={expandDesktop} onNavClick={null} />
-      </div>
+      {!isClientPanel && (
+        <>
+          {/* Desktop rail — hidden on mobile */}
+          <div
+            className="hidden lg:block flex-shrink-0 h-full overflow-hidden"
+            style={{
+              width: expanded ? "240px" : "58px",
+              transition: "width 220ms cubic-bezier(0.4, 0, 0.2, 1)",
+              willChange: "width",
+            }}
+          >
+            <Sidebar expanded={expanded} onExpand={expandDesktop} onNavClick={null} />
+          </div>
 
-      {/* Mobile/Tablet drawer — hidden on desktop */}
-      <div
-        className={`lg:hidden fixed left-0 top-0 z-40 h-full w-72 shadow-2xl
-          transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
-          ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
-      >
-        <Sidebar expanded={true} onExpand={null} onNavClick={closeMobile} />
-      </div>
+          {/* Mobile/Tablet drawer — hidden on desktop */}
+          <div
+            className={`lg:hidden fixed left-0 top-0 z-40 h-full w-72 shadow-2xl
+              transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
+              ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+          >
+            <Sidebar expanded={true} onExpand={null} onNavClick={closeMobile} />
+          </div>
+        </>
+      )}
 
       {/* ── Main area ────────────────────────────────────────────────────── */}
       <div className="flex min-w-0 flex-1 flex-col">
 
-        <div className="border-b border-white/60 bg-white/45 px-4 py-2 shadow-sm backdrop-blur md:px-6">
-          <MemoNavbar
-            onToggleDesktop={toggleDesktop}
-            onToggleMobile={openMobile}
-          />
+        <div className="border-b border-white/60 bg-white/45 shadow-sm backdrop-blur">
+          {isClientPanel ? (
+            <ClientHeader />
+          ) : (
+            <div className="px-4 py-2 md:px-6">
+              <MemoNavbar
+                onToggleDesktop={toggleDesktop}
+                onToggleMobile={openMobile}
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex-1 w-full overflow-x-hidden overflow-y-auto p-4 md:p-6">

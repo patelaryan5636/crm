@@ -1,35 +1,56 @@
+import { useState, useEffect, useCallback } from "react";
 import { TreeDeciduous, UserCheck, Users } from "lucide-react";
-import { useState } from "react";
 import { Heading } from "../../../components/shared/Common_Components.jsx";
-import Employees from "./teams/Employees";
-import TeamLeaders from "./teams/TeamLeaders";
-import { employees as initialEmployees, teamLeaders as initialTeamLeaders } from "./teams/teamsStore";
-import TeamStructure from "./teams/TeamStructure";
+import TeamLeadersTab  from "./teams/TeamLeadersTab.jsx";
+import EmployeesTab    from "./teams/EmployeesTab.jsx";
+import TeamStructureTab from "./teams/TeamStructureTab.jsx";
+import apiClient from "../../../services/apiClient.js";
+import toast from "react-hot-toast";
 
 const TABS = [
   { key: "Team Leaders", icon: UserCheck },
-  { key: "Employees", icon: Users },
+  { key: "Employees",    icon: Users },
   { key: "Team Structure", icon: TreeDeciduous },
 ];
 
 export default function ManagementManagerTeams() {
-  const [active, setActive] = useState("Team Leaders");
-  const [employees, setEmployees] = useState(initialEmployees);
-  const [teamLeaders, setTeamLeaders] = useState(initialTeamLeaders);
+  const [active,   setActive]   = useState("Team Leaders");
+  const [teams,    setTeams]    = useState([]);
+  const [leaders,  setLeaders]  = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [overview, setOverview] = useState({
+    teams: 0, leaders: 0, employees: 0, activeProjects: 0, delayedProjects: 0,
+  });
+  const [loading, setLoading] = useState(false);
 
-  const moveEmployeeToTL = (employeeId, newTLId) => {
-    setEmployees((prev) =>
-      prev.map((emp) =>
-        emp.id === employeeId ? { ...emp, teamLeaderId: newTLId } : emp,
-      ),
-    );
-  };
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [ovRes, teamsRes, ldRes, empRes] = await Promise.all([
+        apiClient.get("/management/teams/overview"),
+        apiClient.get("/management/teams"),
+        apiClient.get("/management/teams/leaders"),
+        apiClient.get("/management/teams/employees"),
+      ]);
+
+      setOverview(ovRes?.data?.data  || {});
+      setTeams(teamsRes?.data?.data?.teams  || []);
+      setLeaders(ldRes?.data?.data?.leaders  || []);
+      setEmployees(empRes?.data?.data?.employees || []);
+    } catch (err) {
+      toast.error(err?.message || "Failed to load team data");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
 
   return (
     <div className="flex flex-col gap-6">
       <Heading primaryText="Team" secondaryText="Management" size={12} />
 
-      {/* ── Pill Tab Navigation — matches ManagementManagerProjects style ── */}
+      {/* Tab navigation */}
       <div className="flex flex-wrap items-center gap-1.5 bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm">
         {TABS.map(({ key, icon: Icon }) => (
           <button
@@ -48,21 +69,31 @@ export default function ManagementManagerTeams() {
         ))}
       </div>
 
-      {/* ── Section content ──────────────────────────────────────────────── */}
       {active === "Team Leaders" && (
-        <TeamLeaders
+        <TeamLeadersTab
+          teams={teams}
+          leaders={leaders}
           employees={employees}
-          moveEmployee={moveEmployeeToTL}
-          teamLeaders={teamLeaders}
-          setTeamLeaders={setTeamLeaders}
-          setEmployees={setEmployees}
+          overview={overview}
+          loading={loading}
+          onRefresh={loadAll}
         />
       )}
       {active === "Employees" && (
-        <Employees employees={employees} moveEmployee={moveEmployeeToTL} />
+        <EmployeesTab
+          employees={employees}
+          overview={overview}
+          loading={loading}
+          onRefresh={loadAll}
+        />
       )}
       {active === "Team Structure" && (
-        <TeamStructure employees={employees} moveEmployeeToTL={moveEmployeeToTL} />
+        <TeamStructureTab
+          teams={teams}
+          leaders={leaders}
+          employees={employees}
+          loading={loading}
+        />
       )}
     </div>
   );

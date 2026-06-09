@@ -350,14 +350,26 @@ const sendProspectQuotationEmail = async (payload) => {
         `,
     };
 
-    if (payload.pdfPath && fs.existsSync(payload.pdfPath)) {
-      const b64 = fs.readFileSync(payload.pdfPath).toString('base64');
-      emailPayload.attachment = [
-        {
-          content: b64,
-          name: path.basename(payload.pdfPath),
-        },
-      ];
+    if (payload.pdfPath) {
+      let urlParts = payload.pdfPath.split('/');
+      let fileName = urlParts[urlParts.length - 1].split('?')[0];
+      try {
+        fileName = decodeURIComponent(fileName);
+      } catch (e) {}
+
+      fileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+      if (!fileName.toLowerCase().endsWith('.pdf')) {
+        fileName += '.pdf';
+      }
+
+      if (payload.pdfPath.startsWith('http')) {
+        emailPayload.attachment = [{ url: payload.pdfPath, name: fileName }];
+        logger.info(`Sending email with direct URL attachment: ${fileName}`);
+      } else if (fs.existsSync(payload.pdfPath)) {
+        const b64 = fs.readFileSync(payload.pdfPath).toString('base64');
+        emailPayload.attachment = [{ content: b64, name: fileName }];
+        logger.info(`Sending email with local base64 attachment: ${fileName}`);
+      }
     }
 
     const response = await axios.post(

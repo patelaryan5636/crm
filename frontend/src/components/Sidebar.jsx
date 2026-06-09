@@ -367,6 +367,7 @@ const MENUS = {
           },
           { name: "Login Logs", path: "/finance/logs", icon: History },
           { name: "HRM", path: "/finance/hrm", icon: UserCheck },
+          { name: "Support", path: "/finance/support", icon: LifeBuoy },
         ],
       },
     ],
@@ -580,32 +581,6 @@ const MENUS = {
         label: "Personal",
         items: [
           { name: "Profile", path: "/management-team-leader/profile", icon: Settings },
-        ],
-      },
-    ],
-  },
-  client: {
-    title: "Client",
-    initials: "CL",
-    sections: [
-      {
-        label: "Overview",
-        items: [
-          {
-            name: "Dashboard",
-            path: "/client",
-            icon: LayoutDashboard,
-            end: true,
-          },
-        ],
-      },
-      {
-        label: "My Account",
-        items: [
-          { name: "My Projects", path: "/client/projects", icon: FolderOpen },
-          { name: "Invoices", path: "/client/invoices", icon: FileText },
-          { name: "Support", path: "/client/support", icon: LifeBuoy },
-          { name: "Profile", path: "/client/profile", icon: User2 },
         ],
       },
     ],

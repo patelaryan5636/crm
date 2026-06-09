@@ -9,6 +9,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
+dotenv.config();
 const AppError = require('./utils/appError');
 const logger = require('./utils/logger');
 
@@ -37,6 +38,9 @@ const financePaymentRoutes = require('./routes/financePayments');
 const invoiceRoutes = require('./routes/invoices');
 const workOrderRoutes = require('./routes/workOrders');
 const managementWorkOrderRoutes = require('./routes/managementWorkOrders');
+const managementTeamRoutes      = require('./routes/managementTeams');
+const managementProjectRoutes   = require('./routes/projects');
+const managementRoutes          = require('./routes/management');
 const paymentWebhookRoutes = require('./routes/paymentWebhooks');
 const paymentSuccessRoutes = require('./routes/paymentSuccess');
 const salesExecutiveFollowUpRoutes = require('./routes/salesExecutiveFollowUps');
@@ -47,8 +51,6 @@ const logsRoutes = require('./routes/logs');
 const adminRoutes = require('./routes/admin');
 const apiConfigRoutes = require('./routes/apiConfig');
 const financeRoutes = require('./routes/finance');
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -167,6 +169,12 @@ try {
 	console.log('✓ /api/finance/work-orders routes registered');
 	app.use('/api/management/work-orders', managementWorkOrderRoutes);
 	console.log('✓ /api/management/work-orders routes registered');
+	app.use('/api/management/teams', managementTeamRoutes);
+	console.log('✓ /api/management/teams routes registered');
+	app.use('/api/management/projects', managementProjectRoutes);
+	console.log('✓ /api/management/projects routes registered');
+	app.use('/api/management', managementRoutes);
+	console.log('✓ /api/management (dashboard + clients) routes registered');
 	app.use('/api/payments', paymentSuccessRoutes);
 	console.log('✓ /api/payments success routes registered');
 	console.log('✓ /api/payments/webhook routes registered');

@@ -380,22 +380,15 @@ function Navbar({ onToggleDesktop, onToggleMobile }) {
         >
           <Menu size={22} />
         </button>
-        <div className="hidden items-center gap-2 rounded-full bg-gray-100/80 px-4 py-1.5 text-gray-500 transition-colors duration-150 focus-within:bg-gray-100 md:flex">
-          <Search size={18} />
-          <input
-            type="text"
-            placeholder="Search anywhere..."
-            className="w-64 border-none bg-transparent text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none"
-          />
-        </div>
       </div>
 
       {/* Right */}
       <div className="flex items-center gap-3">
         {/* ── Attendance mini widget ── */}
-        <NavAttendance />
+        {/* Hide timer for Admin, Super Admin and Client panels */}
+        {!["admin", "super-admin", "client"].includes(role) && <NavAttendance />}
 
-        <NotificationBell userRole={backendRole} />
+        {!["client"].includes(role) && <NotificationBell userRole={backendRole} />}
 
         <button
           type="button"

@@ -7,7 +7,7 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async (req, file) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    const isRaw = ['.csv', '.xlsx', '.xls', '.pdf'].includes(ext);
+    const isRaw = ['.csv', '.xlsx', '.xls'].includes(ext);
     
     return {
       folder: 'crm',

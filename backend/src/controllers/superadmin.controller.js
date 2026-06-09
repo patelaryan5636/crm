@@ -267,7 +267,11 @@ exports.getSupportTickets = catchAsync(async (req, res, next) => {
     .limit(limit);
 
   const total = await SuperAdminTicket.countDocuments();
+  console.log("Ticket Count:", tickets.length);
 
+  if (tickets.length > 0) {
+    console.log("First Ticket:", JSON.stringify(tickets[0], null, 2));
+  }
   res.status(200).json(
     new ApiResponse(
       200,

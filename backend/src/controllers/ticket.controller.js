@@ -10,7 +10,7 @@ const mongoose = require("mongoose");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const ApiResponse = require("../utils/apiResponse");
-const { Ticket, User, AuditLog, Notification, Team } = require("../models");
+const { Ticket, User, AuditLog, Notification, Team, SuperAdminTicket } = require("../models");
 const ticketService = require("../services/ticket.service");
 const notificationService = require("../services/notification.service");
 
@@ -186,6 +186,17 @@ exports.createTicket = catchAsync(async (req, res, next) => {
     { path: "raisedBy", select: "name email role" },
     { path: "assignedTo", select: "name email role" },
   ]);
+
+  // If created by an ADMIN, also create a SuperAdminTicket for visibility
+  if (req.userType === "ADMIN") {
+    await SuperAdminTicket.create({
+      raisedBy: adminId,
+      subject: subject.trim(),
+      message: message.trim(),
+      priority: priority || "NORMAL",
+      status: "OPEN",
+    });
+  }
 
   // Create audit log
   await AuditLog.create({

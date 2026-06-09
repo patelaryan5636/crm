@@ -243,3 +243,159 @@ exports.listClients = catchAsync(async (req, res, next) => {
     new ApiResponse(200, { clients: mappedClients, stats }, 'Clients listed'),
   );
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REPORTS  GET /api/management/reports?period=today|week|month|year
+// Returns all data needed by the 4 report tabs:
+//   projectReports, teamReports, deliveryReports, tlReports, kpis
+// ─────────────────────────────────────────────────────────────────────────────
+exports.getReports = catchAsync(async (req, res, next) => {
+  if (!requireMgmt(req, next)) return;
+  const { Project, User, Department, ProjectTask } = require('../models');
+
+  const adminId = req.admin._id;
+  const period  = req.query.period || 'today'; // today | week | month | year
+
+  const now   = new Date();
+  let since   = new Date(now);
+  since.setHours(0, 0, 0, 0);
+  if (period === 'week')  since.setDate(now.getDate() - 7);
+  if (period === 'month') since.setMonth(now.getMonth() - 1);
+  if (period === 'year')  since.setFullYear(now.getFullYear() - 1);
+
+  const projects = await Project.find({ admin: adminId, isDeleted: false })
+    .populate('teamLeader', 'name')
+    .lean();
+
+  const dept = await Department.findOne({
+    admin: adminId, name: 'MANAGEMENT', isDeleted: false,
+  }).lean();
+
+  const tls = await User.findActive(
+    { admin: adminId, department: dept?._id, role: 'MANAGEMENT_TL' },
+    'name',
+    { sort: { name: 1 } },
+  );
+
+  // ── KPIs ─────────────────────────────────────────────────────────────────
+  const completed     = projects.filter(p => COMPLETED_STATUSES.includes(p.status));
+  const withDeadline  = completed.filter(p => p.expectedDelivery && p.deliveredAt);
+  const onTime        = withDeadline.filter(p => p.deliveredAt <= p.expectedDelivery);
+  const onTimePct     = withDeadline.length === 0 ? 0
+    : Math.round((onTime.length / withDeadline.length) * 100);
+
+  const avgDays = completed.length === 0 ? 0 : Math.round(
+    completed.filter(p => p.startDate && p.deliveredAt).reduce((sum, p) => {
+      return sum + Math.max(0, Math.ceil((p.deliveredAt - p.startDate) / 86400000));
+    }, 0) / completed.filter(p => p.startDate && p.deliveredAt).length,
+  ) || 0;
+
+  const kpis = {
+    totalProjects:    projects.length,
+    completed:        completed.length,
+    onTimePercentage: onTimePct,
+    avgCompletionDays: avgDays,
+  };
+
+  // ── Project reports — daily trend (last 7 days or period buckets) ─────────
+  const buildDailyTrend = (buckets, bucketFn) => buckets.map(b => ({
+    name:       b.name,
+    delivered:  projects.filter(p => COMPLETED_STATUSES.includes(p.status) && bucketFn(p, b)).length,
+    inProgress: projects.filter(p => ACTIVE_STATUSES.includes(p.status) && bucketFn(p, b)).length,
+    delayed:    projects.filter(p => p.status === 'DELAYED' && bucketFn(p, b)).length,
+  }));
+
+  // Build buckets based on period
+  let projectTrend = [];
+  if (period === 'today' || period === 'week') {
+    const days = period === 'today' ? 1 : 7;
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now); d.setDate(now.getDate() - i); d.setHours(0,0,0,0);
+      const next = new Date(d); next.setDate(d.getDate() + 1);
+      const dayName = d.toLocaleDateString('en', { weekday: 'short' });
+      projectTrend.push({
+        name:       dayName,
+        delivered:  projects.filter(p => COMPLETED_STATUSES.includes(p.status) && p.deliveredAt && p.deliveredAt >= d && p.deliveredAt < next).length,
+        inProgress: projects.filter(p => ACTIVE_STATUSES.includes(p.status) && p.updatedAt && p.updatedAt >= d && p.updatedAt < next).length,
+        delayed:    projects.filter(p => p.status === 'DELAYED' && p.updatedAt && p.updatedAt >= d && p.updatedAt < next).length,
+      });
+    }
+  } else if (period === 'month') {
+    for (let w = 1; w <= 4; w++) {
+      const wStart = new Date(now); wStart.setDate(now.getDate() - (4 - w) * 7);
+      const wEnd   = new Date(wStart); wEnd.setDate(wStart.getDate() + 7);
+      projectTrend.push({
+        name:       `Week ${w}`,
+        delivered:  projects.filter(p => COMPLETED_STATUSES.includes(p.status) && p.deliveredAt && p.deliveredAt >= wStart && p.deliveredAt < wEnd).length,
+        inProgress: projects.filter(p => ACTIVE_STATUSES.includes(p.status)).length,
+        delayed:    projects.filter(p => p.status === 'DELAYED').length,
+      });
+    }
+  } else { // year
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const name = d.toLocaleString('en', { month: 'short' });
+      projectTrend.push({
+        name,
+        delivered:  projects.filter(p => p.deliveredAt && p.deliveredAt.toISOString().slice(0,7) === key).length,
+        inProgress: projects.filter(p => ACTIVE_STATUSES.includes(p.status) && p.startDate && p.startDate.toISOString().slice(0,7) === key).length,
+        delayed:    projects.filter(p => p.status === 'DELAYED').length,
+      });
+    }
+  }
+
+  // ── Team reports — per TL breakdown ──────────────────────────────────────
+  const teamReports = tls.map(tl => {
+    const tlProjects = projects.filter(p =>
+      p.teamLeader && String(p.teamLeader._id || p.teamLeader) === String(tl._id),
+    );
+    return {
+      id:            String(tl._id),
+      name:          tl.name,
+      totalProjects: tlProjects.length,
+      completed:     tlProjects.filter(p => COMPLETED_STATUSES.includes(p.status)).length,
+      inProgress:    tlProjects.filter(p => ACTIVE_STATUSES.includes(p.status)).length,
+      delayed:       tlProjects.filter(p => p.status === 'DELAYED').length,
+    };
+  });
+
+  // ── Delivery reports — delivered vs delayed per bucket ───────────────────
+  const deliveryTrend = projectTrend.map(b => ({
+    name:      b.name,
+    delivered: b.delivered,
+    delayed:   b.delayed,
+  }));
+
+  // Monthly delivery (last 12 months always — for delivery tab)
+  const monthlyDelivery = [];
+  for (let i = 11; i >= 0; i--) {
+    const d   = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    monthlyDelivery.push({
+      name:      d.toLocaleString('en', { month: 'short' }),
+      delivered: projects.filter(p => p.deliveredAt && p.deliveredAt.toISOString().slice(0,7) === key).length,
+      delayed:   projects.filter(p => p.status === 'DELAYED' && p.updatedAt && p.updatedAt.toISOString().slice(0,7) === key).length,
+    });
+  }
+
+  // ── TL chart data ─────────────────────────────────────────────────────────
+  const tlChartData = teamReports.map(t => ({
+    name:       t.name.split(' ')[0],
+    completed:  t.completed,
+    inProgress: t.inProgress,
+    delayed:    t.delayed,
+  }));
+
+  return res.status(200).json(
+    new ApiResponse(200, {
+      kpis,
+      projectTrend,
+      teamReports,
+      deliveryTrend,
+      monthlyDelivery,
+      tlReports: teamReports,
+      tlChartData,
+    }, 'Reports loaded'),
+  );
+});

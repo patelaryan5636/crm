@@ -37,7 +37,7 @@ const mapPaymentForFrontend = (payment, prospect) => {
     email: client.email || '',
     amount: payment.amount || 0,
     type: payment.paymentType === 'PARTIAL' ? 'Partial' : 'Full',
-    method: payment.paymentProvider === 'OFFLINE' ? 'offline payment' : (payment.paymentProvider || 'Razorpay'),
+    method: payment.paymentProvider === 'OFFLINE' ? 'Global Payment' : (payment.paymentProvider || 'Razorpay'),
     status: toStatusLabel(payment.status),
     date: payment.sentAt || payment.createdAt,
     notes: payment.failureReason || '',
@@ -426,14 +426,14 @@ exports.processOfflinePayment = catchAsync(async (req, res, next) => {
     paymentProvider: 'OFFLINE',
     paidAt: new Date(),
     verifiedBy: req.user._id,
-    notes: note || 'Offline/Cash Payment',
+    notes: note || 'Global Payment (Cash/Offline)',
     signatureVerified: true,
   });
 
   // 2. Update Prospect Form
   prospect.paymentStatus = 'SUCCESS';
   prospect.paymentVerifiedAt = new Date();
-  prospect.paymentMethod = 'OFFLINE';
+  prospect.paymentMethod = 'GLOBAL_PAYMENT';
   prospect.updatedBy = req.user._id;
   prospect.payments = prospect.payments || [];
   prospect.payments.push(payment._id);

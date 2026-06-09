@@ -93,7 +93,7 @@ export default function GlobalPayment() {
         prospectId: form.prospectId,
         amount: payAmount,
         paymentType: form.paymentType,
-        note: `Offline payment for ${form.service}`
+        note: `Global Payment for ${form.service}`
       });
 
       const data = response.data.data;

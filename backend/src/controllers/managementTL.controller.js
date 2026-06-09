@@ -2,10 +2,8 @@
 
 /**
  * MANAGEMENT TEAM LEADER CONTROLLER
- *
- * Endpoints for MANAGEMENT_TL role.
- * A TL can lead multiple ManagementTeams — we aggregate all members
- * across all their teams and return a unified list.
+ * Teams section — member list + overview stats.
+ * Task stats pulled from ProjectTask collection (separate model).
  */
 
 const catchAsync  = require('../utils/catchAsync');
@@ -26,21 +24,19 @@ const requireTL = (req, next) => {
 // GET /api/management-tl/teams/members
 //
 // Returns all unique members across every team this TL leads.
-// Each member includes: basic info + leave status + project task stats.
+// Task counts (assigned/inProgress/completed/delayed) come from ProjectTask.
 // ─────────────────────────────────────────────────────────────────────────────
 exports.getMyTeamMembers = catchAsync(async (req, res, next) => {
   if (!requireTL(req, next)) return;
 
-  const { ManagementTeam, Leave, Project } = require('../models');
+  const { ManagementTeam, Leave, ProjectTask } = require('../models');
 
   const adminId = req.admin._id;
   const tlId    = req.user._id;
 
-  // 1. Find all teams led by this TL
+  // 1. All teams led by this TL
   const teams = await ManagementTeam.find({
-    admin:     adminId,
-    leader:    tlId,
-    isDeleted: false,
+    admin: adminId, leader: tlId, isDeleted: false,
   })
     .populate('members.user', 'name email phone role isActive')
     .lean();
@@ -49,29 +45,27 @@ exports.getMyTeamMembers = catchAsync(async (req, res, next) => {
     return res.status(200).json(
       new ApiResponse(200, {
         members: [],
-        stats: { total: 0, active: 0, onLeave: 0, delayed: 0 },
-        teams: [],
+        stats:   { total: 0, active: 0, onLeave: 0, delayed: 0 },
+        teams:   [],
       }, 'No teams found for this team leader'),
     );
   }
 
-  // 2. Deduplicate members across teams (an employee can be in multiple teams)
-  const memberMap = new Map(); // userId → { member, teamNames[] }
+  // 2. Deduplicate members (employee can be in multiple teams)
+  const memberMap = new Map(); // userId → { user, teamNames[] }
   for (const team of teams) {
     for (const m of team.members) {
       if (!m.user) continue;
       const uid = String(m.user._id);
-      if (!memberMap.has(uid)) {
-        memberMap.set(uid, { user: m.user, teamNames: [] });
-      }
+      if (!memberMap.has(uid)) memberMap.set(uid, { user: m.user, teamNames: [] });
       memberMap.get(uid).teamNames.push(team.name);
     }
   }
 
   const uniqueMembers = [...memberMap.values()];
-  const memberIds = uniqueMembers.map((m) => m.user._id);
+  const memberIds     = uniqueMembers.map((m) => m.user._id);
 
-  // 3. Who is currently on approved leave?
+  // 3. Leave check
   const today = new Date();
   const onLeaveIds = await Leave.find({
     admin:    adminId,
@@ -82,43 +76,30 @@ exports.getMyTeamMembers = catchAsync(async (req, res, next) => {
   }).distinct('user').catch(() => []);
   const onLeaveSet = new Set(onLeaveIds.map(String));
 
-  // 4. Project task stats per member
-  //    We look at all projects scoped to this admin that have tasks assigned to these members.
-  const projects = await Project.find({
-    admin:     adminId,
-    isDeleted: false,
-  })
-    .select('tasks title')
-    .lean()
-    .catch(() => []);
+  // 4. Task stats per member from ProjectTask collection
+  const allTasks = await ProjectTask.find({
+    admin:      adminId,
+    assignedTo: { $in: memberIds },
+    isDeleted:  false,
+  }).select('assignedTo status').lean();
 
-  // Build a flat task list with assignee userId
-  const tasksByMember = {}; // userId → { assigned, inProgress, completed, delayed }
-  for (const project of projects) {
-    for (const task of (project.tasks || [])) {
-      const assigneeId = task.assignedTo ? String(task.assignedTo) : null;
-      if (!assigneeId || !memberMap.has(assigneeId)) continue;
-
-      if (!tasksByMember[assigneeId]) {
-        tasksByMember[assigneeId] = { assigned: 0, inProgress: 0, completed: 0, delayed: 0 };
-      }
-      const t = tasksByMember[assigneeId];
-      t.assigned += 1;
-
-      const s = (task.status || '').toUpperCase();
-      if (s === 'IN_PROGRESS' || s === 'WORK_STARTED')    t.inProgress += 1;
-      else if (s === 'COMPLETED' || s === 'DELIVERED')    t.completed  += 1;
-      else if (s === 'DELAYED')                           t.delayed    += 1;
-    }
+  const tasksByMember = {}; // uid → { assigned, inProgress, completed, delayed }
+  for (const t of allTasks) {
+    const uid = String(t.assignedTo);
+    if (!tasksByMember[uid]) tasksByMember[uid] = { assigned: 0, inProgress: 0, completed: 0, delayed: 0 };
+    const bucket = tasksByMember[uid];
+    bucket.assigned += 1;
+    const s = t.status;
+    if (s === 'IN_PROGRESS' || s === 'REVIEW') bucket.inProgress += 1;
+    else if (s === 'COMPLETED')                bucket.completed  += 1;
+    else if (s === 'DELAYED')                  bucket.delayed    += 1;
   }
 
   // 5. Shape response
   const members = uniqueMembers.map(({ user, teamNames }) => {
     const uid    = String(user._id);
     const tasks  = tasksByMember[uid] || { assigned: 0, inProgress: 0, completed: 0, delayed: 0 };
-    const isOnLeave = onLeaveSet.has(uid);
-    const status = isOnLeave ? 'On Leave' : (user.isActive ? 'Active' : 'Inactive');
-
+    const status = onLeaveSet.has(uid) ? 'On Leave' : (user.isActive ? 'Active' : 'Inactive');
     return {
       id:         uid,
       name:       user.name,
@@ -143,7 +124,6 @@ exports.getMyTeamMembers = catchAsync(async (req, res, next) => {
     delayed: members.reduce((sum, m) => sum + m.delayed, 0),
   };
 
-  // 7. Teams summary (for reference)
   const teamsSummary = teams.map((t) => ({
     id:          String(t._id),
     name:        t.name,
@@ -156,13 +136,13 @@ exports.getMyTeamMembers = catchAsync(async (req, res, next) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET MY TEAMS OVERVIEW (stat cards)
+// GET OVERVIEW (stat cards)
 // GET /api/management-tl/teams/overview
 // ─────────────────────────────────────────────────────────────────────────────
 exports.getOverview = catchAsync(async (req, res, next) => {
   if (!requireTL(req, next)) return;
 
-  const { ManagementTeam, Leave, Project } = require('../models');
+  const { ManagementTeam, Leave, ProjectTask } = require('../models');
 
   const adminId = req.admin._id;
   const tlId    = req.user._id;
@@ -171,35 +151,39 @@ exports.getOverview = catchAsync(async (req, res, next) => {
     admin: adminId, leader: tlId, isDeleted: false,
   }).lean();
 
-  // Unique member ids
+  // Unique member IDs
   const memberIdSet = new Set();
   for (const t of teams) {
     for (const m of t.members) memberIdSet.add(String(m.user));
   }
-  const totalMembers = memberIdSet.size;
+  const memberIdsArr = [...memberIdSet];
+  const totalMembers = memberIdsArr.length;
 
   const today = new Date();
-  const onLeaveCount = await Leave.countDocuments({
-    admin:    adminId,
-    user:     { $in: [...memberIdSet] },
-    status:   'APPROVED',
-    fromDate: { $lte: today },
-    toDate:   { $gte: today },
-  }).catch(() => 0);
 
-  const delayedTasks = await Project.aggregate([
-    { $match: { admin: adminId, isDeleted: false } },
-    { $unwind: { path: '$tasks', preserveNullAndEmpty: true } },
-    { $match: { 'tasks.assignedTo': { $in: [...memberIdSet].map(id => require('mongoose').Types.ObjectId.createFromHexString(id)) }, 'tasks.status': 'DELAYED' } },
-    { $count: 'total' },
-  ]).then((r) => r[0]?.total || 0).catch(() => 0);
+  const [onLeaveCount, delayedCount] = await Promise.all([
+    Leave.countDocuments({
+      admin:    adminId,
+      user:     { $in: memberIdsArr },
+      status:   'APPROVED',
+      fromDate: { $lte: today },
+      toDate:   { $gte: today },
+    }).catch(() => 0),
+    // Delayed tasks assigned to TL's members
+    ProjectTask.countDocuments({
+      admin:      adminId,
+      assignedTo: { $in: memberIdsArr },
+      status:     'DELAYED',
+      isDeleted:  false,
+    }).catch(() => 0),
+  ]);
 
   return res.status(200).json(
     new ApiResponse(200, {
       totalMembers,
       activeMembers: totalMembers - onLeaveCount,
       onLeave:       onLeaveCount,
-      delayedTasks,
+      delayedTasks:  delayedCount,
       teamCount:     teams.length,
     }, 'Overview fetched'),
   );

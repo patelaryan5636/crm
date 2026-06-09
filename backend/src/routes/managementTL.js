@@ -2,10 +2,17 @@ const express  = require('express');
 const router   = express.Router();
 const teamCtrl = require('../controllers/managementTL.controller');
 const projCtrl = require('../controllers/managementTLProjects.controller');
+const dashCtrl = require('../controllers/managementTLDashboard.controller');
 const { requireUser } = require('../middleware/auth');
 
-// All routes mounted at /api/management-tl
-// Role enforced inside each controller (MANAGEMENT_TL only)
+// ── Dashboard ──
+router.get('/dashboard', requireUser, dashCtrl.getDashboard);
+
+// ── Reports ──
+router.get('/reports-data', requireUser, dashCtrl.getReports);
+
+// ── Notifications data ──
+router.get('/notifications-data', requireUser, dashCtrl.getNotificationsData);
 
 // ── Team endpoints ──
 router.get('/teams/overview', requireUser, teamCtrl.getOverview);

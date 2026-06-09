@@ -1,31 +1,31 @@
 const multer = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('../config/cloudinary');
 const path = require('path');
-const fs = require('fs');
 
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isRaw = ['.csv', '.xlsx', '.xls', '.pdf'].includes(ext);
+    
+    return {
+      folder: 'crm',
+      resource_type: isRaw ? 'raw' : 'auto',
+      public_id: `${path.parse(file.originalname).name}-${Date.now()}`,
+      tags: ['crm'],
+    };
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(1E9 * Math.random());
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
 });
 
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
-  if (file.mimetype === 'text/csv' || ext === '.csv' || 
-      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || ext === '.xlsx' ||
-      file.mimetype === 'application/pdf' || ext === '.pdf') {
+  const allowedExtensions = ['.csv', '.xlsx', '.pdf', '.jpg', '.jpeg', '.png'];
+  
+  if (allowedExtensions.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error('Only CSV, Excel and PDF files are allowed'), false);
+    cb(new Error('File type not supported. Allowed: CSV, Excel, PDF, and Images'), false);
   }
 };
 

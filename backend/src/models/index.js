@@ -1380,6 +1380,24 @@ const ProjectSchema = new Schema(
 
     // ── Progress ──
     progressPercent: { type: Number, default: 0, min: 0, max: 100 },
+
+    // ── Project number (auto-generated, e.g. PRJ-000001) ──
+    projectNumber: { type: String, default: null },
+
+    // ── Work Order link (set when project is created from a WO) ──
+    workOrder: { type: Schema.Types.ObjectId, ref: "WorkOrder", default: null },
+
+    // ── Project Updates timeline ──
+    // inline array (lightweight — full detail in ProjectUpdate model)
+    updates: [
+      {
+        date: { type: Date, default: Date.now },
+        status: { type: String, default: "" },
+        note: { type: String, default: "" },
+        isClientVisible: { type: Boolean, default: true },
+        _id: false,
+      },
+    ],
   },
   { timestamps: true },
 );
@@ -1390,6 +1408,20 @@ ProjectSchema.index({ admin: 1, client: 1 });
 ProjectSchema.index({ admin: 1, teamLeader: 1 });
 ProjectSchema.index({ admin: 1, assignedTo: 1 });
 ProjectSchema.index({ admin: 1, soldBy: 1 });
+ProjectSchema.index({ admin: 1, workOrder: 1 });
+
+// ════════════════════════════════════════════════════════════
+// MODEL 29A — PROJECT COUNTER
+// Atomic project number per admin (PRJ-000001, PRJ-000002 …)
+// ════════════════════════════════════════════════════════════
+const ProjectCounterSchema = new Schema(
+  {
+    admin:  { type: Schema.Types.ObjectId, ref: "Admin", required: true, unique: true },
+    seq:    { type: Number, default: 0 },
+    prefix: { type: String, default: "PRJ", trim: true },
+  },
+  { timestamps: true },
+);
 
 // ════════════════════════════════════════════════════════════
 // MODEL 30 — PROJECT UPDATE (Progress Tracker)
@@ -2086,6 +2118,7 @@ module.exports = {
 
   // ── Projects ──
   Project: mongoose.model("Project", ProjectSchema),
+  ProjectCounter: mongoose.model("ProjectCounter", ProjectCounterSchema),
   ProjectUpdate: mongoose.model("ProjectUpdate", ProjectUpdateSchema),
   ProjectTrackingToken: mongoose.model(
     "ProjectTrackingToken",

@@ -71,8 +71,6 @@ const projectColumns = [
   { key: "deadline", label: "Deadline" },
 ];
 
-const kanbanStatuses = ["In Progress", "Delayed", "Completed"];
-
 const emptyForm = { name: "", client: "", team: "", leader: "", priority: "Medium", status: "In Progress", progress: "0%", payment: "Pending", deadline: "", risk: "Low" };
 
 // ── Professional 2D Illustrated Icon for KPI Cards ──
@@ -102,7 +100,6 @@ const HeaderBtn = ({ icon, label, variant = "ghost", onClick }) => (
 
 export default function Projects() {
   const [projects, setProjects] = useState(initialProjects);
-  const [viewMode, setViewMode] = useState("table");
   const [selectedProject, setSelectedProject] = useState(null);
   const [formProject, setFormProject] = useState(emptyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -167,26 +164,6 @@ export default function Projects() {
     </div>
   );
 
-  // ── Kanban Card ──
-  const KanbanCard = ({ project }) => (
-    <div className="p-4 rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
-      onClick={() => { setSelectedProject(project); openModal("project-view-modal"); }}>
-      <h4 className="text-sm font-bold text-[#2a465a] mb-1">{project.name}</h4>
-      <p className="text-[11px] text-slate-400 font-semibold mb-3">{project.client}</p>
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{project.leader}</span>
-        <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg ${project.priority === "Critical" ? "bg-rose-50 text-rose-500" :
-          project.priority === "High" ? "bg-amber-50 text-amber-600" :
-            "bg-slate-50 text-slate-500"
-          }`}>{project.priority}</span>
-      </div>
-      <div className="mt-3 w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
-        <div className="h-full rounded-full bg-[#2a465a] transition-all duration-500" style={{ width: project.progress }} />
-      </div>
-      <p className="text-right text-[10px] font-bold text-slate-400 mt-1">{project.progress}</p>
-    </div>
-  );
-
   return (
     <div className="flex flex-col gap-6">
 
@@ -195,16 +172,6 @@ export default function Projects() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 -mt-2">
         <div className="hidden sm:block"></div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex bg-white rounded-xl border border-slate-100 p-1 shadow-sm">
-            <button onClick={() => setViewMode("table")}
-              className={`p-2 rounded-lg transition-all ${viewMode === "table" ? "bg-[#2a465a] text-white shadow-md" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"}`}>
-              <List size={16} />
-            </button>
-            <button onClick={() => setViewMode("kanban")}
-              className={`p-2 rounded-lg transition-all ${viewMode === "kanban" ? "bg-[#2a465a] text-white shadow-md" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"}`}>
-              <LayoutGrid size={16} />
-            </button>
-          </div>
           <HeaderBtn icon={<FileDown size={16} />} label="Export" onClick={handleExport} />
           <HeaderBtn icon={<Plus size={16} />} label="New Project" variant="primary"
             onClick={() => { setFormProject({ ...emptyForm }); openModal("project-form-modal"); }} />
@@ -248,35 +215,19 @@ export default function Projects() {
 
 
 
-      {/* ── 6. Table / Kanban + Activity Feed ── */}
+      {/* ── 6. Table / Activity Feed ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
         <div className="lg:col-span-12">
-          {viewMode === "table" ? (
-            <DataTable title="Projects Directory" columns={projectColumns} rows={projects}
-              size={12} pageSize={10} searchable date exportable exportFileName="projects-report"
-              actions={tableActions}
-              filters={[
-                { title: "Status", key: "status", type: "toggle", options: ["In Progress", "Completed", "Delayed"] },
-                { title: "Priority", key: "priority", type: "toggle", options: ["Low", "Medium", "High", "Critical"] },
-                { title: "Risk", key: "risk", type: "toggle", options: ["None", "Low", "Medium", "High"] },
-                { title: "Payment", key: "payment", type: "toggle", options: ["Paid", "Partial", "Pending"] },
-              ]}
-            />
-          ) : (
-            /* Kanban View */
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {kanbanStatuses.map(status => (
-                <div key={status} className="space-y-3">
-                  <div className="flex items-center gap-2 px-1 mb-2">
-                    <div className={`w-2 h-2 rounded-full ${status === "In Progress" ? "bg-blue-500" : status === "Delayed" ? "bg-rose-500" : "bg-emerald-500"}`} />
-                    <h4 className="text-xs font-black uppercase tracking-widest text-[#2a465a]">{status}</h4>
-                    <span className="text-[10px] font-bold text-slate-400 ml-auto">{projects.filter(p => p.status === status).length}</span>
-                  </div>
-                  {projects.filter(p => p.status === status).map(p => <KanbanCard key={p.id} project={p} />)}
-                </div>
-              ))}
-            </div>
-          )}
+          <DataTable title="Projects Directory" columns={projectColumns} rows={projects}
+            size={12} pageSize={10} searchable date exportable exportFileName="projects-report"
+            actions={tableActions}
+            filters={[
+              { title: "Status", key: "status", type: "toggle", options: ["In Progress", "Completed", "Delayed"] },
+              { title: "Priority", key: "priority", type: "toggle", options: ["Low", "Medium", "High", "Critical"] },
+              { title: "Risk", key: "risk", type: "toggle", options: ["None", "Low", "Medium", "High"] },
+              { title: "Payment", key: "payment", type: "toggle", options: ["Paid", "Partial", "Pending"] },
+            ]}
+          />
         </div>
 
 

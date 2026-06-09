@@ -360,10 +360,22 @@ const sendProspectQuotationEmail = async (payload) => {
       }
 
       if (b64) {
+        let fileName = path.basename(payload.pdfPath);
+        try {
+          fileName = decodeURIComponent(fileName);
+        } catch (e) {
+          // ignore
+        }
+
+        // If no extension and we know it's a PDF, add it
+        if (!path.extname(fileName) && payload.pdfPath.includes('/raw/upload/')) {
+          fileName += '.pdf';
+        }
+
         emailPayload.attachment = [
           {
             content: b64,
-            name: path.basename(payload.pdfPath),
+            name: fileName,
           },
         ];
       }

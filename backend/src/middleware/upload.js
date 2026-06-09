@@ -12,7 +12,7 @@ const storage = new CloudinaryStorage({
     return {
       folder: 'crm',
       resource_type: isRaw ? 'raw' : 'auto',
-      public_id: `${path.parse(file.originalname).name}-${Date.now()}`,
+      public_id: `${path.parse(file.originalname).name}-${Date.now()}${isRaw ? ext : ''}`,
       tags: ['crm'],
     };
   },

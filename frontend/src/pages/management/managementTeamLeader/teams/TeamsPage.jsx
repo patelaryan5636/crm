@@ -1,5 +1,6 @@
 import React from "react";
 import { Heading, Grid } from "../../../../components/shared/Common_Components";
+import TeamMembersTable from "./TeamMembersTable";
 import DailyCoordination from "./DailyCoordination";
 
 export default function TeamsPage() {
@@ -14,7 +15,12 @@ export default function TeamsPage() {
           showAnimations={true}
         />
 
-        {/* ── Content ── */}
+        {/* ── Team members table ── */}
+        <div className="col-span-12">
+          <TeamMembersTable />
+        </div>
+
+        {/* ── Daily coordination ── */}
         <div className="col-span-12">
           <DailyCoordination />
         </div>

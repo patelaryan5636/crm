@@ -367,6 +367,7 @@ const MENUS = {
           },
           { name: "Login Logs", path: "/finance/logs", icon: History },
           { name: "HRM", path: "/finance/hrm", icon: UserCheck },
+          { name: "Support", path: "/finance/support", icon: LifeBuoy },
         ],
       },
     ],

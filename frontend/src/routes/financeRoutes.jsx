@@ -12,6 +12,7 @@ import FinanceLoginLogs    from "../pages/finance/FinanceLoginLogs";
 import FinanceHRM          from "../pages/finance/FinanceHRM";
 import FinanceProfile from "../pages/finance/FinanceProfile";
 import Clients from "../pages/finance/Clients";
+import FinanceSupport from "../pages/finance/FinanceSupport";
 
 function FinanceRoutes() {
   return (
@@ -27,6 +28,7 @@ function FinanceRoutes() {
         <Route path="expenses"        element={<Expenses />}             />
         <Route path="global-payment"  element={<GlobalPayment />}        />
         <Route path="notifications"   element={<FinanceNotifications />} />
+        <Route path="support"         element={<FinanceSupport />}       />
         <Route path="logs"            element={<FinanceLoginLogs />}     />
         <Route path="hrm"             element={<FinanceHRM />}           />
         <Route path="profile"         element={<FinanceProfile />}              />

@@ -82,13 +82,6 @@ export default function FinanceHRM() {
   const [loading, setLoading] = useState(true);
   const [attendance, setAttendance] = useState([]);
   const [leaves, setLeaves] = useState([]);
-  const [stats, setStats] = useState({
-    present: 0,
-    absent: 0,
-    leaveDays: 0,
-    avgPerf: "0%"
-  });
-
   // ── Apply Leave form state ──
   const [applyForm, setApplyForm] = useState({
     leaveType: "",
@@ -148,14 +141,6 @@ export default function FinanceHRM() {
         });
         setAttendance(rows);
 
-        const presentCount = rows.filter(r => ["Present", "Working"].includes(r.status)).length;
-        const absentCount = rows.filter(r => r.status === "Absent").length;
-        setStats(prev => ({
-          ...prev,
-          present: presentCount,
-          absent: absentCount,
-          avgPerf: "92%"
-        }));
       }
     } catch (err) {
       console.error("Failed to fetch attendance:", err);
@@ -191,10 +176,6 @@ export default function FinanceHRM() {
           raw: l
         }));
         setLeaves(rows);
-        setStats(prev => ({
-          ...prev,
-          leaveDays: rows.filter(r => r.raw.status === 'APPROVED').reduce((sum, r) => sum + r.days, 0)
-        }));
       }
     } catch (err) {
       console.error("Failed to fetch leaves:", err);
@@ -268,22 +249,9 @@ export default function FinanceHRM() {
     }
   };
 
-  const kpi = [
-    { title: "Present",         value: String(stats.present), accent: KPI_ACCENTS[1], icon: KPI_ICONS[1] },
-    { title: "Absent",          value: String(stats.absent),  accent: KPI_ACCENTS[3], icon: KPI_ICONS[3] },
-    { title: "Total Leave Days",        value: String(stats.leaveDays),   accent: KPI_ACCENTS[2], icon: KPI_ICONS[2] },
-    { title: "Avg Performance", value: stats.avgPerf,              accent: KPI_ACCENTS[4], icon: KPI_ICONS[4] },
-  ];
-
   return (
     <div className="flex flex-col gap-6">
-      <DashGrid cols={12} gap={4}>
-        <Heading primaryText="Finance" secondaryText="HRM" size={12} />
-        {kpi.map((k) => (
-          <EnhancedDashCard key={k.title} title={k.title} value={k.value}
-            icon={k.icon} accentColor={k.accent} size={3} />
-        ))}
-      </DashGrid>
+      <Heading primaryText="Finance" secondaryText="HRM" size={12} />
 
       {/* HRM Tabs */}
       <div className="flex flex-wrap items-center gap-1.5 bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm">

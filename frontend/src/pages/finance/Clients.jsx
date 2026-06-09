@@ -523,6 +523,7 @@ export default function Clients() {
               tooltip: "Update status",
               variant: "primary",
               onClick: openAction,
+              show: (row) => row.clientEmailStatus !== "SENT",
             },
           ]}
         />

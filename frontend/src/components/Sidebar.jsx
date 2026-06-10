@@ -103,7 +103,6 @@ const MENUS = {
         label: "Operations",
         items: [
           { name: "User Management", path: "/admin/users", icon: Users },
-          { name: "Departments", path: "/admin/departments", icon: Building2 },
           {
             name: "Leads & Sales",
             icon: TrendingUp,
@@ -128,7 +127,6 @@ const MENUS = {
         items: [
           { name: "Support", path: "/admin/support", icon: LifeBuoy },
           { name: "API Config", path: "/admin/api-config", icon: Webhook },
-          { name: "Profile", path: "/admin/profile", icon: Settings },
         ],
       },
     ],

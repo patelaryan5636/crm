@@ -2,7 +2,6 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import Dashboard from "../pages/admin/Dashboard";
 import Projects from "../pages/admin/Projects";
-import Departments from "../pages/admin/Departments";
 import FinanceDashboard from "../pages/admin/FinanceDashboard";
 import HRM from "../pages/admin/HRM";
 import Support from "../pages/admin/Support";
@@ -11,8 +10,6 @@ import Report from "../pages/admin/Report";
 // ── User Management ──
 import UserManagement from "../pages/admin/UserManagement";
 import AllUsers from "../pages/admin/user-management/AllUsers";
-import RolesPermissions from "../pages/admin/user-management/RolesPermissions";
-import UserApprovals from "../pages/admin/user-management/UserApprovals";
 import LoginLogs from "../pages/admin/user-management/LoginLogs";
 
 // ── Leads ──
@@ -154,12 +151,10 @@ function AdminRoutes() {
       <Route element={<MainLayout />}>
         <Route index element={<Dashboard />} />
 
-        {/* ── User Management (5 tabs) ── */}
+        {/* ── User Management (3 tabs) ── */}
         <Route path="users" element={<UserManagement />}>
           <Route index element={<Navigate to="all" replace />} />
           <Route path="all" element={<AllUsers />} />
-          <Route path="roles" element={<RolesPermissions />} />
-          <Route path="approvals" element={<UserApprovals />} />
           <Route path="logs" element={<LoginLogs />} />
         </Route>
 
@@ -182,7 +177,7 @@ function AdminRoutes() {
           <Route path="tickets" element={<Tickets />} />
         </Route>
 
-        <Route path="departments" element={<Departments />} />
+        {/* <Route path="departments" element={<Departments />} /> */}
         <Route path="projects" element={<Projects />} />
         <Route path="finance" element={<FinanceDashboard />} />
         <Route path="hrm" element={<HRM />} />

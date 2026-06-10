@@ -2088,7 +2088,7 @@ export const Heading = ({
         <div>
           <span className={showAnimations ? "text-white drop-shadow-sm" : "text-[#2a465a] drop-shadow-sm"}>{primaryText}</span>
           {secondaryText && (
-            <span className={showAnimations ? "text-[#38bdf8] font-extrabold ml-2 opacity-90" : "text-slate-400 font-extrabold"}> {secondaryText}</span>
+            <span className={showAnimations ? "text-[#38bdf8] font-extrabold ml-1 opacity-90" : "text-slate-400 font-extrabold"}> {secondaryText}</span>
           )}
         </div>
 

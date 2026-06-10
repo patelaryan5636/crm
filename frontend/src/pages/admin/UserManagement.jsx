@@ -2,16 +2,11 @@ import { NavLink, Outlet, useLocation, Navigate } from "react-router-dom";
 import { Heading } from "../../components/shared/Common_Components";
 import {
   Users,
-  UserPlus,
-  Shield,
-  UserCheck,
   ScrollText,
 } from "lucide-react";
 
 const tabs = [
   { name: "All Users", path: "all", icon: Users },
-  { name: "Roles & Permissions", path: "roles", icon: Shield },
-  { name: "User Approvals", path: "approvals", icon: UserCheck },
   { name: "Login Logs", path: "logs", icon: ScrollText },
 ];
 

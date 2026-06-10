@@ -1,222 +1,932 @@
-import { useMemo, useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  BarChart3, CalendarRange, Layers3, Plus, Users, Eye, Pencil,
-  FileText, CheckCircle, AlertCircle, Clock, TrendingUp, TrendingDown,
-  FileDown,
+  Building2,
+  Users,
+  UserCheck,
+  Target,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Briefcase,
+  Activity,
+  AlertCircle,
+  Clock,
+  CheckCircle,
+  CreditCard,
+  Plus,
+  Eye,
+  Pencil,
+  Trash2,
+  Calendar,
 } from "lucide-react";
 import {
-  DashGrid, EnhancedDashCard, DataTable, Heading,
-  PanelModal as Modal, openModal, closeModal, Button,
-  Grid, InputField, SelectField, Option, GAreaChart, GBarChart,
+  DashGrid,
+  EnhancedDashCard,
+  DataTable,
+  Heading,
+  P,
+  PanelModal as Modal,
+  openModal,
+  closeModal,
+  DataField,
+  Grid,
+  GAreaChart,
+  GBarChart,
+  Button,
 } from "../../components/shared/Common_Components";
+import { userService } from "../../services/userService";
 
-// ── Mock Data ──────────────────────────────────────────────────────────────
+// ─── Mock Data (role-based) ─────────────────────────────────────────────────
 
-const initialReports = [
-  { id: "RPT-300", title: "Daily Sales Activity", type: "Sales", department: "Sales", cadence: "Daily", period: "23 Apr 2026", status: "Published", owner: "Aarav Mehta", generatedOn: "23 Apr 2026, 08:30 AM", summary: "Captures fresh leads, follow-ups completed, and conversion movement across the sales desk.", priority: "Normal" },
-  { id: "RPT-301", title: "Monthly Sales Performance", type: "Sales", department: "Sales", cadence: "Monthly", period: "Apr 2026", status: "Published", owner: "Riya Sharma", generatedOn: "19 Apr 2026, 09:20 AM", summary: "Tracks lead conversion, revenue movement, and follow-up performance across regional sales teams.", priority: "Normal" },
-  { id: "RPT-302", title: "Finance Collection Overview", type: "Finance", department: "Finance", cadence: "Quarterly", period: "Q2 2026", status: "Draft", owner: "Vikram Nair", generatedOn: "18 Apr 2026, 05:10 PM", summary: "Shows pending invoices, collection trends, and payment delays across active client accounts.", priority: "Critical" },
-  { id: "RPT-303", title: "Management Pipeline Snapshot", type: "Executive", department: "Mgmt", cadence: "Weekly", period: "Week 16, 2026", status: "Scheduled", owner: "Ananya Patel", generatedOn: "19 Apr 2026, 08:00 AM", summary: "High-level summary of team delivery, lead pipeline, project health, and escalation trends.", priority: "Normal" },
-  { id: "RPT-304", title: "HR Attrition Report", type: "Executive", department: "HR", cadence: "Monthly", period: "Apr 2026", status: "Draft", owner: "Karan Bhatia", generatedOn: "20 Apr 2026, 11:00 AM", summary: "Tracks employee turnover, new hires, and department-level attrition rates.", priority: "Normal" },
+// ─── TIMELINE DATA ─────────────────────────────────────────────────────────
+const revenueChartDataMonthly = [
+  { name: "Jan", revenue: 820000, expenses: 420000 },
+  { name: "Feb", revenue: 940000, expenses: 460000 },
+  { name: "Mar", revenue: 1100000, expenses: 510000 },
+  { name: "Apr", revenue: 1350000, expenses: 590000 },
+  { name: "May", revenue: 1200000, expenses: 550000 },
+  { name: "Jun", revenue: 1480000, expenses: 620000 },
 ];
 
-const reportTrendData = [
-  { name: "Jan", published: 5, draft: 2, scheduled: 1 },
-  { name: "Feb", published: 7, draft: 3, scheduled: 2 },
-  { name: "Mar", published: 6, draft: 1, scheduled: 3 },
-  { name: "Apr", published: 9, draft: 4, scheduled: 2 },
-  { name: "May", published: 8, draft: 2, scheduled: 1 },
-  { name: "Jun", published: 10, draft: 3, scheduled: 2 },
+const revenueChartDataYearly = [
+  { name: "2022", revenue: 4500000, expenses: 2100000 },
+  { name: "2023", revenue: 6200000, expenses: 2800000 },
+  { name: "2024", revenue: 8900000, expenses: 3500000 },
+  { name: "2025", revenue: 11500000, expenses: 4200000 },
+  { name: "2026", revenue: 12400000, expenses: 4800000 },
 ];
 
-const deptReportData = [
-  { name: "Sales", reports: 12, approved: 10 },
-  { name: "Finance", reports: 8, approved: 5 },
-  { name: "Mgmt", reports: 6, approved: 5 },
-  { name: "HR", reports: 4, approved: 3 },
+const revenueChartDataWeekly = [
+  { name: "Week 1", revenue: 280000, expenses: 140000 },
+  { name: "Week 2", revenue: 320000, expenses: 155000 },
+  { name: "Week 3", revenue: 340000, expenses: 165000 },
+  { name: "Week 4", revenue: 410000, expenses: 200000 },
 ];
 
-const defaultForm = { title: "", type: "Sales", department: "Sales", cadence: "Monthly", period: "", owner: "", status: "Draft", summary: "", priority: "Normal" };
+// Lead Conversion Data
+const leadConversionMonthly = [
+  { name: "Jan", leads: 280, converted: 112, conversionRate: 40 },
+  { name: "Feb", revenue: 320, converted: 140, conversionRate: 44 },
+  { name: "Mar", revenue: 350, converted: 155, conversionRate: 44 },
+  { name: "Apr", revenue: 420, converted: 174, conversionRate: 41 },
+  { name: "May", revenue: 380, converted: 152, conversionRate: 40 },
+  { name: "Jun", revenue: 450, converted: 189, conversionRate: 42 },
+];
 
-const columns = [
-  { key: "id", label: "Report ID" },
-  { key: "title", label: "Report Name" },
-  { key: "department", label: "Department" },
-  { key: "owner", label: "Generated By" },
-  { key: "type", label: "Type" },
-  { key: "priority", label: "Priority" },
+const leadConversionYearly = [
+  { name: "2022", leads: 2800, converted: 1120, conversionRate: 40 },
+  { name: "2023", revenue: 3600, converted: 1584, conversionRate: 44 },
+  { name: "2024", revenue: 4200, converted: 1848, conversionRate: 44 },
+  { name: "2025", revenue: 5100, converted: 2091, conversionRate: 41 },
+  { name: "2026", revenue: 5600, converted: 2352, conversionRate: 42 },
+];
+
+const leadConversionWeekly = [
+  { name: "Week 1", leads: 95, converted: 38, conversionRate: 40 },
+  { name: "Week 2", revenue: 110, converted: 48, conversionRate: 44 },
+  { name: "Week 3", revenue: 115, converted: 51, conversionRate: 44 },
+  { name: "Week 4", revenue: 135, converted: 55, conversionRate: 41 },
+];
+
+// Project Completion Data
+const projectCompletionMonthly = [
+  { name: "Jan", total: 12, completed: 4, inProgress: 6, delayed: 2 },
+  { name: "Feb", total: 14, completed: 6, inProgress: 6, delayed: 2 },
+  { name: "Mar", total: 16, completed: 8, inProgress: 6, delayed: 2 },
+  { name: "Apr", total: 18, completed: 10, inProgress: 6, delayed: 2 },
+  { name: "May", total: 16, completed: 9, inProgress: 5, delayed: 2 },
+  { name: "Jun", total: 20, completed: 12, inProgress: 6, delayed: 2 },
+];
+
+const projectCompletionYearly = [
+  { name: "2022", total: 45, completed: 35, inProgress: 8, delayed: 2 },
+  { name: "2023", total: 68, completed: 58, inProgress: 8, delayed: 2 },
+  { name: "2024", total: 92, completed: 78, inProgress: 12, delayed: 2 },
+  { name: "2025", total: 110, completed: 95, inProgress: 12, delayed: 3 },
+  { name: "2026", total: 98, completed: 83, inProgress: 13, delayed: 2 },
+];
+
+const projectCompletionWeekly = [
+  { name: "Week 1", total: 5, completed: 1, inProgress: 3, delayed: 1 },
+  { name: "Week 2", total: 5, completed: 2, inProgress: 2, delayed: 1 },
+  { name: "Week 3", total: 5, completed: 3, inProgress: 1, delayed: 1 },
+  { name: "Week 4", total: 5, completed: 4, inProgress: 1, delayed: 0 },
+];
+
+// Payment Collection Data
+const paymentCollectionMonthly = [
+  { name: "Jan", total: 2400000, collected: 2160000, pending: 240000 },
+  { name: "Feb", total: 2800000, collected: 2380000, pending: 420000 },
+  { name: "Mar", total: 3200000, collected: 2880000, pending: 320000 },
+  { name: "Apr", total: 3800000, collected: 3230000, pending: 570000 },
+  { name: "May", total: 3400000, collected: 2890000, pending: 510000 },
+  { name: "Jun", total: 4200000, collected: 3570000, pending: 630000 },
+];
+
+const paymentCollectionYearly = [
+  { name: "2022", total: 18000000, collected: 15300000, pending: 2700000 },
+  { name: "2023", total: 24500000, collected: 21840000, pending: 2660000 },
+  { name: "2024", total: 32100000, collected: 29070000, pending: 3030000 },
+  { name: "2025", total: 41800000, collected: 37620000, pending: 4180000 },
+  { name: "2026", total: 44200000, collected: 37570000, pending: 6630000 },
+];
+
+const paymentCollectionWeekly = [
+  { name: "Week 1", total: 1000000, collected: 850000, pending: 150000 },
+  { name: "Week 2", total: 1100000, collected: 935000, pending: 165000 },
+  { name: "Week 3", total: 1150000, revenue: 977500, pending: 172500 },
+  { name: "Week 4", total: 1350000, collected: 1147500, pending: 202500 },
+];
+
+const deptPerformanceData = [
+  { name: "Sales", target: 90, achieved: 87 },
+  { name: "Management", target: 85, achieved: 80 },
+  { name: "Finance", target: 95, achieved: 92 },
+];
+
+const deptRevenueMonthly = [
+  { name: "Sales", value: 340000, color: "#3b82f6" },
+  { name: "Management", value: 280000, color: "#8b5cf6" },
+  { name: "Finance", value: 430000, color: "#22c55e" },
+];
+
+const deptRevenueYearly = [
+  { name: "Sales", value: 3800000, color: "#3b82f6" },
+  { name: "Management", value: 3200000, color: "#8b5cf6" },
+  { name: "Finance", value: 4700000, color: "#22c55e" },
+];
+
+const deptRevenueWeekly = [
+  { name: "Sales", value: 85000, color: "#3b82f6" },
+  { name: "Management", value: 72000, color: "#8b5cf6" },
+  { name: "Finance", value: 105000, color: "#22c55e" },
+];
+
+const salesEmployees = [
+  {
+    name: "Priya Mehta",
+    role: "Manager",
+    totalLeads: 210,
+    activeLeads: 85,
+    dumpLeads: 30,
+    calls: 340,
+    conversion: "40%",
+    revenue: "₹18,50,000",
+    missedFollowups: 4,
+    status: "Active",
+    date: "2026-04-10",
+  },
+  {
+    name: "Arjun Kapoor",
+    role: "TL",
+    totalLeads: 160,
+    activeLeads: 70,
+    dumpLeads: 20,
+    calls: 280,
+    conversion: "43%",
+    revenue: "₹14,20,000",
+    missedFollowups: 2,
+    status: "Active",
+    date: "2026-04-11",
+  },
+  {
+    name: "Sneha Joshi",
+    role: "Executive",
+    totalLeads: 95,
+    activeLeads: 40,
+    dumpLeads: 15,
+    calls: 180,
+    conversion: "42%",
+    revenue: "₹8,80,000",
+    missedFollowups: 6,
+    status: "Active",
+    date: "2026-04-12",
+  },
+  {
+    name: "Vikram Nair",
+    role: "Executive",
+    totalLeads: 88,
+    activeLeads: 32,
+    dumpLeads: 22,
+    calls: 150,
+    conversion: "36%",
+    revenue: "₹7,40,000",
+    missedFollowups: 8,
+    status: "Inactive",
+    date: "2026-04-08",
+  },
+  {
+    name: "Neha Gupta",
+    role: "TL",
+    totalLeads: 145,
+    activeLeads: 60,
+    dumpLeads: 18,
+    calls: 260,
+    conversion: "41%",
+    revenue: "₹12,60,000",
+    missedFollowups: 3,
+    status: "Active",
+    date: "2026-04-14",
+  },
+  {
+    name: "Rohit Verma",
+    role: "Executive",
+    totalLeads: 102,
+    activeLeads: 45,
+    dumpLeads: 12,
+    calls: 195,
+    conversion: "44%",
+    revenue: "₹9,20,000",
+    missedFollowups: 1,
+    status: "Active",
+    date: "2026-04-13",
+  },
+  {
+    name: "Ananya Singh",
+    role: "Executive",
+    totalLeads: 78,
+    activeLeads: 28,
+    dumpLeads: 20,
+    calls: 140,
+    conversion: "35%",
+    revenue: "₹6,10,000",
+    missedFollowups: 9,
+    status: "Inactive",
+    date: "2026-04-07",
+  },
+  {
+    name: "Karan Bhatia",
+    role: "Manager",
+    totalLeads: 195,
+    activeLeads: 80,
+    dumpLeads: 25,
+    calls: 310,
+    conversion: "41%",
+    revenue: "₹16,90,000",
+    missedFollowups: 3,
+    status: "Active",
+    date: "2026-04-15",
+  },
+];
+
+const projects = [
+  {
+    project: "CRM Portal Revamp",
+    client: "Acme Corp",
+    assignedTo: "Arjun Kapoor",
+    startDate: "01 Feb 2026",
+    deadline: "30 Apr 2026",
+    status: "In Progress",
+    progress: "72%",
+    priority: "High",
+    date: "2026-02-01",
+  },
+  {
+    project: "ERP Integration",
+    client: "Global Tech",
+    assignedTo: "Neha Gupta",
+    startDate: "15 Jan 2026",
+    deadline: "15 May 2026",
+    status: "In Progress",
+    progress: "55%",
+    priority: "Critical",
+    date: "2026-01-15",
+  },
+  {
+    project: "Mobile App v2",
+    client: "Nexus Labs",
+    assignedTo: "Rohit Verma",
+    startDate: "10 Mar 2026",
+    deadline: "10 Jun 2026",
+    status: "In Progress",
+    progress: "38%",
+    priority: "Medium",
+    date: "2026-03-10",
+  },
+  {
+    project: "Data Migration",
+    client: "Sunrise Retail",
+    assignedTo: "Karan Bhatia",
+    startDate: "05 Dec 2025",
+    deadline: "05 Mar 2026",
+    status: "Delayed",
+    progress: "80%",
+    priority: "High",
+    date: "2025-12-05",
+  },
+  {
+    project: "Analytics Dashboard",
+    client: "FinTech Ltd.",
+    assignedTo: "Priya Mehta",
+    startDate: "20 Jan 2026",
+    deadline: "20 Apr 2026",
+    status: "Completed",
+    progress: "100%",
+    priority: "Low",
+    date: "2026-01-20",
+  },
+  {
+    project: "API Gateway Setup",
+    client: "CloudBase Inc.",
+    assignedTo: "Vikram Nair",
+    startDate: "01 Mar 2026",
+    deadline: "01 May 2026",
+    status: "In Progress",
+    progress: "45%",
+    priority: "Medium",
+    date: "2026-03-01",
+  },
+];
+
+const financeRecords = [
+  {
+    client: "Acme Corp",
+    project: "CRM Portal Revamp",
+    invoiceId: "INV-1001",
+    total: "₹12,00,000",
+    paid: "₹8,40,000",
+    remaining: "₹3,60,000",
+    type: "Milestone",
+    status: "Partial",
+    date: "2026-04-01",
+  },
+  {
+    client: "Global Tech",
+    project: "ERP Integration",
+    invoiceId: "INV-1002",
+    total: "₹22,50,000",
+    paid: "₹22,50,000",
+    remaining: "₹0",
+    type: "Full Payment",
+    status: "Paid",
+    date: "2026-03-20",
+  },
+  {
+    client: "Nexus Labs",
+    project: "Mobile App v2",
+    invoiceId: "INV-1003",
+    total: "₹9,80,000",
+    paid: "₹4,90,000",
+    remaining: "₹4,90,000",
+    type: "Milestone",
+    status: "Partial",
+    date: "2026-04-10",
+  },
+  {
+    client: "Sunrise Retail",
+    project: "Data Migration",
+    invoiceId: "INV-1004",
+    total: "₹6,40,000",
+    paid: "₹0",
+    remaining: "₹6,40,000",
+    type: "Post-Delivery",
+    status: "Pending",
+    date: "2026-03-05",
+  },
+  {
+    client: "FinTech Ltd.",
+    project: "Analytics Dashboard",
+    invoiceId: "INV-1005",
+    total: "₹15,00,000",
+    paid: "₹15,00,000",
+    remaining: "₹0",
+    type: "Full Payment",
+    status: "Paid",
+    date: "2026-04-18",
+  },
+  {
+    client: "CloudBase Inc.",
+    project: "API Gateway Setup",
+    invoiceId: "INV-1006",
+    total: "₹7,20,000",
+    paid: "₹3,60,000",
+    remaining: "₹3,60,000",
+    type: "Milestone",
+    status: "Partial",
+    date: "2026-04-05",
+  },
+];
+
+// ─── Column Definitions ─────────────────────────────────────────────────────
+
+const salesColumns = [
+  { key: "name", label: "Employee" },
+  { key: "role", label: "Role" },
+  { key: "totalLeads", label: "Total Leads" },
+  { key: "activeLeads", label: "Active Leads" },
+  { key: "calls", label: "Calls" },
+  { key: "missedFollowups", label: "Missed Followups" },
+  { key: "conversion", label: "Conversion %" },
+  { key: "revenue", label: "Revenue" },
   { key: "status", label: "Status" },
-  { key: "generatedOn", label: "Last Updated" },
+  { key: "date", label: "Joined" },
 ];
 
-// ── Component ──────────────────────────────────────────────────────────────
+const projectColumns = [
+  { key: "project", label: "Project Name" },
+  { key: "client", label: "Client" },
+  { key: "assignedTo", label: "Assigned To" },
+  { key: "startDate", label: "Start Date" },
+  { key: "deadline", label: "Deadline" },
+  { key: "status", label: "Status" },
+  { key: "progress", label: "Progress %" },
+  { key: "priority", label: "Priority" },
+];
+
+const financeColumns = [
+  { key: "client", label: "Client" },
+  { key: "project", label: "Project" },
+  { key: "invoiceId", label: "Invoice #" },
+  { key: "total", label: "Total Amount" },
+  { key: "paid", label: "Paid" },
+  { key: "remaining", label: "Remaining" },
+  { key: "type", label: "Type" },
+  { key: "status", label: "Status" },
+  { key: "date", label: "Date" },
+];
+
+// ─── Component ──────────────────────────────────────────────────────────────
+
+const initialDepts = [
+  {
+    id: "dept-1",
+    name: "sales",
+    displayName: "Sales Department",
+    totalUsers: 8,
+    activeUsers: 6,
+    roles: "Manager, TL, Executive",
+    createdAt: "10 Apr 2026",
+  },
+  {
+    id: "dept-2",
+    name: "management",
+    displayName: "Management",
+    totalUsers: 6,
+    activeUsers: 5,
+    roles: "Admin, Project Manager",
+    createdAt: "15 Jan 2026",
+  },
+  {
+    id: "dept-3",
+    name: "finance",
+    displayName: "Finance",
+    totalUsers: 4,
+    activeUsers: 4,
+    roles: "Analyst, Accountant",
+    createdAt: "05 Dec 2025",
+  },
+];
 
 export default function Report() {
-  const [reports, setReports] = useState(initialReports);
-  const [activeReport, setActiveReport] = useState(null);
-  const [form, setForm] = useState(defaultForm);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [timeline, setTimeline] = useState("monthly"); // "yearly", "monthly", "weekly"
+  const [departments, setDepartments] = useState(initialDepts);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedSale, setSelectedSale] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedFinance, setSelectedFinance] = useState(null);
 
-  // KPIs
-  const total = reports.length;
-  const published = reports.filter(r => r.status === "Published").length;
-  const drafts = reports.filter(r => r.status === "Draft").length;
-  const critical = reports.filter(r => r.priority === "Critical").length;
-
-  const handleFormChange = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
-
-  const handleSave = () => {
-    if (!form.title.trim() || !form.owner.trim()) return;
-    setIsSubmitting(true);
-    setTimeout(() => {
-      if (form.id) {
-        setReports(prev => prev.map(r => r.id === form.id ? { ...form } : r));
-      } else {
-        const newReport = {
-          ...form,
-          id: `RPT-${305 + reports.length}`,
-          generatedOn: new Date().toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
-        };
-        setReports(prev => [newReport, ...prev]);
-      }
-      closeModal("report-form-modal");
-      setIsSubmitting(false);
-    }, 400);
+  // ─── Get chart data based on timeline ────────────────────────────────────
+  const getRevenueData = () => {
+    switch (timeline) {
+      case "yearly":
+        return revenueChartDataYearly;
+      case "weekly":
+        return revenueChartDataWeekly;
+      default:
+        return revenueChartDataMonthly;
+    }
   };
 
-  const handleDelete = () => {
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setReports(prev => prev.filter(r => r.id !== form.id));
-      closeModal("report-form-modal");
-      setIsSubmitting(false);
-    }, 400);
+  const getLeadConversionData = () => {
+    switch (timeline) {
+      case "yearly":
+        return leadConversionYearly;
+      case "weekly":
+        return leadConversionWeekly;
+      default:
+        return leadConversionMonthly;
+    }
   };
 
-  const handleExport = () => {
-    const headers = columns.map(c => c.label).join(",");
-    const rows = reports.map(r => columns.map(c => `"${r[c.key] || ""}"`).join(","));
-    const blob = new Blob([headers + "\n" + rows.join("\n")], { type: "text/csv" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "reports-export.csv"; a.click();
+  const getProjectCompletionData = () => {
+    switch (timeline) {
+      case "yearly":
+        return projectCompletionYearly;
+      case "weekly":
+        return projectCompletionWeekly;
+      default:
+        return projectCompletionMonthly;
+    }
   };
 
-  const tableActions = [
-    { icon: <Eye size={14} />, tooltip: "View", variant: "ghost", onClick: (row) => { setActiveReport(row); openModal("report-view-modal"); } },
-    { icon: <Pencil size={14} />, tooltip: "Edit", variant: "primary", onClick: (row) => { setForm({ ...row }); openModal("report-form-modal"); } },
-  ];
+  const getPaymentCollectionData = () => {
+    switch (timeline) {
+      case "yearly":
+        return paymentCollectionYearly;
+      case "weekly":
+        return paymentCollectionWeekly;
+      default:
+        return paymentCollectionMonthly;
+    }
+  };
 
-  // Form Input Helper
-  const FormInput = ({ label, field, placeholder }) => (
-    <div className="space-y-1.5">
-      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{label}</label>
-      <input type="text" value={form[field]} onChange={e => handleFormChange(field, e.target.value)}
-        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-[#2a465a] focus:outline-none focus:border-[#38bdf8] focus:ring-1 focus:ring-[#38bdf8] transition-all"
-        placeholder={placeholder || `Enter ${label.toLowerCase()}`} />
-    </div>
-  );
+  const getDeptRevenueData = () => {
+    switch (timeline) {
+      case "yearly":
+        return deptRevenueYearly;
+      case "weekly":
+        return deptRevenueWeekly;
+      default:
+        return deptRevenueMonthly;
+    }
+  };
 
-  const FormSelect = ({ label, field, options }) => (
-    <div className="space-y-1.5">
-      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{label}</label>
-      <select value={form[field]} onChange={e => handleFormChange(field, e.target.value)}
-        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-[#2a465a] focus:outline-none focus:border-[#38bdf8] focus:ring-1 focus:ring-[#38bdf8] transition-all">
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-    </div>
-  );
+  const fetchDepartments = () => {
+    // Replaced by mock state
+  };
+
+  const totalDepts = departments.length;
+  const totalUsers = departments.reduce((sum, d) => sum + d.totalUsers, 0);
+  const totalActive = departments.reduce((sum, d) => sum + d.activeUsers, 0);
 
   return (
     <div className="space-y-6">
-      {/* ── Header ── */}
-      <Heading primaryText="Reports" secondaryText="Command Center" size={12} />
-
-      {/* ── Action Bar ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 -mt-2">
-        <p className="text-sm font-semibold text-slate-400">Monitor, review, and manage department reports.</p>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold text-[#2a465a] bg-white border border-slate-200 hover:bg-slate-50 hover:-translate-y-0.5 transition-all duration-200 active:scale-95">
-            <FileDown size={16} /> Export All
-          </button>
-          <button onClick={() => { setForm({ ...defaultForm }); openModal("report-form-modal"); }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold text-white shadow-lg bg-[#2a465a] hover:bg-gradient-to-r hover:from-[#1e3a52] hover:to-[#2b5a7a] hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 active:scale-95">
-            <Plus size={16} /> Create Report
-          </button>
+      {/* ── Header with Timeline Filter ── */}
+      <div className="flex flex-col gap-5 mb-4">
+        <div className="w-full flex items-center justify-between">
+          <div>
+            <Heading
+              primaryText="Reports&nbsp; &"
+              secondaryText="Management"
+              size={12}
+            />
+          </div>
+          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+            <Calendar size={18} className="text-slate-500" />
+            <div className="flex gap-2">
+              {[
+                { label: "Weekly", value: "weekly" },
+                { label: "Monthly", value: "monthly" },
+                { label: "Yearly", value: "yearly" },
+              ].map(({ label, value }) => (
+                <button
+                  key={value}
+                  onClick={() => setTimeline(value)}
+                  className={`px-4 py-1.5 rounded-lg font-semibold text-sm transition-all ${
+                    timeline === value
+                      ? "bg-[#2a465a] text-white shadow-md"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ── KPI Cards ── */}
+      {/* ── Global KPI Cards ── */}
       <DashGrid cols={12} gap={4}>
-        <EnhancedDashCard title="Total Reports" value={String(total)} icon={<FileText size={22} />} accentColor="#355872" size={3} />
-        <EnhancedDashCard title="Published" value={String(published)} icon={<CheckCircle size={22} />} accentColor="#22c55e" size={3} />
-        <EnhancedDashCard title="Pending Review" value={String(drafts)} icon={<Clock size={22} />} accentColor="#f59e0b" size={3} />
-        <EnhancedDashCard title="Critical" value={String(critical)} icon={<AlertCircle size={22} />} accentColor="#ef4444" size={3} />
+        <EnhancedDashCard
+          title="Total Departments"
+          value={String(totalDepts)}
+          icon={<Building2 size={22} />}
+          accentColor="#38bdf8"
+          size={3}
+        />
+        <EnhancedDashCard
+          title="Total Users"
+          value={String(totalUsers)}
+          icon={<Users size={22} />}
+          accentColor="#3b82f6"
+          size={3}
+        />
+        <EnhancedDashCard
+          title="Active Users"
+          value={String(totalActive)}
+          icon={<UserCheck size={22} />}
+          accentColor="#22c55e"
+          size={3}
+        />
+        <EnhancedDashCard
+          title="Total Revenue"
+          value="₹1.84Cr"
+          icon={<DollarSign size={22} />}
+          accentColor="#8b5cf6"
+          size={3}
+        />
       </DashGrid>
 
-      {/* ── Analytics Charts ── */}
+      {/* ── Charts Row 1 ── */}
       <DashGrid cols={12} gap={4}>
-        <GAreaChart title="Report Activity Trend" subtitle="Monthly breakdown"
-          data={reportTrendData}
+        <GAreaChart
+          title="Revenue & Expense Trend"
+          subtitle={`${timeline.charAt(0).toUpperCase() + timeline.slice(1)} breakdown`}
+          data={getRevenueData()}
           areas={[
-            { key: "published", label: "Published", color: "#22c55e" },
-            { key: "draft", label: "Drafts", color: "#f59e0b" },
-            { key: "scheduled", label: "Scheduled", color: "#3b82f6" },
-          ]} size={8} height={260} />
-        <GBarChart title="Department Reports" subtitle="Reports vs approved"
-          data={deptReportData}
+            { key: "revenue", label: "Revenue", color: "#3b82f6" },
+            { key: "expenses", label: "Expenses", color: "#f43f5e" },
+          ]}
+          size={6}
+          height={300}
+        />
+        <GBarChart
+          title="Department Performance"
+          subtitle="Target vs Achieved"
+          data={deptPerformanceData}
           bars={[
-            { key: "reports", label: "Total", color: "#94a3b8" },
-            { key: "approved", label: "Approved", color: "#2a465a" },
-          ]} size={4} height={260} />
+            { key: "target", label: "Target", color: "#94a3b8" },
+            { key: "achieved", label: "Achieved", color: "#2a465a" },
+          ]}
+          size={6}
+          height={300}
+        />
+          <GBarChart
+            title="Project Completion Status"
+            subtitle={`${timeline.charAt(0).toUpperCase() + timeline.slice(1)} breakdown`}
+            data={getProjectCompletionData()}
+            bars={[
+              { key: "completed", label: "Completed", color: "#22c55e" },
+              { key: "inProgress", label: "In Progress", color: "#3b82f6" },
+              { key: "delayed", label: "Delayed", color: "#f43f5e" },
+            ]}
+            size={6}
+            height={300}
+          />
+        <GAreaChart
+          title="Lead Generation & Conversion"
+          subtitle={`${timeline.charAt(0).toUpperCase() + timeline.slice(1)} breakdown`}
+          data={getLeadConversionData()}
+          areas={[
+            { key: "leads", label: "Leads Generated", color: "#22c55e" },
+            { key: "converted", label: "Converted", color: "#3b82f6" },
+          ]}
+          size={6}
+          height={300}
+        />
+        <GAreaChart
+          title="Payment Collection Analysis"
+          subtitle={`${timeline.charAt(0).toUpperCase() + timeline.slice(1)} breakdown`}
+          data={getPaymentCollectionData()}
+          areas={[
+            { key: "collected", label: "Collected", color: "#22c55e" },
+            { key: "pending", label: "Pending", color: "#f59e0b" },
+          ]}
+          size={6}
+          height={300}
+        />
+        <GBarChart
+          title="Department Revenue Distribution"
+          subtitle={`${timeline.charAt(0).toUpperCase() + timeline.slice(1)} breakdown`}
+          data={getDeptRevenueData()}
+          bars={[
+            { key: "value", label: "Revenue", color: "#3b82f6" },
+          ]}
+          size={6}
+          height={300}
+        />
+        
       </DashGrid>
 
-      {/* ── Reports Table ── */}
+      {/* ══ SALES DEPARTMENT ══════════════════════════════════════════════════ */}
+      <DashGrid cols={12} gap={4}>
+        <div className="col-span-12">
+          <Heading primaryText="Sales" secondaryText="Department" size={12} />
+        </div>
+        <EnhancedDashCard
+          title="Total Leads"
+          value="1,073"
+          icon={<Target size={22} />}
+          accentColor="#22c55e"
+          size={3}
+        />
+        <EnhancedDashCard
+          title="Active Leads"
+          value="440"
+          icon={<Activity size={22} />}
+          accentColor="#3b82f6"
+          size={3}
+        />
+        <EnhancedDashCard
+          title="Dump Leads"
+          value="162"
+          icon={<AlertCircle size={22} />}
+          accentColor="#f43f5e"
+          size={3}
+        />
+        <EnhancedDashCard
+          title="Avg Conversion"
+          value="40.3%"
+          icon={<TrendingUp size={22} />}
+          accentColor="#8b5cf6"
+          size={3}
+        />
+      </DashGrid>
       <DataTable
-        title="Reports Directory"
-        columns={columns}
-        rows={reports}
-        actions={tableActions}
-        size={12} pageSize={10} searchable exportable exportFileName="reports-data"
+        exportable
+        exportFileName={"sales_employees"}
+        title="Sales Employees"
+        columns={salesColumns}
+        rows={salesEmployees}
+        actions={[
+          {
+            icon: <Eye size={15} />,
+            tooltip: "View",
+            variant: "ghost",
+            onClick: (row) => {
+              setSelectedSale(row);
+              openModal("sales-view-modal");
+            },
+          },
+        ]}
+        size={12}
+        pageSize={5}
+        searchable
+        date={false}
         filters={[
-          { title: "Department", key: "department", type: "toggle", options: ["Sales", "Finance", "Mgmt", "HR"] },
-          { title: "Status", key: "status", type: "toggle", options: ["Published", "Draft", "Scheduled"] },
-          { title: "Priority", key: "priority", type: "toggle", options: ["Normal", "Critical"] },
-          { title: "Type", key: "type", type: "toggle", options: ["Sales", "Finance", "Executive"] },
+          {
+            title: "Role",
+            key: "role",
+            type: "toggle",
+            options: ["Manager", "TL", "Executive"],
+          },
+          {
+            title: "Status",
+            key: "status",
+            type: "toggle",
+            options: ["Active", "Inactive"],
+          },
         ]}
       />
 
-      {/* ══ VIEW MODAL ═══════════════════════════════════════════════════════ */}
-      <Modal id="report-view-modal" title="Report Details">
-        {activeReport && (
+      {/* ══ MANAGEMENT DEPARTMENT ═════════════════════════════════════════════ */}
+      <DashGrid cols={12} gap={4}>
+        <div className="col-span-12">
+          <Heading
+            primaryText="Management"
+            secondaryText="Department"
+            size={12}
+          />
+        </div>
+        <EnhancedDashCard
+          title="Total Projects"
+          value="6"
+          icon={<Briefcase size={22} />}
+          accentColor="#f59e0b"
+          size={3}
+        />
+        <EnhancedDashCard
+          title="In Progress"
+          value="4"
+          icon={<Clock size={22} />}
+          accentColor="#3b82f6"
+          size={3}
+        />
+        <EnhancedDashCard
+          title="Completed"
+          value="1"
+          icon={<CheckCircle size={22} />}
+          accentColor="#22c55e"
+          size={3}
+        />
+        <EnhancedDashCard
+          title="Delayed"
+          value="1"
+          icon={<AlertCircle size={22} />}
+          accentColor="#f43f5e"
+          size={3}
+        />
+      </DashGrid>
+      <DataTable
+        exportable
+        exportFileName={"project_management"}
+        title="Project Management"
+        columns={projectColumns}
+        rows={projects}
+        actions={[
+          {
+            icon: <Eye size={15} />,
+            tooltip: "View",
+            variant: "ghost",
+            onClick: (row) => {
+              setSelectedProject(row);
+              openModal("project-view-modal");
+            },
+          },
+        ]}
+        size={12}
+        pageSize={5}
+        searchable
+        date={true}
+        filters={[
+          {
+            title: "Status",
+            key: "status",
+            type: "toggle",
+            options: ["In Progress", "Completed", "Delayed"],
+          },
+          {
+            title: "Priority",
+            key: "priority",
+            type: "toggle",
+            options: ["Low", "Medium", "High", "Critical"],
+          },
+        ]}
+      />
+
+      {/* ══ FINANCE DEPARTMENT ════════════════════════════════════════════════ */}
+      <DashGrid cols={12} gap={4}>
+        <div className="col-span-12">
+          <Heading primaryText="Finance" secondaryText="Department" size={12} />
+        </div>
+        <EnhancedDashCard
+          title="Total Revenue"
+          value="₹72,90,000"
+          icon={<DollarSign size={22} />}
+          accentColor="#22c55e"
+          size={3}
+        />
+        <EnhancedDashCard
+          title="Pending"
+          value="₹18,70,000"
+          icon={<Clock size={22} />}
+          accentColor="#f59e0b"
+          size={3}
+        />
+        <EnhancedDashCard
+          title="Expenses"
+          value="₹31,50,000"
+          icon={<CreditCard size={22} />}
+          accentColor="#f43f5e"
+          size={3}
+        />
+        <EnhancedDashCard
+          title="Net Profit"
+          value="₹41,40,000"
+          icon={<TrendingUp size={22} />}
+          accentColor="#8b5cf6"
+          size={3}
+        />
+      </DashGrid>
+      <DataTable
+        exportable
+        exportFileName={"finance_payments"}
+        title="Finance & Payments"
+        columns={financeColumns}
+        rows={financeRecords}
+        actions={[
+          {
+            icon: <Eye size={15} />,
+            tooltip: "View",
+            variant: "ghost",
+            onClick: (row) => {
+              setSelectedFinance(row);
+              openModal("finance-view-modal");
+            },
+          },
+        ]}
+        size={12}
+        pageSize={5}
+        searchable
+        date={true}
+        filters={[
+          {
+            title: "Status",
+            key: "status",
+            type: "toggle",
+            options: ["Paid", "Partial", "Pending"],
+          },
+          {
+            title: "Type",
+            key: "type",
+            type: "toggle",
+            options: ["Milestone", "Full Payment", "Post-Delivery"],
+          },
+        ]}
+      />
+
+      {/* ══ VIEW MODALS FOR TABLE ROWS ═════════════════════════════════════════ */}
+      <Modal id="sales-view-modal" title="Sales Employee Details">
+        {selectedSale && (
           <div className="space-y-5">
             <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
               <div className="w-14 h-14 rounded-2xl bg-[#2a465a] flex items-center justify-center text-white shadow-lg">
-                <FileText size={24} />
+                <Users size={24} />
               </div>
               <div>
-                <p className="text-lg font-black text-[#2a465a]">{activeReport.title}</p>
-                <p className="text-sm font-bold text-slate-500">{activeReport.id} • {activeReport.owner}</p>
+                <p className="text-lg font-black text-[#2a465a]">{selectedSale.name}</p>
+                <p className="text-sm font-bold text-slate-500">{selectedSale.role}</p>
               </div>
             </div>
-
-            <div className="flex flex-wrap gap-2">
-              {[
-                { label: activeReport.status, cls: activeReport.status === "Published" ? "bg-emerald-50 text-emerald-600" : activeReport.status === "Scheduled" ? "bg-sky-50 text-sky-600" : "bg-amber-50 text-amber-600" },
-                { label: activeReport.type, cls: "bg-slate-50 text-slate-600" },
-                { label: activeReport.department, cls: "bg-indigo-50 text-indigo-600" },
-                { label: activeReport.cadence, cls: "bg-fuchsia-50 text-fuchsia-600" },
-                { label: activeReport.priority, cls: activeReport.priority === "Critical" ? "bg-rose-50 text-rose-600" : "bg-slate-50 text-slate-500" },
-              ].map(b => (
-                <span key={b.label} className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest ${b.cls}`}>{b.label}</span>
-              ))}
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
               {[
-                { label: "Owner", val: activeReport.owner },
-                { label: "Period", val: activeReport.period },
-                { label: "Generated On", val: activeReport.generatedOn },
-                { label: "Report ID", val: activeReport.id },
+                { label: "Total Leads", val: selectedSale.totalLeads },
+                { label: "Active Leads", val: selectedSale.activeLeads },
+                { label: "Calls", val: selectedSale.calls },
+                { label: "Missed Followups", val: selectedSale.missedFollowups },
+                { label: "Conversion", val: selectedSale.conversion },
+                { label: "Revenue", val: selectedSale.revenue },
               ].map(({ label, val }) => (
                 <div key={label}>
                   <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">{label}</span>
@@ -224,62 +934,82 @@ export default function Report() {
                 </div>
               ))}
             </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Summary</p>
-              <p className="text-sm font-semibold leading-relaxed text-slate-700">{activeReport.summary}</p>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("report-view-modal")} />
-              <Button text="Edit Report" variant="primary" size={3} onClick={() => {
-                closeModal("report-view-modal");
-                setForm({ ...activeReport });
-                openModal("report-form-modal");
-              }} />
+            <div className="flex justify-end pt-4 border-t border-slate-100">
+              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("sales-view-modal")} />
             </div>
           </div>
         )}
       </Modal>
 
-      {/* ══ CREATE/EDIT MODAL ═════════════════════════════════════════════════ */}
-      <Modal id="report-form-modal" title={form.id ? "Edit Report" : "Create Report"}>
-        <div className="space-y-4">
-          <FormInput label="Report Title" field="title" />
-          <div className="grid grid-cols-2 gap-4">
-            <FormInput label="Owner" field="owner" />
-            <FormInput label="Period" field="period" placeholder="e.g. Apr 2026" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <FormSelect label="Type" field="type" options={["Sales", "Finance", "Executive"]} />
-            <FormSelect label="Department" field="department" options={["Sales", "Finance", "Mgmt", "HR"]} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <FormSelect label="Cadence" field="cadence" options={["Daily", "Weekly", "Monthly", "Quarterly"]} />
-            <FormSelect label="Status" field="status" options={["Draft", "Published", "Scheduled"]} />
-          </div>
-          <FormSelect label="Priority" field="priority" options={["Normal", "Critical"]} />
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Summary</label>
-            <textarea value={form.summary} onChange={e => handleFormChange("summary", e.target.value)} rows={3}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-[#2a465a] focus:outline-none focus:border-[#38bdf8] focus:ring-1 focus:ring-[#38bdf8] transition-all resize-none"
-              placeholder="Describe what this report covers" />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
-            <Button text="Cancel" variant="ghost" size={3} onClick={() => closeModal("report-form-modal")} disabled={isSubmitting} />
-            <Button text={isSubmitting ? "Saving..." : form.id ? "Update" : "Create"} variant="primary" size={3}
-              onClick={handleSave} disabled={isSubmitting || !form.title || !form.owner} />
-          </div>
-
-          {form.id && (
-            <div className="flex items-center gap-3 pt-3 border-t border-slate-100 mt-2">
-              <span className="text-xs font-bold text-rose-400 uppercase tracking-widest mr-auto">Danger Zone</span>
-              <Button text="Delete Report" variant="danger" size={3} onClick={handleDelete} />
+      <Modal id="project-view-modal" title="Project Details">
+        {selectedProject && (
+          <div className="space-y-5">
+            <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <div className="w-14 h-14 rounded-2xl bg-[#2a465a] flex items-center justify-center text-white shadow-lg">
+                <Briefcase size={24} />
+              </div>
+              <div>
+                <p className="text-lg font-black text-[#2a465a]">{selectedProject.project}</p>
+                <p className="text-sm font-bold text-slate-500">{selectedProject.client}</p>
+              </div>
             </div>
-          )}
-        </div>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: "Assigned To", val: selectedProject.assignedTo },
+                { label: "Start Date", val: selectedProject.startDate },
+                { label: "Deadline", val: selectedProject.deadline },
+                { label: "Status", val: selectedProject.status },
+                { label: "Progress", val: selectedProject.progress },
+                { label: "Priority", val: selectedProject.priority },
+              ].map(({ label, val }) => (
+                <div key={label}>
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">{label}</span>
+                  <span className="text-[#2a465a] font-bold bg-white px-3 py-2.5 rounded-xl block border border-slate-100 text-sm">{val}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end pt-4 border-t border-slate-100">
+              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("project-view-modal")} />
+            </div>
+          </div>
+        )}
       </Modal>
+
+      <Modal id="finance-view-modal" title="Payment Details">
+        {selectedFinance && (
+          <div className="space-y-5">
+            <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <div className="w-14 h-14 rounded-2xl bg-[#2a465a] flex items-center justify-center text-white shadow-lg">
+                <CreditCard size={24} />
+              </div>
+              <div>
+                <p className="text-lg font-black text-[#2a465a]">{selectedFinance.invoiceId} • {selectedFinance.client}</p>
+                <p className="text-sm font-bold text-slate-500">{selectedFinance.project}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: "Total", val: selectedFinance.total },
+                { label: "Paid", val: selectedFinance.paid },
+                { label: "Remaining", val: selectedFinance.remaining },
+                { label: "Type", val: selectedFinance.type },
+                { label: "Status", val: selectedFinance.status },
+                { label: "Date", val: selectedFinance.date },
+              ].map(({ label, val }) => (
+                <div key={label}>
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">{label}</span>
+                  <span className="text-[#2a465a] font-bold bg-white px-3 py-2.5 rounded-xl block border border-slate-100 text-sm">{val}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end pt-4 border-t border-slate-100">
+              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("finance-view-modal")} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+
     </div>
   );
 }

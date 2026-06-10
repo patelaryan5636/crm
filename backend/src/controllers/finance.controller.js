@@ -163,11 +163,11 @@ exports.getDashboardData = catchAsync(async (req, res, next) => {
   const paidInvoicesCount = await Invoice.countDocuments({ admin: adminId, status: "PAID" });
 
   const kpiData = [
-    { title: "Total Revenue", value: `₹${(totalRevenue / 100000).toFixed(2)}L`, sub: "Total settled" },
+    { title: "Total Revenue", value: `₹${Number(totalRevenue).toLocaleString("en-IN")}`, sub: "Total settled" },
     { title: "Pending Payments", value: String(pendingPaymentsCount), sub: "Awaiting clearance" },
     { title: "Failed Payments", value: String(failedPaymentsCount), sub: "Needs attention" },
-    { title: "Total Expenses", value: `₹${(totalExpenses / 100000).toFixed(2)}L`, sub: "Paid expenses" },
-    { title: "Net Profit", value: `₹${((totalRevenue - totalExpenses) / 100000).toFixed(2)}L`, sub: "Revenue - Expenses" },
+    { title: "Total Expenses", value: `₹${Number(totalExpenses).toLocaleString("en-IN")}`, sub: "Paid expenses" },
+    { title: "Net Profit", value: `₹${Number(totalRevenue - totalExpenses).toLocaleString("en-IN")}`, sub: "Revenue - Expenses" },
     { title: "Total Invoices", value: String(totalInvoicesCount), sub: "All time" },
     { title: "Paid Invoices", value: String(paidInvoicesCount), sub: "Fully settled" },
     { title: "Unpaid Invoices", value: String(totalInvoicesCount - paidInvoicesCount), sub: "Awaiting payment" },
@@ -199,6 +199,98 @@ exports.getDashboardData = catchAsync(async (req, res, next) => {
     value: item.value
   }));
 
+  // 7. Chart Data: Monthly Revenue, Expense, and Profit comparison (in ₹ Lakhs)
+  const currentYear = new Date().getFullYear();
+  
+  const monthlyRevenueAgg = await Payment.aggregate([
+    {
+      $match: {
+        admin: mongoAdminId,
+        status: "SUCCESS"
+      }
+    },
+    {
+      $project: {
+        month: { $month: { $ifNull: ["$paidAt", "$createdAt"] } },
+        year: { $year: { $ifNull: ["$paidAt", "$createdAt"] } },
+        amount: 1
+      }
+    },
+    {
+      $match: {
+        year: currentYear
+      }
+    },
+    {
+      $group: {
+        _id: "$month",
+        total: { $sum: "$amount" }
+      }
+    }
+  ]);
+
+  const monthlyExpensesAgg = await Expense.aggregate([
+    {
+      $match: {
+        admin: mongoAdminId,
+        isDeleted: false,
+        status: "Paid"
+      }
+    },
+    {
+      $project: {
+        month: { $month: { $ifNull: ["$expenseDate", "$createdAt"] } },
+        year: { $year: { $ifNull: ["$expenseDate", "$createdAt"] } },
+        amount: 1
+      }
+    },
+    {
+      $match: {
+        year: currentYear
+      }
+    },
+    {
+      $group: {
+        _id: "$month",
+        total: { $sum: "$amount" }
+      }
+    }
+  ]);
+
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthlyDataMap = {};
+  monthNames.forEach((name, index) => {
+    monthlyDataMap[index + 1] = {
+      name,
+      revenue: 0,
+      expense: 0,
+      profit: 0
+    };
+  });
+
+  monthlyRevenueAgg.forEach(item => {
+    const monthNum = item._id;
+    if (monthlyDataMap[monthNum]) {
+      monthlyDataMap[monthNum].revenue = Number((item.total / 100000).toFixed(2));
+    }
+  });
+
+  monthlyExpensesAgg.forEach(item => {
+    const monthNum = item._id;
+    if (monthlyDataMap[monthNum]) {
+      monthlyDataMap[monthNum].expense = Number((item.total / 100000).toFixed(2));
+    }
+  });
+
+  monthNames.forEach((_, index) => {
+    const monthNum = index + 1;
+    const rev = monthlyDataMap[monthNum].revenue;
+    const exp = monthlyDataMap[monthNum].expense;
+    monthlyDataMap[monthNum].profit = Number((rev - exp).toFixed(2));
+  });
+
+  const revenueExpenseData = Object.values(monthlyDataMap);
+
   return res.status(200).json(
     new ApiResponse(
       200,
@@ -209,6 +301,7 @@ exports.getDashboardData = catchAsync(async (req, res, next) => {
         kpiData: kpiData,
         expenseByCat,
         paymentStatusData,
+        revenueExpenseData,
       },
       "Dashboard data fetched successfully"
     )

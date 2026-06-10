@@ -91,6 +91,7 @@ export default function FinanceDashboard() {
     kpiData: [],
     expenseByCat: [],
     paymentStatusData: [],
+    revenueExpenseData: [],
   });
 
   useEffect(() => {
@@ -119,6 +120,15 @@ export default function FinanceDashboard() {
     );
   }
 
+  // Derive target data from dynamic revenue if available
+  const dynamicRevenueTargetData = data.revenueExpenseData?.length > 0
+    ? data.revenueExpenseData.map((item, index) => ({
+        name: item.name,
+        revenue: item.revenue,
+        target: [50, 48, 55, 60, 65, 70, 72, 75, 78, 80, 82, 88][index] || 50
+      }))
+    : monthlyRevenueTargetData;
+
   return (
     <div className="flex flex-col gap-6">
 
@@ -146,7 +156,7 @@ export default function FinanceDashboard() {
         <GLineChart
           title="Revenue vs Expense vs Profit"
           subtitle="Monthly comparison (₹ Lakhs)"
-          data={revenueExpenseData}
+          data={data.revenueExpenseData?.length > 0 ? data.revenueExpenseData : revenueExpenseData}
           lines={[
             { key: "revenue", color: "#22c55e", label: "Revenue (L)" },
             { key: "expense", color: "#f43f5e", label: "Expense (L)" },
@@ -167,7 +177,7 @@ export default function FinanceDashboard() {
         <GColumnChart
           title="Monthly Revenue vs Target"
           subtitle="Actual revenue against expected target (₹ Lakhs)"
-          data={monthlyRevenueTargetData}
+          data={dynamicRevenueTargetData}
           bars={[
             { key: "revenue", color: "#3b82f6", label: "Revenue (L)" },
             { key: "target",  color: "#f59e0b", label: "Target (L)"  },

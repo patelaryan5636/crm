@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   DashGrid,
   EnhancedDashCard,
@@ -23,34 +24,28 @@ import {
   Eye,
   Download,
   CheckSquare,
+  Loader2,
 } from "lucide-react";
 import {
-  financeKpiData,
   revenueExpenseData,
   paymentStatusData,
   expenseCategoryData,
   monthlyRevenueTargetData,
-  recentPaymentsData,
-  recentInvoicesData,
   pendingActionsData,
-  recentActivitiesData,
   quickInsightsData,
 } from "./FinanceDashboardData";
+import { getDashboardData } from "../../services/financeService";
 
 // ── KPI icon + color config (by index) ───────────────────────────────────────
 const kpiConfig = [
   { icon: <DollarSign  size={22} />, accentColor: "#22c55e" },
+  { icon: <Clock       size={22} />, accentColor: "#f59e0b" },
+  { icon: <AlertCircle size={22} />, accentColor: "#f43f5e" },
+  { icon: <TrendingDown size={22} />, accentColor: "#ef4444" },
   { icon: <TrendingUp  size={22} />, accentColor: "#3b82f6" },
-  { icon: <AlertCircle size={22} />, accentColor: "#f59e0b" },
-  { icon: <TrendingDown size={22} />,accentColor: "#f43f5e" },
-  { icon: <Receipt     size={22} />, accentColor: "#8b5cf6" },
-  { icon: <TrendingUp  size={22} />, accentColor: "#14b8a6" },
   { icon: <FileText    size={22} />, accentColor: "#38bdf8" },
   { icon: <CheckCircle size={22} />, accentColor: "#22c55e" },
-  { icon: <CheckSquare size={22} />, accentColor: "#10b981" },
-  { icon: <Clock       size={22} />, accentColor: "#f59e0b" },
-  { icon: <CreditCard  size={22} />, accentColor: "#a78bfa" },
-  { icon: <IndianRupee size={22} />, accentColor: "#ef4444" },
+  { icon: <Receipt     size={22} />, accentColor: "#8b5cf6" },
 ];
 
 // ── Table column definitions ──────────────────────────────────────────────────
@@ -88,6 +83,40 @@ const activityColumns = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function FinanceDashboard() {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({
+    recentPayments: [],
+    recentInvoices: [],
+    recentActivities: [],
+    kpiData: [],
+  });
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await getDashboardData();
+        // response.data is the ApiResponse object: { statusCode, data, message }
+        if (response.data && response.data.data) {
+          setData(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
 
@@ -96,15 +125,15 @@ export default function FinanceDashboard() {
         <Heading primaryText="Finance" secondaryText="Dashboard" size={12} />
       </DashGrid>
 
-      {/* ── 12 KPI Cards — 3 per row ── */}
+      {/* ── KPI Cards ── */}
       <DashGrid cols={12} gap={4}>
-        {financeKpiData.map((kpi, i) => (
+        {(data.kpiData && data.kpiData.length > 0 ? data.kpiData : []).map((kpi, i) => (
           <EnhancedDashCard
             key={kpi.title}
             title={kpi.title}
             value={kpi.value}
-            icon={kpiConfig[i].icon}
-            accentColor={kpiConfig[i].accentColor}
+            icon={kpiConfig[i % kpiConfig.length].icon}
+            accentColor={kpiConfig[i % kpiConfig.length].accentColor}
             size={3}
           />
         ))}
@@ -210,10 +239,12 @@ export default function FinanceDashboard() {
         <DataTable
           title={"Recent Payments"}
           columns={paymentColumns}
-          rows={recentPaymentsData}
+          rows={data.recentPayments}
           searchable
           pageSize={5}
           size={12}
+          defaultSortKey="date"
+          defaultSortDir="desc"
           actions={[
             {
               icon: <Eye size={15} />,
@@ -237,10 +268,12 @@ export default function FinanceDashboard() {
         <DataTable
           title={"Recent Invoices"}
           columns={invoiceColumns}
-          rows={recentInvoicesData}
+          rows={data.recentInvoices}
           searchable
           pageSize={5}
           size={12}
+          defaultSortKey="date"
+          defaultSortDir="desc"
           actions={[
             {
               icon: <Eye size={15} />,
@@ -263,10 +296,12 @@ export default function FinanceDashboard() {
         <DataTable
           title={"Recent Activities"}
           columns={activityColumns}
-          rows={recentActivitiesData}
+          rows={data.recentActivities}
           searchable
           pageSize={5}
           size={12}
+          defaultSortKey="date"
+          defaultSortDir="desc"
         />
       </DashGrid>
 

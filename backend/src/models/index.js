@@ -188,6 +188,9 @@ const AUDIT_ACTIONS = [
   "TEAM_MEMBER_ADDED",
   "TEAM_MEMBER_REMOVED",
   "TEAM_DELETED",
+  "EXPENSE_CREATED",
+  "EXPENSE_UPDATED",
+  "EXPENSE_DELETED",
 ];
 const RESET_PURPOSE = ["PASSWORD_RESET", "EMAIL_VERIFY"];
 const WEBHOOK_SOURCE = ["RAZORPAY"];
@@ -1487,7 +1490,7 @@ const PaymentSchema = new Schema(
     // Payment link metadata
     paymentProvider: {
       type: String,
-      enum: ["RAZORPAY", "PAYTM", "OTHER"],
+      enum: ["RAZORPAY", "PAYTM", "OTHER", "OFFLINE"],
       default: "RAZORPAY",
     },
     paymentLinkId: { type: String, default: null },

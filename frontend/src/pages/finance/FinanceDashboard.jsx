@@ -89,6 +89,8 @@ export default function FinanceDashboard() {
     recentInvoices: [],
     recentActivities: [],
     kpiData: [],
+    expenseByCat: [],
+    paymentStatusData: [],
   });
 
   useEffect(() => {
@@ -155,7 +157,7 @@ export default function FinanceDashboard() {
         <GDoughnutChart
           title="Payment Status"
           subtitle="Successful · Pending · Failed · Partial"
-          data={paymentStatusData}
+          data={data.paymentStatusData?.length > 0 ? data.paymentStatusData : paymentStatusData}
           size={4}
         />
       </DashGrid>
@@ -175,7 +177,7 @@ export default function FinanceDashboard() {
         <GPieChart
           title="Expense by Category"
           subtitle="Category-wise expense distribution"
-          data={expenseCategoryData}
+          data={data.expenseByCat?.length > 0 ? data.expenseByCat : expenseCategoryData}
           size={5}
         />
       </DashGrid>

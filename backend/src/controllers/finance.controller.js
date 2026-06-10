@@ -173,6 +173,32 @@ exports.getDashboardData = catchAsync(async (req, res, next) => {
     { title: "Unpaid Invoices", value: String(totalInvoicesCount - paidInvoicesCount), sub: "Awaiting payment" },
   ];
 
+  // 5. Chart Data: Expense by Category
+  const expenseByCat = await Expense.aggregate([
+    { $match: { admin: mongoAdminId, isDeleted: false } },
+    { $group: { _id: "$category", value: { $sum: "$amount" } } },
+    { $project: { _id: 0, name: "$_id", value: 1 } },
+  ]);
+
+  // 6. Chart Data: Payment Status
+  const paymentStatusAgg = await Payment.aggregate([
+    { $match: { admin: mongoAdminId } },
+    { $group: { _id: "$status", value: { $sum: 1 } } },
+    { $project: { _id: 0, name: "$_id", value: 1 } },
+  ]);
+
+  const statusMap = {
+    SUCCESS: "Successful Payments",
+    PENDING: "Pending Payments",
+    FAILED: "Failed Payments",
+    PARTIAL: "Partial Payments",
+  };
+
+  const paymentStatusData = paymentStatusAgg.map(item => ({
+    name: statusMap[item.name] || item.name,
+    value: item.value
+  }));
+
   return res.status(200).json(
     new ApiResponse(
       200,
@@ -181,6 +207,8 @@ exports.getDashboardData = catchAsync(async (req, res, next) => {
         recentInvoices: formattedInvoices,
         recentActivities: sortedActivities,
         kpiData: kpiData,
+        expenseByCat,
+        paymentStatusData,
       },
       "Dashboard data fetched successfully"
     )

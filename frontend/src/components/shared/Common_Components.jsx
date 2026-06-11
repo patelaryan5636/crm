@@ -64,6 +64,8 @@ import {
   ChevronDown,
   ArrowUpDown,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import {
@@ -243,15 +245,20 @@ export const DataField = ({
   className = "",
   icon: Icon,
   rows = 3,
+  error,
 }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
   const sharedCls = `
-    w-full rounded-2xl border border-slate-200 bg-slate-50/90
+    w-full rounded-2xl border ${error ? "border-rose-300 bg-rose-50/20" : "border-slate-200 bg-slate-50/90"}
     text-[#2a465a] placeholder:text-slate-400 text-sm font-medium
-    focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40
+    focus:outline-none focus:ring-2 ${error ? "focus:ring-rose-500/20 focus:border-rose-400" : "focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40"}
     disabled:opacity-50 disabled:cursor-not-allowed
     transition duration-200
     ${className}
   `;
+
+  const inputType = type === "password" ? (showPassword ? "text" : "password") : type;
 
   return (
     <div className={`${colSpan(size)} flex flex-col gap-1.5`}>
@@ -284,19 +291,40 @@ export const DataField = ({
             className={`${sharedCls} px-4 py-3.5 resize-y`}
           />
         ) : (
-          <input
-            id={id}
-            type={type}
-            placeholder={placeholder}
-            autoFocus={autoFocus}
-            value={value}
-            onChange={onChange}
-            disabled={disabled}
-            readOnly={readOnly}
-            className={`${sharedCls} ${Icon ? "pl-12 pr-4" : "px-4"} py-3.5`}
-          />
+          <>
+            <input
+              id={id}
+              type={inputType}
+              placeholder={placeholder}
+              autoFocus={autoFocus}
+              value={value}
+              onChange={onChange}
+              disabled={disabled}
+              readOnly={readOnly}
+              className={`${sharedCls} ${Icon ? "pl-12" : "pl-4"} ${type === "password" ? "pr-12" : "pr-4"} py-3.5`}
+            />
+            {type === "password" && (
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute inset-y-0 right-4 flex items-center focus:outline-none text-slate-400 hover:text-[#2a465a] transition active:scale-90"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            )}
+          </>
         )}
       </div>
+      {error && (
+        <span className="text-xs font-semibold text-rose-500 mt-0.5 ml-1 animate-fade-in flex items-center gap-1">
+          <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          {error}
+        </span>
+      )}
     </div>
   );
 };

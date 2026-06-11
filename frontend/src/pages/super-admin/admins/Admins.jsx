@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import apiClient from "../../../services/apiClient";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   Grid,
   Heading,
@@ -79,7 +80,10 @@ function AdminsSkeleton() {
       {/* KPI Cards Skeletons */}
       <div className="grid grid-cols-12 gap-6">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="col-span-12 md:col-span-3 bg-white rounded-2xl border border-slate-100 p-6 flex justify-between items-center h-28">
+          <div
+            key={i}
+            className="col-span-12 md:col-span-3 bg-white rounded-2xl border border-slate-100 p-6 flex justify-between items-center h-28"
+          >
             <div className="space-y-3">
               <div className="h-3.5 w-24 bg-slate-200 rounded" />
               <div className="h-7 w-16 bg-slate-200 rounded" />
@@ -105,7 +109,10 @@ function AdminsSkeleton() {
             {[...Array(5)].map((_, rowIndex) => (
               <div key={rowIndex} className="h-16 flex items-center px-6 gap-4">
                 {[...Array(6)].map((_, colIndex) => (
-                  <div key={colIndex} className="h-3 bg-slate-200/70 rounded flex-1" />
+                  <div
+                    key={colIndex}
+                    className="h-3 bg-slate-200/70 rounded flex-1"
+                  />
                 ))}
               </div>
             ))}
@@ -121,6 +128,8 @@ export default function Admins() {
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [createError, setCreateError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const navigate = useNavigate();
 
   // ── Selected row states ──
@@ -229,9 +238,12 @@ export default function Admins() {
       }));
       setDeactivateReason("");
       closeModal("admin-toggle");
+      toast.success(
+        `Admin ${newStatus ? "activated" : "deactivated"} successfully`,
+      );
     } catch (err) {
       console.error(err);
-      alert(err.message || "Failed to toggle status");
+      toast.error(err.message || "Failed to toggle status");
     }
   };
 
@@ -259,6 +271,22 @@ export default function Admins() {
   };
 
   const handleCreateAdmin = async () => {
+    setCreateError("");
+    setFieldErrors({});
+
+    const errors = {};
+    if (!createForm.adminName.trim()) {
+      errors.adminName = "Admin Name is required";
+    }
+    if (!createForm.email.trim()) {
+      errors.email = "Email is required";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
     try {
       const payload = {
         name: createForm.adminName,
@@ -284,9 +312,19 @@ export default function Admins() {
         dataMax: "5000",
         renewal: "",
       });
+      toast.success("Admin created successfully");
     } catch (err) {
       console.error(err);
-      alert(err.message || "Failed to create admin");
+      const msg = err.message || "Failed to create admin";
+      if (msg.toLowerCase().includes("email")) {
+        setFieldErrors({ email: msg });
+      } else if (msg.toLowerCase().includes("name")) {
+        setFieldErrors({ adminName: msg });
+      } else if (msg.toLowerCase().includes("password")) {
+        setFieldErrors({ password: msg });
+      } else {
+        setCreateError(msg);
+      }
     }
   };
 
@@ -364,6 +402,8 @@ export default function Admins() {
                   dataMax: "5000",
                   renewal: "",
                 });
+                setCreateError("");
+                setFieldErrors({});
                 openModal("admin-create");
               }}
               className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-white font-bold text-sm shadow-lg bg-[#2a465a] hover:bg-gradient-to-r hover:from-[#1e3a52] hover:to-[#2b5a7a] hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-200 shiny-sweep"
@@ -405,9 +445,12 @@ export default function Admins() {
                   tooltip: "View",
                   variant: "ghost",
                   onClick: (row) => {
-                    navigate(`/super-admin/departments?id=${row.id || row._id}`, {
-                      state: { admin: row },
-                    });
+                    navigate(
+                      `/super-admin/departments?id=${row.id || row._id}`,
+                      {
+                        state: { admin: row },
+                      },
+                    );
                   },
                 },
                 {
@@ -694,6 +737,7 @@ export default function Admins() {
               value={createForm.adminName}
               onChange={handleCreateField("adminName")}
               placeholder="Full name"
+              error={fieldErrors.adminName}
             />
             <DataField
               label="Company Name"
@@ -711,11 +755,12 @@ export default function Admins() {
               value={createForm.email}
               onChange={handleCreateField("email")}
               placeholder="admin@company.com"
+              error={fieldErrors.email}
             />
             <DataField
               label="Phone"
               id="create-phone"
-              type="tel"
+              type="number"
               size={4}
               value={createForm.phone}
               onChange={handleCreateField("phone")}
@@ -729,6 +774,7 @@ export default function Admins() {
               value={createForm.password}
               onChange={handleCreateField("password")}
               placeholder="Password"
+              error={fieldErrors.password}
             />
             <SelectField
               label="Plan"
@@ -768,6 +814,24 @@ export default function Admins() {
               placeholder="5000"
             />
           </Grid>
+          {createError && (
+            <div className="text-sm font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-4 py-2.5 flex items-center gap-2 shadow-sm animate-fade-in">
+              <svg
+                className="w-4 h-4 flex-shrink-0 text-rose-500"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>{createError}</span>
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-1">
             <Button
               text="Cancel"

@@ -118,7 +118,7 @@ export default function ManagementTLAnnouncements() {
   };
 
   // Team = entire team (no specific target needed), Employee = individual picker
-  const needsTarget = form.audience === "Employee" || form.audience === "Executive";
+  const needsTarget = form.audience === "Team" || form.audience === "Employee" || form.audience === "Executive";
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
@@ -127,7 +127,7 @@ export default function ManagementTLAnnouncements() {
     if (!form.audience.trim()) errs.audience = "Audience is required.";
     if (!form.title.trim())    errs.title    = "Title is required.";
     if (!form.body.trim())     errs.body     = "Message body is required.";
-    if (needsTarget && !form.targetId) errs.targetId = "Please select an employee.";
+    if (needsTarget && !form.targetId) errs.targetId = `Please select a ${form.audience.toLowerCase()}.`;
     if (Object.keys(errs).length) { setFormErr(errs); return; }
 
     setSubmitting(true);
@@ -213,14 +213,14 @@ export default function ManagementTLAnnouncements() {
                 </div>
               ) : (
                 <>
-                  <SelectField label="Select Employee *" id="mgmt-tl-target" size={12}
-                    placeholder="Select employee..."
+                  <SelectField label={`Select ${form.audience} *`} id="mgmt-tl-target" size={12}
+                    placeholder={`Select ${form.audience.toLowerCase()}...`}
                     value={form.targetId}
                     onChange={(e) => setField("targetId", e.target.value)}>
                     {targets.map((t) => <Option key={t.id} value={t.id} label={t.label} />)}
                   </SelectField>
                   {targets.length === 0 && (
-                    <p className="text-xs text-slate-400 mt-1 px-1">No employees found in your team.</p>
+                    <p className="text-xs text-slate-400 mt-1 px-1">No {form.audience.toLowerCase()} found.</p>
                   )}
                 </>
               )}

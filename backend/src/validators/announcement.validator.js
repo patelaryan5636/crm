@@ -1,6 +1,6 @@
 const Joi = require('joi');
 
-const audienceOptions = ['All', 'Team', 'Team Leaders', 'Executive'];
+const audienceOptions = ['All', 'Team', 'Team Leaders', 'Executive', 'Employee'];
 const announcementTypes = ['Announcement', 'Warning', 'Appreciation'];
 
 const objectIdSchema = Joi.string().pattern(/^[0-9a-fA-F]{24}$/).messages({

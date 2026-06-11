@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const ApiResponse = require('../utils/apiResponse');
-const { Announcement, Team, Notification, User } = require('../models/index');
+const { Announcement, Team, ManagementTeam, Notification, User } = require('../models/index');
 
 const RECEIVER_ROLES = [
   'SALES_TL',
@@ -40,8 +40,8 @@ const RECEIVER_ROLES = [
 const buildVisibilityFilter = async (adminId, user) => {
   const now = new Date();
 
-  // Find all teams this user belongs to (as member or leader)
-  const userTeams = await Team.find({
+  // Find all sales and management teams this user belongs to (as member or leader)
+  const membershipFilter = {
     admin: adminId,
     isDeleted: false,
     isActive: true,
@@ -49,9 +49,14 @@ const buildVisibilityFilter = async (adminId, user) => {
       { leader: user._id },
       { 'members.user': user._id },
     ],
-  }).select('_id');
+  };
+  const [salesTeams, managementTeams] = await Promise.all([
+    Team.find(membershipFilter).select('_id').lean(),
+    ManagementTeam.find(membershipFilter).select('_id').lean(),
+  ]);
 
-  const teamIds = userTeams.map((t) => t._id);
+  const salesTeamIds = salesTeams.map((t) => t._id);
+  const managementTeamIds = managementTeams.map((t) => t._id);
 
   const visibilityOr = [
     // Broadcast to everyone in the tenant
@@ -60,8 +65,19 @@ const buildVisibilityFilter = async (adminId, user) => {
     { targetType: 'ROLE', targetRole: user.role },
     // Direct user
     { targetType: 'USER', targetUser: user._id },
+    // Department-wide
+    ...(user.department ? [{ targetType: 'DEPARTMENT', targetDepartment: user.department }] : []),
     // Team-based (user is in the team)
-    ...(teamIds.length > 0 ? [{ targetType: 'TEAM', targetTeam: { $in: teamIds } }] : []),
+    ...(salesTeamIds.length > 0 ? [{
+      targetType: 'TEAM',
+      targetTeam: { $in: salesTeamIds },
+      $or: [{ targetTeamModel: 'Team' }, { targetTeamModel: { $exists: false } }],
+    }] : []),
+    ...(managementTeamIds.length > 0 ? [{
+      targetType: 'TEAM',
+      targetTeam: { $in: managementTeamIds },
+      targetTeamModel: 'ManagementTeam',
+    }] : []),
   ];
 
   return {
@@ -140,8 +156,15 @@ exports.getMyAnnouncements = catchAsync(async (req, res, next) => {
     isRead:       readSet.has(ann._id.toString()),
   }));
 
-  // Unread count
-  const unreadCount = formatted.filter((a) => !a.isRead).length;
+  const visibleIds = await Announcement.find(filter).distinct('_id');
+  const readVisibleCount = await Notification.countDocuments({
+    admin: adminId,
+    user: user._id,
+    type: 'ANNOUNCEMENT',
+    refId: { $in: visibleIds },
+    isRead: true,
+  });
+  const unreadCount = Math.max(0, total - readVisibleCount);
 
   res.status(200).json(
     new ApiResponse(200, {
@@ -287,10 +310,13 @@ exports.getUnreadCount = catchAsync(async (req, res, next) => {
   const filter = await buildVisibilityFilter(adminId, user);
   const totalVisible = await Announcement.countDocuments(filter);
 
+  const visibleIds = await Announcement.find(filter).distinct('_id');
+
   const readCount = await Notification.countDocuments({
     admin:   adminId,
     user:    user._id,
     type:    'ANNOUNCEMENT',
+    refId:   { $in: visibleIds },
     isRead:  true,
   });
 

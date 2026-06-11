@@ -2055,6 +2055,11 @@ const AnnouncementSchema = new Schema(
       default: null,
     },
     targetTeam: { type: Schema.Types.ObjectId, ref: "Team", default: null },
+    targetTeamModel: {
+      type: String,
+      enum: ["Team", "ManagementTeam"],
+      default: "Team",
+    },
     targetRole: { type: String, enum: ROLES, default: null },
     targetUser: { type: Schema.Types.ObjectId, ref: "User", default: null },
   },

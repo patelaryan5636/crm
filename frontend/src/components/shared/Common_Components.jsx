@@ -2746,6 +2746,7 @@ export const GBarChart = ({
   size = 6,
   height = 260,
   filters,
+  yAxisWidth = 70,
 }) => (
   // dataKey is derived from the data so ChartCard only animates when data actually changes.
   <ChartCard title={title} subtitle={subtitle} size={size} height={height} filters={filters} dataKey={JSON.stringify(data)}>
@@ -2772,7 +2773,7 @@ export const GBarChart = ({
         tick={{ fill: T.textMuted, fontSize: 11 }}
         axisLine={false}
         tickLine={false}
-        width={70}
+        width={yAxisWidth}
       />
       <Tooltip {...tooltipStyle} />
       <Legend wrapperStyle={{ fontSize: 12, color: T.textSecondary }} />

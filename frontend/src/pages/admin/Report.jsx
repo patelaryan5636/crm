@@ -32,6 +32,7 @@ import {
   Grid,
   GAreaChart,
   GBarChart,
+  GPieChart,
   Button,
 } from "../../components/shared/Common_Components";
 import { userService } from "../../services/userService";
@@ -46,6 +47,12 @@ const revenueChartDataMonthly = [
   { name: "Apr", revenue: 1350000, expenses: 590000 },
   { name: "May", revenue: 1200000, expenses: 550000 },
   { name: "Jun", revenue: 1480000, expenses: 620000 },
+  { name: "Jul", revenue: 1550000, expenses: 660000 },
+  { name: "Aug", revenue: 1620000, expenses: 700000 },
+  { name: "Sep", revenue: 1750000, expenses: 740000 },
+  { name: "Oct", revenue: 1850000, expenses: 790000 },
+  { name: "Nov", revenue: 1980000, expenses: 840000 },
+  { name: "Dec", revenue: 2100000, expenses: 900000 },
 ];
 
 const revenueChartDataYearly = [
@@ -71,6 +78,12 @@ const leadConversionMonthly = [
   { name: "Apr", leads: 420, converted: 174, conversionRate: 41 },
   { name: "May", leads: 380, converted: 152, conversionRate: 40 },
   { name: "Jun", leads: 450, converted: 189, conversionRate: 42 },
+  { name: "Jul", leads: 470, converted: 197, conversionRate: 42 },
+  { name: "Aug", leads: 490, converted: 205, conversionRate: 42 },
+  { name: "Sep", leads: 520, converted: 228, conversionRate: 44 },
+  { name: "Oct", leads: 550, converted: 242, conversionRate: 44 },
+  { name: "Nov", leads: 580, converted: 261, conversionRate: 45 },
+  { name: "Dec", leads: 620, converted: 285, conversionRate: 46 },
 ];
 
 const leadConversionYearly = [
@@ -90,12 +103,11 @@ const leadConversionWeekly = [
 
 // Project Completion Data
 const projectCompletionMonthly = [
-  { name: "Jan", total: 12, completed: 4, inProgress: 6, delayed: 2 },
-  { name: "Feb", total: 14, completed: 6, inProgress: 6, delayed: 2 },
-  { name: "Mar", total: 16, completed: 8, inProgress: 6, delayed: 2 },
-  { name: "Apr", total: 18, completed: 10, inProgress: 6, delayed: 2 },
-  { name: "May", total: 16, completed: 9, inProgress: 5, delayed: 2 },
-  { name: "Jun", total: 20, completed: 12, inProgress: 6, delayed: 2 },
+  { name: "1", total: 12, completed: 4, inProgress: 6, delayed: 2 },
+  { name: "3", total: 16, completed: 8, inProgress: 6, delayed: 2 },
+  { name: "6", total: 20, completed: 12, inProgress: 6, delayed: 2 },
+  { name: "9", total: 26, completed: 18, inProgress: 6, delayed: 2 },
+  { name: "12", total: 32, completed: 24, inProgress: 6, delayed: 2 },
 ];
 
 const projectCompletionYearly = [
@@ -121,6 +133,12 @@ const paymentCollectionMonthly = [
   { name: "Apr", total: 3800000, collected: 3230000, pending: 570000 },
   { name: "May", total: 3400000, collected: 2890000, pending: 510000 },
   { name: "Jun", total: 4200000, collected: 3570000, pending: 630000 },
+  { name: "Jul", total: 4500000, collected: 3825000, pending: 675000 },
+  { name: "Aug", total: 4800000, collected: 4080000, pending: 720000 },
+  { name: "Sep", total: 5200000, collected: 4420000, pending: 780000 },
+  { name: "Oct", total: 5500000, collected: 4675000, pending: 825000 },
+  { name: "Nov", total: 6000000, collected: 5100000, pending: 900000 },
+  { name: "Dec", total: 6500000, collected: 5525000, pending: 975000 },
 ];
 
 const paymentCollectionYearly = [
@@ -136,12 +154,6 @@ const paymentCollectionWeekly = [
   { name: "Week 2", total: 1100000, collected: 935000, pending: 165000 },
   { name: "Week 3", total: 1150000, collected: 977500, pending: 172500 },
   { name: "Week 4", total: 1350000, collected: 1147500, pending: 202500 },
-];
-
-const deptPerformanceData = [
-  { name: "Sales", target: 90, achieved: 87 },
-  { name: "Management", target: 85, achieved: 80 },
-  { name: "Finance", target: 95, achieved: 92 },
 ];
 
 const deptRevenueMonthly = [
@@ -162,111 +174,36 @@ const deptRevenueWeekly = [
   { name: "Finance", value: 105000, color: "#22c55e" },
 ];
 
-const salesEmployees = [
-  {
-    name: "Priya Mehta",
-    role: "Manager",
-    totalLeads: 210,
-    activeLeads: 85,
-    dumpLeads: 30,
-    calls: 340,
-    conversion: "40%",
-    revenue: "₹18,50,000",
-    missedFollowups: 4,
-    status: "Active",
-    date: "2026-04-10",
-  },
-  {
-    name: "Arjun Kapoor",
-    role: "TL",
-    totalLeads: 160,
-    activeLeads: 70,
-    dumpLeads: 20,
-    calls: 280,
-    conversion: "43%",
-    revenue: "₹14,20,000",
-    missedFollowups: 2,
-    status: "Active",
-    date: "2026-04-11",
-  },
-  {
-    name: "Sneha Joshi",
-    role: "Executive",
-    totalLeads: 95,
-    activeLeads: 40,
-    dumpLeads: 15,
-    calls: 180,
-    conversion: "42%",
-    revenue: "₹8,80,000",
-    missedFollowups: 6,
-    status: "Active",
-    date: "2026-04-12",
-  },
-  {
-    name: "Vikram Nair",
-    role: "Executive",
-    totalLeads: 88,
-    activeLeads: 32,
-    dumpLeads: 22,
-    calls: 150,
-    conversion: "36%",
-    revenue: "₹7,40,000",
-    missedFollowups: 8,
-    status: "Inactive",
-    date: "2026-04-08",
-  },
-  {
-    name: "Neha Gupta",
-    role: "TL",
-    totalLeads: 145,
-    activeLeads: 60,
-    dumpLeads: 18,
-    calls: 260,
-    conversion: "41%",
-    revenue: "₹12,60,000",
-    missedFollowups: 3,
-    status: "Active",
-    date: "2026-04-14",
-  },
-  {
-    name: "Rohit Verma",
-    role: "Executive",
-    totalLeads: 102,
-    activeLeads: 45,
-    dumpLeads: 12,
-    calls: 195,
-    conversion: "44%",
-    revenue: "₹9,20,000",
-    missedFollowups: 1,
-    status: "Active",
-    date: "2026-04-13",
-  },
-  {
-    name: "Ananya Singh",
-    role: "Executive",
-    totalLeads: 78,
-    activeLeads: 28,
-    dumpLeads: 20,
-    calls: 140,
-    conversion: "35%",
-    revenue: "₹6,10,000",
-    missedFollowups: 9,
-    status: "Inactive",
-    date: "2026-04-07",
-  },
-  {
-    name: "Karan Bhatia",
-    role: "Manager",
-    totalLeads: 195,
-    activeLeads: 80,
-    dumpLeads: 25,
-    calls: 310,
-    conversion: "41%",
-    revenue: "₹16,90,000",
-    missedFollowups: 3,
-    status: "Active",
-    date: "2026-04-15",
-  },
+const salesLeadsPieWeekly = [
+  { name: "Interested", value: 150 },
+  { name: "Follow-ups", value: 110 },
+  { name: "Not Talk", value: 90 },
+  { name: "Not Interested", value: 58 },
+  { name: "Dump Leads", value: 32 },
+];
+
+const salesLeadsPieMonthly = [
+  { name: "Interested", value: 350 },
+  { name: "Follow-ups", value: 250 },
+  { name: "Not Talk", value: 200 },
+  { name: "Not Interested", value: 111 },
+  { name: "Dump Leads", value: 162 },
+];
+
+const salesLeadsPieYearly = [
+  { name: "Interested", value: 8000 },
+  { name: "Follow-ups", value: 6000 },
+  { name: "Not Talk", value: 4500 },
+  { name: "Not Interested", value: 2500 },
+  { name: "Dump Leads", value: 1500 },
+];
+
+const salesLeadsColors = [
+  "#3b82f6",
+  "#f59e0b",
+  "#94a3b8",
+  "#f43f5e",
+  "#ec4899",
 ];
 
 const projects = [
@@ -409,19 +346,6 @@ const financeRecords = [
 
 // ─── Column Definitions ─────────────────────────────────────────────────────
 
-const salesColumns = [
-  { key: "name", label: "Employee" },
-  { key: "role", label: "Role" },
-  { key: "totalLeads", label: "Total Leads" },
-  { key: "activeLeads", label: "Active Leads" },
-  { key: "calls", label: "Calls" },
-  { key: "missedFollowups", label: "Missed Followups" },
-  { key: "conversion", label: "Conversion %" },
-  { key: "revenue", label: "Revenue" },
-  { key: "status", label: "Status" },
-  { key: "date", label: "Joined" },
-];
-
 const projectColumns = [
   { key: "project", label: "Project Name" },
   { key: "client", label: "Client" },
@@ -481,7 +405,6 @@ export default function Report() {
   const [timeline, setTimeline] = useState("monthly"); // "yearly", "monthly", "weekly"
   const [departments, setDepartments] = useState(initialDepts);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedSale, setSelectedSale] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const [selectedFinance, setSelectedFinance] = useState(null);
 
@@ -541,6 +464,17 @@ export default function Report() {
     }
   };
 
+  const getSalesLeadsPieData = () => {
+    switch (timeline) {
+      case "yearly":
+        return salesLeadsPieYearly;
+      case "weekly":
+        return salesLeadsPieWeekly;
+      default:
+        return salesLeadsPieMonthly;
+    }
+  };
+
   const fetchDepartments = () => {
     // Replaced by mock state
   };
@@ -549,42 +483,101 @@ export default function Report() {
   const totalUsers = departments.reduce((sum, d) => sum + d.totalUsers, 0);
   const totalActive = departments.reduce((sum, d) => sum + d.activeUsers, 0);
 
+  const getGlobalStats = () => {
+    switch (timeline) {
+      case "weekly":
+        return { depts: 3, users: 12, active: 8 };
+      case "yearly":
+        return { depts: 3, users: 24, active: 20 };
+      default:
+        return { depts: totalDepts, users: totalUsers, active: totalActive };
+    }
+  };
+  const globalStats = getGlobalStats();
+
+  const currentLeadsData = getSalesLeadsPieData();
+  const totalLeadsCount = currentLeadsData.reduce(
+    (sum, item) => sum + item.value,
+    0,
+  );
+
+  const getLeadSegmentVal = (name) => {
+    const item = currentLeadsData.find((d) => d.name === name);
+    return item ? item.value : 0;
+  };
+
+  const getLeadSegmentPct = (name) => {
+    if (totalLeadsCount === 0) return "0.0%";
+    const val = getLeadSegmentVal(name);
+    return `${((val / totalLeadsCount) * 100).toFixed(1)}%`;
+  };
+
+  // ─── Project Calculations ──────────────────────────────────────────────────
+  const currentProjectsData = getProjectCompletionData();
+  const totalProjectsCount = currentProjectsData.reduce(
+    (sum, item) => sum + item.total,
+    0,
+  );
+  const completedProjectsCount = currentProjectsData.reduce(
+    (sum, item) => sum + item.completed,
+    0,
+  );
+  const inProgressProjectsCount = currentProjectsData.reduce(
+    (sum, item) => sum + item.inProgress,
+    0,
+  );
+  const delayedProjectsCount = currentProjectsData.reduce(
+    (sum, item) => sum + item.delayed,
+    0,
+  );
+
+  // ─── Finance Calculations ──────────────────────────────────────────────────
+  const currentRevenueData = getRevenueData();
+  const currentPaymentData = getPaymentCollectionData();
+
+  const totalRevenueVal = currentRevenueData.reduce(
+    (sum, item) => sum + item.revenue,
+    0,
+  );
+  const totalExpensesVal = currentRevenueData.reduce(
+    (sum, item) => sum + item.expenses,
+    0,
+  );
+  const totalPendingVal = currentPaymentData.reduce(
+    (sum, item) => sum + item.pending,
+    0,
+  );
+  const netProfitVal = totalRevenueVal - totalExpensesVal;
+
+  const formatCompactRupee = (val) => {
+    const isNegative = val < 0;
+    const absVal = Math.abs(val);
+    let formatted = "";
+    if (absVal >= 10000000) {
+      formatted = `₹${(absVal / 10000000).toFixed(2)}Cr`;
+    } else if (absVal >= 100000) {
+      formatted = `₹${(absVal / 100000).toFixed(2)}L`;
+    } else {
+      formatted = `₹${absVal.toLocaleString("en-IN")}`;
+    }
+    return isNegative ? `-${formatted}` : formatted;
+  };
+
+  const formatIndianRupee = (val) => {
+    const isNegative = val < 0;
+    const absVal = Math.abs(val);
+    const formatted = `₹${absVal.toLocaleString("en-IN")}`;
+    return isNegative ? `-${formatted}` : formatted;
+  };
+
   return (
     <div className="space-y-6">
       {/* ── Header with Timeline Filter ── */}
-      <div className="flex flex-col gap-5 mb-4">
-        <div className="w-full flex items-center justify-between">
-          <div>
-            <Heading
-              primaryText="Reports&nbsp; &"
-              secondaryText="Management"
-              size={12}
-            />
-          </div>
-          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-            <Calendar size={18} className="text-slate-500" />
-            <div className="flex gap-2">
-              {[
-                { label: "Weekly", value: "weekly" },
-                { label: "Monthly", value: "monthly" },
-                { label: "Yearly", value: "yearly" },
-              ].map(({ label, value }) => (
-                <button
-                  key={value}
-                  onClick={() => setTimeline(value)}
-                  className={`px-4 py-1.5 rounded-lg font-semibold text-sm transition-all ${
-                    timeline === value
-                      ? "bg-[#2a465a] text-white shadow-md"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      <Heading
+        primaryText="Reports&nbsp; &"
+        secondaryText="Management"
+        size={12}
+      />
 
       {/* ── Global KPI Cards ── */}
       <DashGrid cols={12} gap={4}>
@@ -617,6 +610,30 @@ export default function Report() {
           size={3}
         />
       </DashGrid>
+      <div className="flex justify-end">
+        <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+          <Calendar size={18} className="text-slate-500" />
+          <div className="flex gap-2">
+            {[
+              { label: "Weekly", value: "weekly" },
+              { label: "Monthly", value: "monthly" },
+              { label: "Yearly", value: "yearly" },
+            ].map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => setTimeline(value)}
+                className={`px-4 py-1.5 rounded-lg font-semibold text-sm transition-all ${
+                  timeline === value
+                    ? "bg-[#2a465a] text-white shadow-md"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* ── Charts Row 1 ── */}
       <DashGrid cols={12} gap={4}>
@@ -628,42 +645,29 @@ export default function Report() {
             { key: "revenue", label: "Revenue", color: "#3b82f6" },
             { key: "expenses", label: "Expenses", color: "#f43f5e" },
           ]}
-          size={6}
+          size={8}
           height={300}
         />
         <GBarChart
-          title="Department Performance"
-          subtitle="Target vs Achieved"
-          data={deptPerformanceData}
-          bars={[
-            { key: "target", label: "Target", color: "#94a3b8" },
-            { key: "achieved", label: "Achieved", color: "#2a465a" },
-          ]}
-          size={6}
+          title="Department Revenue Distribution"
+          subtitle={`${timeline.charAt(0).toUpperCase() + timeline.slice(1)} breakdown`}
+          data={getDeptRevenueData()}
+          bars={[{ key: "value", label: "Revenue", color: "#3b82f6" }]}
+          size={4}
           height={300}
         />
-          <GBarChart
-            title="Project Completion Status"
-            subtitle={`${timeline.charAt(0).toUpperCase() + timeline.slice(1)} breakdown`}
-            data={getProjectCompletionData()}
-            bars={[
-              { key: "completed", label: "Completed", color: "#22c55e" },
-              { key: "inProgress", label: "In Progress", color: "#3b82f6" },
-              { key: "delayed", label: "Delayed", color: "#f43f5e" },
-            ]}
-            size={6}
-            height={300}
-          />
-        <GAreaChart
-          title="Lead Generation & Conversion"
+        <GBarChart
+          title="Project Completion Status"
           subtitle={`${timeline.charAt(0).toUpperCase() + timeline.slice(1)} breakdown`}
-          data={getLeadConversionData()}
-          areas={[
-            { key: "leads", label: "Leads Generated", color: "#22c55e" },
-            { key: "converted", label: "Converted", color: "#3b82f6" },
+          data={getProjectCompletionData()}
+          bars={[
+            { key: "completed", label: "Completed", color: "#22c55e" },
+            { key: "inProgress", label: "In Progress", color: "#3b82f6" },
+            { key: "delayed", label: "Delayed", color: "#f43f5e" },
           ]}
           size={6}
           height={300}
+          yAxisWidth={30}
         />
         <GAreaChart
           title="Payment Collection Analysis"
@@ -676,17 +680,6 @@ export default function Report() {
           size={6}
           height={300}
         />
-        <GBarChart
-          title="Department Revenue Distribution"
-          subtitle={`${timeline.charAt(0).toUpperCase() + timeline.slice(1)} breakdown`}
-          data={getDeptRevenueData()}
-          bars={[
-            { key: "value", label: "Revenue", color: "#3b82f6" },
-          ]}
-          size={6}
-          height={300}
-        />
-        
       </DashGrid>
 
       {/* ══ SALES DEPARTMENT ══════════════════════════════════════════════════ */}
@@ -696,70 +689,54 @@ export default function Report() {
         </div>
         <EnhancedDashCard
           title="Total Leads"
-          value="1,073"
+          value={totalLeadsCount.toLocaleString("en-IN")}
           icon={<Target size={22} />}
           accentColor="#22c55e"
           size={3}
         />
         <EnhancedDashCard
-          title="Active Leads"
-          value="440"
+          title="Interested"
+          value={`${getLeadSegmentVal("Interested").toLocaleString("en-IN")} (${getLeadSegmentPct("Interested")})`}
           icon={<Activity size={22} />}
           accentColor="#3b82f6"
           size={3}
         />
         <EnhancedDashCard
-          title="Dump Leads"
-          value="162"
+          title="Not Interested"
+          value={`${getLeadSegmentVal("Not Interested").toLocaleString("en-IN")} (${getLeadSegmentPct("Not Interested")})`}
           icon={<AlertCircle size={22} />}
           accentColor="#f43f5e"
           size={3}
         />
         <EnhancedDashCard
-          title="Avg Conversion"
-          value="40.3%"
-          icon={<TrendingUp size={22} />}
-          accentColor="#8b5cf6"
+          title="Dump Data"
+          value={`${getLeadSegmentVal("Dump Leads").toLocaleString("en-IN")} (${getLeadSegmentPct("Dump Leads")})`}
+          icon={<Trash2 size={22} />}
+          accentColor="#ec4899"
           size={3}
         />
       </DashGrid>
-      <DataTable
-        exportable
-        exportFileName={"sales_employees"}
-        title="Sales Employees"
-        columns={salesColumns}
-        rows={salesEmployees}
-        actions={[
-          {
-            icon: <Eye size={15} />,
-            tooltip: "View",
-            variant: "ghost",
-            onClick: (row) => {
-              setSelectedSale(row);
-              openModal("sales-view-modal");
-            },
-          },
-        ]}
-        size={12}
-        pageSize={5}
-        searchable
-        date={false}
-        filters={[
-          {
-            title: "Role",
-            key: "role",
-            type: "toggle",
-            options: ["Manager", "TL", "Executive"],
-          },
-          {
-            title: "Status",
-            key: "status",
-            type: "toggle",
-            options: ["Active", "Inactive"],
-          },
-        ]}
-      />
-
+      <DashGrid cols={12} gap={4}>
+        <GPieChart
+          title="Sales Leads Segments"
+          subtitle="Interested vs Follow-ups vs Not Talk vs Not Interested vs Dump Leads"
+          data={getSalesLeadsPieData()}
+          colors={salesLeadsColors}
+          size={4}
+          height={300}
+        />
+        <GAreaChart
+          title="Lead Generation & Conversion"
+          subtitle={`${timeline.charAt(0).toUpperCase() + timeline.slice(1)} breakdown`}
+          data={getLeadConversionData()}
+          areas={[
+            { key: "leads", label: "Leads Generated", color: "#22c55e" },
+            { key: "converted", label: "Converted", color: "#3b82f6" },
+          ]}
+          size={8}
+          height={300}
+        />
+      </DashGrid>
       {/* ══ MANAGEMENT DEPARTMENT ═════════════════════════════════════════════ */}
       <DashGrid cols={12} gap={4}>
         <div className="col-span-12">
@@ -771,28 +748,28 @@ export default function Report() {
         </div>
         <EnhancedDashCard
           title="Total Projects"
-          value="6"
+          value={String(totalProjectsCount)}
           icon={<Briefcase size={22} />}
           accentColor="#f59e0b"
           size={3}
         />
         <EnhancedDashCard
           title="In Progress"
-          value="4"
+          value={String(inProgressProjectsCount)}
           icon={<Clock size={22} />}
           accentColor="#3b82f6"
           size={3}
         />
         <EnhancedDashCard
           title="Completed"
-          value="1"
+          value={String(completedProjectsCount)}
           icon={<CheckCircle size={22} />}
           accentColor="#22c55e"
           size={3}
         />
         <EnhancedDashCard
           title="Delayed"
-          value="1"
+          value={String(delayedProjectsCount)}
           icon={<AlertCircle size={22} />}
           accentColor="#f43f5e"
           size={3}
@@ -842,28 +819,28 @@ export default function Report() {
         </div>
         <EnhancedDashCard
           title="Total Revenue"
-          value="₹72,90,000"
+          value={formatIndianRupee(totalRevenueVal)}
           icon={<DollarSign size={22} />}
           accentColor="#22c55e"
           size={3}
         />
         <EnhancedDashCard
           title="Pending"
-          value="₹18,70,000"
+          value={formatIndianRupee(totalPendingVal)}
           icon={<Clock size={22} />}
           accentColor="#f59e0b"
           size={3}
         />
         <EnhancedDashCard
           title="Expenses"
-          value="₹31,50,000"
+          value={formatIndianRupee(totalExpensesVal)}
           icon={<CreditCard size={22} />}
           accentColor="#f43f5e"
           size={3}
         />
         <EnhancedDashCard
           title="Net Profit"
-          value="₹41,40,000"
+          value={formatIndianRupee(netProfitVal)}
           icon={<TrendingUp size={22} />}
           accentColor="#8b5cf6"
           size={3}
@@ -907,39 +884,6 @@ export default function Report() {
       />
 
       {/* ══ VIEW MODALS FOR TABLE ROWS ═════════════════════════════════════════ */}
-      <Modal id="sales-view-modal" title="Sales Employee Details">
-        {selectedSale && (
-          <div className="space-y-5">
-            <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-              <div className="w-14 h-14 rounded-2xl bg-[#2a465a] flex items-center justify-center text-white shadow-lg">
-                <Users size={24} />
-              </div>
-              <div>
-                <p className="text-lg font-black text-[#2a465a]">{selectedSale.name}</p>
-                <p className="text-sm font-bold text-slate-500">{selectedSale.role}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { label: "Total Leads", val: selectedSale.totalLeads },
-                { label: "Active Leads", val: selectedSale.activeLeads },
-                { label: "Calls", val: selectedSale.calls },
-                { label: "Missed Followups", val: selectedSale.missedFollowups },
-                { label: "Conversion", val: selectedSale.conversion },
-                { label: "Revenue", val: selectedSale.revenue },
-              ].map(({ label, val }) => (
-                <div key={label}>
-                  <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">{label}</span>
-                  <span className="text-[#2a465a] font-bold bg-white px-3 py-2.5 rounded-xl block border border-slate-100 text-sm">{val}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end pt-4 border-t border-slate-100">
-              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("sales-view-modal")} />
-            </div>
-          </div>
-        )}
-      </Modal>
 
       <Modal id="project-view-modal" title="Project Details">
         {selectedProject && (
@@ -949,8 +893,12 @@ export default function Report() {
                 <Briefcase size={24} />
               </div>
               <div>
-                <p className="text-lg font-black text-[#2a465a]">{selectedProject.project}</p>
-                <p className="text-sm font-bold text-slate-500">{selectedProject.client}</p>
+                <p className="text-lg font-black text-[#2a465a]">
+                  {selectedProject.project}
+                </p>
+                <p className="text-sm font-bold text-slate-500">
+                  {selectedProject.client}
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -963,13 +911,22 @@ export default function Report() {
                 { label: "Priority", val: selectedProject.priority },
               ].map(({ label, val }) => (
                 <div key={label}>
-                  <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">{label}</span>
-                  <span className="text-[#2a465a] font-bold bg-white px-3 py-2.5 rounded-xl block border border-slate-100 text-sm">{val}</span>
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">
+                    {label}
+                  </span>
+                  <span className="text-[#2a465a] font-bold bg-white px-3 py-2.5 rounded-xl block border border-slate-100 text-sm">
+                    {val}
+                  </span>
                 </div>
               ))}
             </div>
             <div className="flex justify-end pt-4 border-t border-slate-100">
-              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("project-view-modal")} />
+              <Button
+                text="Close"
+                variant="ghost"
+                size={3}
+                onClick={() => closeModal("project-view-modal")}
+              />
             </div>
           </div>
         )}
@@ -983,8 +940,12 @@ export default function Report() {
                 <CreditCard size={24} />
               </div>
               <div>
-                <p className="text-lg font-black text-[#2a465a]">{selectedFinance.invoiceId} • {selectedFinance.client}</p>
-                <p className="text-sm font-bold text-slate-500">{selectedFinance.project}</p>
+                <p className="text-lg font-black text-[#2a465a]">
+                  {selectedFinance.invoiceId} • {selectedFinance.client}
+                </p>
+                <p className="text-sm font-bold text-slate-500">
+                  {selectedFinance.project}
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -997,19 +958,26 @@ export default function Report() {
                 { label: "Date", val: selectedFinance.date },
               ].map(({ label, val }) => (
                 <div key={label}>
-                  <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">{label}</span>
-                  <span className="text-[#2a465a] font-bold bg-white px-3 py-2.5 rounded-xl block border border-slate-100 text-sm">{val}</span>
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">
+                    {label}
+                  </span>
+                  <span className="text-[#2a465a] font-bold bg-white px-3 py-2.5 rounded-xl block border border-slate-100 text-sm">
+                    {val}
+                  </span>
                 </div>
               ))}
             </div>
             <div className="flex justify-end pt-4 border-t border-slate-100">
-              <Button text="Close" variant="ghost" size={3} onClick={() => closeModal("finance-view-modal")} />
+              <Button
+                text="Close"
+                variant="ghost"
+                size={3}
+                onClick={() => closeModal("finance-view-modal")}
+              />
             </div>
           </div>
         )}
       </Modal>
-
-
     </div>
   );
 }

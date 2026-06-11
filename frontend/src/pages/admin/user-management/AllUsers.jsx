@@ -12,6 +12,7 @@ import {
   Mail,
   Pencil,
   Trash2,
+  Eye,
 } from "lucide-react";
 import {
   DashGrid,
@@ -28,15 +29,7 @@ import {
 } from "../../../components/shared/Common_Components";
 import { userService } from "../../../services/userService";
 
-
-
-const statusOptions = ["All", "Active", "Inactive"];
-const departmentOptions = ["All", "Sales", "Management", "Finance", "Administration"];
-
 export default function AllUsers() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [deptFilter, setDeptFilter] = useState("All");
   const [selectedUser, setSelectedUser] = useState(null);
   const [usersList, setUsersList] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -64,7 +57,7 @@ export default function AllUsers() {
     try {
       setIsLoading(true);
       const response = await userService.getUsers();
-      const mappedUsers = response.data.users.map(u => ({
+      const mappedUsers = response.data.users.map((u) => ({
         id: u._id,
         name: u.name,
         email: u.email,
@@ -72,9 +65,15 @@ export default function AllUsers() {
         role: u.role,
         department: u.department?.name || "N/A",
         status: u.status || "Active",
-        joinedDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "N/A",
+        joinedDate: u.createdAt
+          ? new Date(u.createdAt).toLocaleDateString()
+          : "N/A",
         lastLogin: "Never", // Placeholder or fetch if available
-        avatar: u.name.split(" ").map(n => n[0]).join("").toUpperCase()
+        avatar: u.name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+          .toUpperCase(),
       }));
       setUsersList(mappedUsers);
     } catch (error) {
@@ -88,7 +87,7 @@ export default function AllUsers() {
     try {
       const [deptRes, mapRes] = await Promise.all([
         userService.getDepartments(),
-        userService.getRoleDepartmentMap()
+        userService.getRoleDepartmentMap(),
       ]);
       setDepartments(deptRes.data.departments);
       setRoleDeptMap(mapRes.data.roleDepartmentMap);
@@ -105,13 +104,13 @@ export default function AllUsers() {
   const handleCreateUser = async () => {
     try {
       setIsCreating(true);
-      
+
       await userService.createUser({
         name: quickName,
         email: quickEmail,
         phone: quickMobile,
         role: quickRole,
-        departmentId: quickDept
+        departmentId: quickDept,
       });
       alert("User created successfully!");
       closeModal("create-user-quick-modal");
@@ -125,8 +124,11 @@ export default function AllUsers() {
   };
 
   const handleExport = () => {
-    const csvContent = "data:text/csv;charset=utf-8,Name,Email,Role,Status\n" + 
-      usersList.map(u => `${u.name},${u.email},${u.role},${u.status}`).join("\n");
+    const csvContent =
+      "data:text/csv;charset=utf-8,Name,Email,Role,Status\n" +
+      usersList
+        .map((u) => `${u.name},${u.email},${u.role},${u.status}`)
+        .join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -160,14 +162,14 @@ export default function AllUsers() {
           const firstError = preview.previewErrors?.[0]?.reason;
           alert(
             `No valid users found in ${file.name}.` +
-              (firstError ? `\nFirst issue: ${firstError}` : "")
+              (firstError ? `\nFirst issue: ${firstError}` : ""),
           );
           return;
         }
 
         const commitResponse = await userService.commitBulkUsers(
           preview.uploadId,
-          "VALID_ONLY"
+          "VALID_ONLY",
         );
         const result = commitResponse.data;
 
@@ -175,13 +177,15 @@ export default function AllUsers() {
 
         if (result.importedCount > 0 && result.failedCount > 0) {
           alert(
-            `Bulk upload partially completed.\nImported: ${result.importedCount}\nSkipped/failed: ${result.failedCount}`
+            `Bulk upload partially completed.\nImported: ${result.importedCount}\nSkipped/failed: ${result.failedCount}`,
           );
         } else if (result.importedCount > 0) {
-          alert(`Successfully imported ${result.importedCount} users from ${file.name}`);
+          alert(
+            `Successfully imported ${result.importedCount} users from ${file.name}`,
+          );
         } else {
           alert(
-            `Upload processed, but no users were inserted.\nStatus: ${result.status}\nFailed rows: ${result.failedCount}`
+            `Upload processed, but no users were inserted.\nStatus: ${result.status}\nFailed rows: ${result.failedCount}`,
           );
         }
       } catch (error) {
@@ -197,24 +201,6 @@ export default function AllUsers() {
   const totalUsers = usersList.length;
   const activeUsers = usersList.filter((u) => u.status === "Active").length;
   const inactiveUsers = usersList.filter((u) => u.status === "Inactive").length;
-  const salesTeam = usersList.filter((u) => u.department.toUpperCase() === "SALES").length;
-
-  // ── Filter Logic ──
-  const filteredUsers = useMemo(() => {
-    return usersList.filter((user) => {
-      const q = searchQuery.toLowerCase();
-      const matchSearch =
-        !q ||
-        user.name.toLowerCase().includes(q) ||
-        user.email.toLowerCase().includes(q) ||
-        user.mobile.includes(q);
-      const matchStatus =
-        statusFilter === "All" || user.status === statusFilter;
-      const matchDept =
-        deptFilter === "All" || user.department === deptFilter;
-      return matchSearch && matchStatus && matchDept;
-    });
-  }, [usersList, searchQuery, statusFilter, deptFilter]);
 
   // ── Table columns ──
   const columns = [
@@ -228,21 +214,31 @@ export default function AllUsers() {
   ];
 
   // ── Table rows (formatted for DataTable) ──
-  const rows = filteredUsers;
+  const rows = usersList;
 
   const availableRoles = useMemo(() => {
     if (!quickDept || !roleDeptMap) return [];
-    const dept = departments.find(d => d._id === quickDept);
+    const dept = departments.find((d) => d._id === quickDept);
     if (!dept) return [];
     const roles = roleDeptMap[dept.name] || [];
     // Explicitly filter out admin and super admin roles as requested
-    return roles.filter(role => role !== 'ADMIN' && role !== 'SUPER_ADMIN');
+    return roles.filter((role) => role !== "ADMIN" && role !== "SUPER_ADMIN");
   }, [quickDept, roleDeptMap, departments]);
 
   // ── Actions ──
   const actions = [
     {
-      label: "Edit",
+      icon: <Eye size={15} />,
+      tooltip: "View Details",
+      variant: "ghost",
+      onClick: (row) => {
+        setSelectedUser(row);
+        openModal("view-user-modal");
+      },
+    },
+    {
+      icon: <Pencil size={15} />,
+      tooltip: "Edit",
       variant: "primary",
       onClick: (row) => {
         setSelectedUser(row);
@@ -250,7 +246,8 @@ export default function AllUsers() {
       },
     },
     {
-      label: "Delete",
+      icon: <Trash2 size={15} />,
+      tooltip: "Delete",
       variant: "danger",
       onClick: (row) => {
         setSelectedUser(row);
@@ -297,8 +294,7 @@ export default function AllUsers() {
             onClick={() => openModal("create-user-quick-modal")}
             className="flex items-center gap-2 rounded-xl bg-[#2a465a] px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-[#2a465a]/20 transition hover:bg-gradient-to-r hover:from-[#1e3a52] hover:to-[#2b5a7a] hover:shadow-xl hover:-translate-y-0.5 active:scale-95 shiny-sweep"
           >
-            <UserPlus size={14} />
-            + Create User
+            <UserPlus size={14} />+ Create User
           </button>
         </div>
       </div>
@@ -310,96 +306,104 @@ export default function AllUsers() {
           value={String(totalUsers)}
           icon={<Users size={22} />}
           accentColor="#38bdf8"
-          size={3}
+          size={4}
         />
         <EnhancedDashCard
           title="Active Users"
           value={String(activeUsers)}
           icon={<UserCheck size={22} />}
           accentColor="#22c55e"
-          size={3}
+          size={4}
         />
         <EnhancedDashCard
           title="Inactive Users"
           value={String(inactiveUsers)}
           icon={<UserX size={22} />}
           accentColor="#f43f5e"
-          size={3}
-        />
-        <EnhancedDashCard
-          title="Sales Team"
-          value={String(salesTeam)}
-          icon={<Target size={22} />}
-          accentColor="#7AAACE"
-          size={3}
+          size={4}
         />
       </DashGrid>
-
-      {/* ── Filters ── */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200/60 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap gap-4">
-          {/* Status pills */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
-              Status:
-            </span>
-            {statusOptions.map((s) => (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all duration-200 ${
-                  statusFilter === s
-                    ? "bg-[#2a465a] text-white shadow-md"
-                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-
-          {/* Department pills */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
-              Dept:
-            </span>
-            <button
-              onClick={() => setDeptFilter("All")}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all duration-200 ${
-                deptFilter === "All"
-                  ? "bg-[#2a465a] text-white shadow-md"
-                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-              }`}
-            >
-              All
-            </button>
-            {departments.map((d) => (
-              <button
-                key={d._id}
-                onClick={() => setDeptFilter(d.name)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all duration-200 ${
-                  deptFilter === d.name
-                    ? "bg-[#2a465a] text-white shadow-md"
-                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                }`}
-              >
-                {d.name.charAt(0) + d.name.slice(1).toLowerCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
 
       {/* ── Data Table ── */}
       <DataTable
         title="User Records"
+        exportable
+        exportFileName="user_records"
         columns={columns}
         rows={rows}
         actions={actions}
         pageSize={5}
         searchable
         size={12}
+        userProfile="name"
+        filters={[
+          {
+            title: "Status",
+            type: "toggle",
+            key: "status",
+            options: ["Active", "Inactive"],
+          },
+          {
+            title: "Department",
+            type: "toggle",
+            key: "department",
+            options: ["Sales", "Management", "Finance", "Administration"],
+            fn: (row, selected) => {
+              const lowerSelected = selected.map((s) => s.toLowerCase());
+              const deptVal = String(row.department ?? "").toLowerCase();
+              return lowerSelected.includes(deptVal);
+            },
+          },
+        ]}
       />
+
+      {/* ── View User Modal ── */}
+      <Modal id="view-user-modal" title="User Details">
+        {selectedUser && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 pb-5 border-b border-slate-100">
+              <div className="w-14 h-14 rounded-2xl bg-[#2a465a] flex items-center justify-center text-white font-black text-xl shadow-lg">
+                {selectedUser.avatar}
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-[#2a465a]">
+                  {selectedUser.name}
+                </h3>
+                <p className="text-sm font-bold text-slate-500">
+                  {selectedUser.email}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: "Mobile", val: selectedUser.mobile },
+                { label: "Role", val: selectedUser.role },
+                { label: "Department", val: selectedUser.department },
+                { label: "Status", val: selectedUser.status },
+                { label: "Joined Date", val: selectedUser.joinedDate },
+                { label: "Last Login", val: selectedUser.lastLogin },
+              ].map(({ label, val }) => (
+                <div key={label}>
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">
+                    {label}
+                  </span>
+                  <span className="text-[#2a465a] font-bold bg-slate-50 px-3 py-2.5 rounded-xl block border border-slate-100 text-sm">
+                    {val}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="pt-4 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => closeModal("view-user-modal")}
+                className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* ── Delete Confirmation Modal ── */}
       <Modal id="delete-confirm-modal" title="Confirm Delete">
@@ -487,56 +491,102 @@ export default function AllUsers() {
       </Modal>
 
       {/* ── Create User Modal ── */}
-      <Modal id="create-user-quick-modal" title="Create New User" onClose={resetCreateForm}>
+      <Modal
+        id="create-user-quick-modal"
+        title="Create New User"
+        onClose={resetCreateForm}
+      >
         <div className="space-y-5">
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex items-start gap-4">
-             <div className="w-10 h-10 rounded-full bg-[#2a465a]/10 flex items-center justify-center text-[#2a465a] mt-0.5">
-               <UserPlus size={18} />
-             </div>
-             <div>
-               <h4 className="text-sm font-bold text-[#2a465a]">User Profile Details</h4>
-               <p className="text-xs text-slate-500 mt-0.5">Enter the basic details and assign a role to the new team member.</p>
-             </div>
+            <div className="w-10 h-10 rounded-full bg-[#2a465a]/10 flex items-center justify-center text-[#2a465a] mt-0.5">
+              <UserPlus size={18} />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-[#2a465a]">
+                User Profile Details
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Enter the basic details and assign a role to the new team
+                member.
+              </p>
+            </div>
           </div>
           <Grid cols={12} gap={4}>
-            <DataField label="Full Name" id="quick-name" size={12} placeholder="e.g. Rahul Sharma" value={quickName} onChange={e => setQuickName(e.target.value)} />
-            <DataField label="Email Address" id="quick-email" type="email" size={6} placeholder="user@company.com" value={quickEmail} onChange={e => setQuickEmail(e.target.value)} />
-            <DataField label="Mobile Number" id="quick-mobile" type="tel" size={6} placeholder="+91 9876543210" value={quickMobile} onChange={e => setQuickMobile(e.target.value)} />
-            <DataField 
-              label="Auto-generated Password" 
-              id="quick-password" 
-              size={12} 
-              value={quickMobile.length >= 5 ? `Email@${quickMobile.slice(-5)}` : "Email@*****"} 
-              readOnly 
+            <DataField
+              label="Full Name"
+              id="quick-name"
+              size={12}
+              placeholder="e.g. Rahul Sharma"
+              value={quickName}
+              onChange={(e) => setQuickName(e.target.value)}
+            />
+            <DataField
+              label="Email Address"
+              id="quick-email"
+              type="email"
+              size={6}
+              placeholder="user@company.com"
+              value={quickEmail}
+              onChange={(e) => setQuickEmail(e.target.value)}
+            />
+            <DataField
+              label="Mobile Number"
+              id="quick-mobile"
+              type="tel"
+              size={6}
+              placeholder="+91 9876543210"
+              value={quickMobile}
+              onChange={(e) => setQuickMobile(e.target.value)}
+            />
+            <DataField
+              label="Auto-generated Password"
+              id="quick-password"
+              size={12}
+              value={
+                quickMobile.length >= 5
+                  ? `Email@${quickMobile.slice(-5)}`
+                  : "Email@*****"
+              }
+              readOnly
               className="bg-slate-50 border-slate-200 text-slate-500 font-mono"
             />
-            
-            <SelectField 
-              label="Role Selection" 
-              id="quick-role" 
-              size={6} 
-              placeholder={quickDept ? "Assign a role" : "Select department first"} 
-              value={quickRole} 
-              onChange={e => setQuickRole(e.target.value)}
+
+            <SelectField
+              label="Role Selection"
+              id="quick-role"
+              size={6}
+              placeholder={
+                quickDept ? "Assign a role" : "Select department first"
+              }
+              value={quickRole}
+              onChange={(e) => setQuickRole(e.target.value)}
               disabled={!quickDept}
             >
-              {availableRoles.map(role => (
-                <Option key={role} value={role} label={role.replace(/_/g, ' ').split(' ').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')} />
+              {availableRoles.map((role) => (
+                <Option
+                  key={role}
+                  value={role}
+                  label={role
+                    .replace(/_/g, " ")
+                    .split(" ")
+                    .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+                    .join(" ")}
+                />
               ))}
             </SelectField>
 
-            <SelectField 
-              label="Department" 
-              id="quick-dept" 
-              size={6} 
-              placeholder="Select department" 
-              value={quickDept} 
-              onChange={e => {
+            <SelectField
+              label="Department"
+              id="quick-dept"
+              size={6}
+              placeholder="Select department"
+              value={quickDept}
+              onChange={(e) => {
                 setQuickDept(e.target.value);
                 setQuickRole(""); // Reset role when department changes
               }}
             >
-              {departments.map(d => (
+              {departments.map((d) => (
                 <Option key={d._id} value={d._id} label={d.displayName} />
               ))}
             </SelectField>

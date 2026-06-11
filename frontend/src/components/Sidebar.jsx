@@ -113,6 +113,7 @@ const MENUS = {
           },
           { name: "Projects", path: "/admin/projects", icon: FolderOpen },
           { name: "HRM", path: "/admin/hrm", icon: UserCheck },
+          { name: "Announcements", path: "/admin/announcements", icon: Megaphone },
         ],
       },
       {

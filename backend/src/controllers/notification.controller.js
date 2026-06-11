@@ -63,6 +63,7 @@ const buildVisibilityFilter = async (adminId, user) => {
     { targetType: 'ALL' },
     // Role-based
     { targetType: 'ROLE', targetRole: user.role },
+    { targetType: 'ROLE', targetRoles: user.role },
     // Direct user
     { targetType: 'USER', targetUser: user._id },
     // Department-wide

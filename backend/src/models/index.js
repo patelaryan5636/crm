@@ -2061,6 +2061,7 @@ const AnnouncementSchema = new Schema(
       default: "Team",
     },
     targetRole: { type: String, enum: ROLES, default: null },
+    targetRoles: [{ type: String, enum: ROLES }],
     targetUser: { type: Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true },

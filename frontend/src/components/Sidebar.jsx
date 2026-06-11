@@ -581,6 +581,11 @@ const MENUS = {
             path: "/management-team-leader/notifications",
             icon: Bell,
           },
+          {
+            name: "Announcements",
+            path: "/management-team-leader/announcements",
+            icon: MessageSquare,
+          },
         ],
       },
       {

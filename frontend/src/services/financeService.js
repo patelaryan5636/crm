@@ -1,5 +1,9 @@
 import apiClient from "./apiClient";
 
+export const getDashboardData = () => {
+  return apiClient.get("/finance/dashboard");
+};
+
 export const getExpenses = () => {
   return apiClient.get("/finance/expenses");
 };

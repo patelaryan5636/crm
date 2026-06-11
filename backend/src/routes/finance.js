@@ -4,6 +4,7 @@ const router = express.Router();
 const financeController = require("../controllers/finance.controller");
 const { requireUser } = require("../middleware/auth");
 //these routes are for finanace expense sections
+router.get("/dashboard", requireUser, financeController.getDashboardData);
 router.get("/expenses", requireUser, financeController.getExpenses);
 router.get("/expenses/chart", requireUser, financeController.getExpenseChart);
 router.post("/expenses", requireUser, financeController.createExpense);

@@ -64,6 +64,11 @@ const MENUS = {
             path: "/super-admin/announcements",
             icon: Megaphone,
           },
+          {
+            name: "Queries",
+            path: "/super-admin/queries",
+            icon: MessageSquare,
+          },
         ],
       },
       {

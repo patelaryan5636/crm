@@ -1890,7 +1890,7 @@ export const DataTable = ({
                               );
                             }
 
-                            return rendered;
+                            return text;
                           })()}
                         </td>
                       );

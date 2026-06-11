@@ -149,7 +149,6 @@ function NotificationBell({ userRole }) {
     'MANAGEMENT_TL',
     'MANAGEMENT_EMPLOYEE',
     'ADMIN',
-    'SUPER_ADMIN',
     'SALES_TEAM_LEADER',
     'FINANCE',
     'MANAGEMENT_TEAM_LEADER',

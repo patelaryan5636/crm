@@ -2034,6 +2034,8 @@ LeaveSchema.index({ admin: 1, fromDate: 1, status: 1 });
 const AnnouncementSchema = new Schema(
   {
     admin: { type: Schema.Types.ObjectId, ref: "Admin", required: true },
+    platformAnnouncementKey: { type: String, default: null, index: true },
+    platformTargetAdmin: { type: Schema.Types.ObjectId, ref: "Admin", default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     createdByAdmin: { type: Boolean, default: false },
     title: { type: String, required: true, trim: true },

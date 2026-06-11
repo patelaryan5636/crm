@@ -303,25 +303,54 @@ exports.verifyPayment = catchAsync(async (req, res, next) => {
 
 exports.markFailed = catchAsync(async (req, res, next) => {
   if (!requireFinanceRole(req, next)) return;
-  const { ProspectForm, Payment } = require('../models');
+  const { ProspectForm, Payment, AuditLog } = require('../models');
   const { prospectId } = req.params;
   const { note } = req.body || {};
 
   const prospect = await ProspectForm.findOne({ _id: prospectId, admin: req.admin._id });
   if (!prospect) return next(new AppError('Prospect not found', 404));
 
-  const payment = await Payment.findOne({ prospectForm: prospect._id }).sort({ createdAt: -1 });
-  if (!payment) return next(new AppError('Payment record not found', 404));
+  let payment = await Payment.findOne({ prospectForm: prospect._id }).sort({ createdAt: -1 });
+  
+  const failureReason = note || 'Cancelled by finance manager';
 
-  payment.status = 'FAILED';
-  payment.failureReason = note || 'Marked failed from finance UI';
-  await payment.save();
+  if (!payment) {
+    // If no payment record exists yet, create one marked as FAILED
+    payment = await Payment.create({
+      admin: req.admin._id,
+      prospectForm: prospect._id,
+      client: prospect.client?._id || undefined,
+      amount: prospect.finalAmount || prospect.totalAmount || 0,
+      paymentType: prospect.paymentType || 'FULL',
+      status: 'FAILED',
+      paymentProvider: 'RAZORPAY',
+      failureReason,
+    });
+  } else {
+    payment.status = 'FAILED';
+    payment.failureReason = failureReason;
+    if (['PENDING', 'SENT'].includes(payment.paymentLinkStatus)) {
+      payment.paymentLinkStatus = 'EXPIRED';
+    }
+    await payment.save();
+  }
 
   prospect.paymentStatus = 'FAILED';
   prospect.paymentFailedAt = new Date();
-  prospect.paymentFailureReason = note || prospect.paymentFailureReason || 'Marked failed by finance';
+  prospect.paymentFailureReason = failureReason;
   prospect.updatedBy = req.user?._id || null;
   await prospect.save();
+
+  // Add audit log
+  await AuditLog.create({
+    admin: req.admin._id,
+    performedBy: req.user._id,
+    performerType: 'USER',
+    action: 'PAYMENT_FAILED',
+    targetModel: 'Payment',
+    targetId: payment._id,
+    note: `Payment marked failed for ${prospect.contactPerson || 'Client'}. ${failureReason}`,
+  });
 
   res.status(200).json(new ApiResponse(200, { payment: mapPaymentForFrontend(payment.toObject(), prospect) }, 'Payment marked failed'));
 });

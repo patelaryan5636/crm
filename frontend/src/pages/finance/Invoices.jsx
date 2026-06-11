@@ -276,6 +276,8 @@ export default function Invoices() {
           columns={columns}
           rows={invoices}
           pageSize={10}
+          defaultSortKey="date"
+          defaultSortDir="desc"
           actions={[
             {
               icon: <Eye size={15} />,

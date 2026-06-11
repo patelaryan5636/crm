@@ -115,15 +115,19 @@ export default function Payments() {
     }
   };
   const markFailed = async (row) => {
+    const tid = toast.loading('Marking as failed...');
     try {
       await apiClient.put(`/finance/payments/${row.prospectId}/failed`, {
-        note: 'Marked failed from finance payment page',
+        note: 'Cancelled manually from Payments management',
       });
+      toast.success('Payment marked failed', { id: tid });
       await loadPayments();
     } catch (failError) {
-      setError(failError?.message || 'Failed to mark payment as failed');
+      console.error(failError);
+      toast.error(failError?.response?.data?.message || failError?.message || 'Failed to update payment', { id: tid });
     }
   };
+
   const recreateLink = async (row) => {
     try {
       toast.loading('Creating new payment link…', { id: 'recreate' });
@@ -144,6 +148,7 @@ export default function Payments() {
       setError(err?.response?.data?.message || err?.message || 'Failed to recreate link');
     }
   };
+
   const saveVerify = async () => {
     try {
       await apiClient.put(`/finance/payments/${selected.prospectId}/verify`, {
@@ -197,12 +202,23 @@ export default function Payments() {
         columns={columns}
         rows={payments}
         pageSize={10}
+        defaultSortKey="date"
+        defaultSortDir="desc"
         actions={[
           { icon: <Link2 size={15}/>,        label: paymentLinkActionLabel, tooltip: paymentLinkActionTooltip, variant: "primary", onClick: sendRazorpayLink, show: (row) => row.status !== "Successful" },
           { icon: <RefreshCw size={15}/>,    tooltip: "Recreate Link (fix stale ngrok URL)", variant: "ghost", onClick: recreateLink, show: (row) => row.status !== "Successful" },
           { icon: <Eye size={15}/>,        tooltip: "View Details",  variant: "ghost",   onClick: openView   },
-          { icon: <ShieldCheck size={15}/>, tooltip: "Verify / Update", variant: "success", onClick: openVerify },
-          { icon: <Ban size={15}/>,         tooltip: "Mark Failed",   variant: "danger",  onClick: markFailed },
+          { 
+            icon: <Ban size={15}/>, 
+            tooltip: "Mark Failed", 
+            variant: "danger", 
+            onClick: (row) => {
+              if (window.confirm(`Are you sure you want to mark the payment for ${row.client} as failed?`)) {
+                markFailed(row);
+              }
+            }, 
+            show: (row) => row.status === "Pending" 
+          },
         ]}
       />
 

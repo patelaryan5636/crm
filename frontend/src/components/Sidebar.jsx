@@ -299,6 +299,16 @@ const MENUS = {
         ],
       },
       {
+        label: "Performance",
+        items: [
+          {
+            name: "My Target",
+            path: "/sales-executive/my-target",
+            icon: Target,
+          },
+        ],
+      },
+      {
         label: "Personal",
         items: [
           {

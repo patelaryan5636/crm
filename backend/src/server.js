@@ -54,6 +54,7 @@ const logsRoutes = require('./routes/logs');
 const adminRoutes = require('./routes/admin');
 const apiConfigRoutes = require('./routes/apiConfig');
 const financeRoutes = require('./routes/finance');
+const targetsRoutes = require('./routes/targets');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -203,6 +204,8 @@ try {
   console.log('✓ /api/admin routes registered');
 	app.use('/api/finance', financeRoutes);
 	console.log('✓ /api/finance routes registered');
+	app.use('/api/targets', targetsRoutes);
+	console.log('✓ /api/targets routes registered');
 } catch (error) {
 	console.error('❌ Error registering routes:', error);
 }

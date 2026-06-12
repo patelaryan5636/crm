@@ -4,6 +4,10 @@ export const getDashboardData = () => {
   return apiClient.get("/finance/dashboard");
 };
 
+export const getQuickInsights = () => {
+  return apiClient.get("/finance/dashboard/quick-insights");
+};
+
 export const getExpenses = () => {
   return apiClient.get("/finance/expenses");
 };

@@ -419,6 +419,7 @@ export const Button = ({
   type = "button",
   disabled = false,
   loading = false,
+  icon = null,
 }) => {
   const variantCls = {
     primary:
@@ -447,6 +448,7 @@ export const Button = ({
           href={link}
           className={`${cls.trim().replace(/\n/g, " ")} inline-flex justify-center`}
         >
+          {icon && <span className="flex-shrink-0">{icon}</span>}
           {text}
         </a>
       </div>
@@ -464,11 +466,13 @@ export const Button = ({
         disabled={disabled || loading} 
         className={cls}
       >
-        {loading && (
+        {loading ? (
           <svg className="animate-spin h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
+        ) : (
+          icon && <span className="flex-shrink-0">{icon}</span>
         )}
         {text}
       </button>
@@ -2093,6 +2097,7 @@ export const Heading = ({
   size = 12,
   fontSize = "2xl", // "sm" | "md" | "lg" | "xl" | "2xl" (default) | "3xl" | "4xl"
   showAnimations = true, // Added to toggle floating squares and wave drops
+  action = null,
 }) => {
   const fontSizeMap = {
     sm: "text-sm",
@@ -2126,12 +2131,18 @@ export const Heading = ({
           )}
         </div>
 
-        {/* Optional Top-Right Floating Squares */}
-        {showAnimations && (
-          <div className="relative w-10 h-10 mr-2">
-            <div className="absolute inset-0 border-2 border-white/20 rounded-[8px] backdrop-blur-sm" style={{ animation: "squareOrbit1 6s linear infinite" }} />
-            <div className="absolute inset-1 border-2 border-[#38bdf8]/40 rounded-[6px]" style={{ animation: "squareOrbit2 8s linear infinite" }} />
+        {/* Action or Optional Top-Right Floating Squares */}
+        {action ? (
+          <div className="relative z-20 flex items-center justify-end min-w-[150px]">
+            {action}
           </div>
+        ) : (
+          showAnimations && (
+            <div className="relative w-10 h-10 mr-2">
+              <div className="absolute inset-0 border-2 border-white/20 rounded-[8px] backdrop-blur-sm" style={{ animation: "squareOrbit1 6s linear infinite" }} />
+              <div className="absolute inset-1 border-2 border-[#38bdf8]/40 rounded-[6px]" style={{ animation: "squareOrbit2 8s linear infinite" }} />
+            </div>
+          )
         )}
       </h2>
       {!showAnimations && <hr className="mt-3 border-slate-200/60 relative z-10" />}

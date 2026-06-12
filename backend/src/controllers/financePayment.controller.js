@@ -52,7 +52,14 @@ exports.listPayments = catchAsync(async (req, res, next) => {
   if (!requireFinanceRole(req, next)) return;
   const { ProspectForm, Payment } = require('../models');
 
-  const q = { admin: req.admin._id, finalAmount: { $gt: 0 } };
+  const q = {
+    admin: req.admin._id,
+    $or: [
+      { finalAmount: { $gt: 0 } },
+      { status: 'SENT_TO_FINANCE' },
+      { stage: 'Interested' },
+    ],
+  };
   const rows = await ProspectForm.find(q).populate('client', 'name email mobile companyName').lean();
 
   // For each prospect, find latest payment if any

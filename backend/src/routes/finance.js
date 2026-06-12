@@ -11,4 +11,6 @@ router.post("/expenses", requireUser, financeController.createExpense);
 router.put("/expenses/:id", requireUser, financeController.updateExpense);
 router.delete("/expenses/:id", requireUser, financeController.deleteExpense);
 
+router.get("/dashboard/quick-insights", requireUser, financeController.getQuickInsights);
+
 module.exports = router;

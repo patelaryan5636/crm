@@ -361,18 +361,28 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
 
 /**
  * GET /api/finance/prospects/active-clients
- * Returns all active clients for dropdown in frontend.
+ * Returns all active clients who have made at least one successful payment.
  */
 exports.getActiveClients = catchAsync(async (req, res, next) => {
-  const { Client } = require('../models');
+  const { Client, Payment } = require('../models');
 
   const allowed = ["FINANCE_MANAGER", "FINANCE_EXECUTIVE"];
   if (!req.user || !allowed.includes(req.user.role)) {
     return next(new AppError('Only Finance users can access active clients', 403));
   }
 
+  // Get distinct client IDs that have at least one successful payment
+  const paidClientIds = await Payment.distinct('client', {
+    admin: req.admin._id,
+    status: 'SUCCESS',
+    client: { $ne: null }
+  });
+
   const clients = await Client.findActive(
-    { admin: req.admin._id },
+    { 
+      admin: req.admin._id,
+      _id: { $in: paidClientIds }
+    },
     'name email mobile companyName',
     { sort: { name: 1 } }
   );

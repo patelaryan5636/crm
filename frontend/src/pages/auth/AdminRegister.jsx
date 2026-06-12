@@ -14,6 +14,11 @@ import {
   Building2,
   KeyRound,
   BadgeCheck,
+  ClipboardList,
+  Users,
+  TrendingUp,
+  FileText,
+  Briefcase,
 } from "lucide-react";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
 import { sendOTP, verifyOTP, registerAdmin } from "../../services/authService";

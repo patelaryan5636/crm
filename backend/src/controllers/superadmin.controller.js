@@ -189,6 +189,175 @@ exports.login = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * GET SUPER ADMIN DASHBOARD METRICS
+ */
+exports.getDashboardMetrics = catchAsync(async (req, res, next) => {
+  // 1. KPI Counts
+  const totalCompanies = await Admin.countDocuments({ isDeleted: false });
+  const activeCompanies = await Admin.countDocuments({ isDeleted: false, isActive: true });
+  const inactiveCompanies = await Admin.countDocuments({ isDeleted: false, isActive: false });
+  const totalPlatformUsers = await User.countDocuments({ isDeleted: false });
+  const totalLeads = await Lead.countDocuments({ isDeleted: { $ne: true } });
+  const openSupportTickets = await SuperAdminTicket.countDocuments({
+    status: { $in: ["OPEN", "IN_PROGRESS", "ESCALATED"] }
+  });
+
+  // 2. Companies list with user counts (latest 10)
+  const recentAdmins = await Admin.find({ isDeleted: false })
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .lean();
+
+  const companyRows = await Promise.all(
+    recentAdmins.map(async (admin) => {
+      const usersCount = await User.countDocuments({ admin: admin._id, isDeleted: false });
+      return {
+        id: admin._id,
+        company: admin.company?.name || "No Company Name",
+        admin: admin.name,
+        plan: admin.planStatus || "TRIAL",
+        users: String(usersCount),
+        revenue: "₹0", // Omit revenue as per user request
+        renewal: formatDateOnly(admin.planExpiresAt) || "N/A",
+        status: admin.isActive ? "Completed" : "Failed",
+        date: formatDateOnly(admin.createdAt),
+      };
+    })
+  );
+
+  // 3. Support Tickets (latest 10)
+  const recentTickets = await SuperAdminTicket.find()
+    .populate("raisedBy", "name company")
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .lean();
+
+  const ticketRows = recentTickets.map((ticket) => {
+    // Priority mapping
+    let priority = "Medium";
+    if (ticket.priority === "URGENT") priority = "Critical";
+    else if (ticket.priority === "HIGH") priority = "High";
+    else if (ticket.priority === "LOW") priority = "Low";
+
+    // Status mapping
+    let status = "Pending";
+    if (ticket.status === "RESOLVED" || ticket.status === "CLOSED") status = "Completed";
+    else if (ticket.status === "IN_PROGRESS") status = "In Progress";
+    else if (ticket.status === "ESCALATED") status = "Failed";
+
+    return {
+      ticketId: `#TKT-${ticket._id.toString().slice(-4).toUpperCase()}`,
+      company: ticket.raisedBy?.company?.name || ticket.raisedBy?.name || "Unknown",
+      subject: ticket.subject,
+      priority,
+      status,
+      date: formatDateOnly(ticket.createdAt),
+    };
+  });
+
+  // 4. Recent Platform Activities (latest 10) - Filtered to exclude tenant internal activities
+  const admins = await Admin.find().select("_id").lean();
+  const adminIds = admins.map(a => a._id);
+
+  const recentActivities = await AuditLog.find({
+    $or: [
+      { performerType: "SUPER_ADMIN" },
+      { action: { $in: ["ADMIN_CREATED", "ADMIN_UPDATED", "ADMIN_DEACTIVATED", "LIMIT_CHANGED"] } },
+      { targetModel: { $in: ["Admin", "SuperAdminTicket", "Query", "SuperAdmin"] } }
+    ]
+  })
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .lean();
+
+  const realActivityRows = await Promise.all(
+    recentActivities.map(async (act) => {
+      let performerName = "System";
+      const isPerformerAdmin = act.performerType === "ADMIN" || adminIds.some(id => id.toString() === act.performedBy?.toString());
+      if (act.performerType === "SUPER_ADMIN") {
+        const sa = await SuperAdmin.findById(act.performedBy).select("name").lean();
+        if (sa) performerName = sa.name;
+      } else if (isPerformerAdmin) {
+        const adm = await Admin.findById(act.performedBy).select("name").lean();
+        if (adm) performerName = adm.name;
+      } else if (act.performerType === "USER") {
+        const usr = await User.findById(act.performedBy).select("name").lean();
+        if (usr) performerName = usr.name;
+      }
+
+      let activityMessage = act.note;
+      if (!activityMessage) {
+        if (act.action === "ADMIN_CREATED") {
+          activityMessage = "New admin account created";
+        } else if (act.action === "ADMIN_UPDATED") {
+          activityMessage = "Admin account details updated";
+        } else if (act.action === "ADMIN_DEACTIVATED") {
+          activityMessage = "Admin account deactivated";
+        } else if (act.action === "TICKET_CREATED") {
+          activityMessage = "Admin raised a support ticket";
+        } else if (act.action === "ANNOUNCEMENT_SENT") {
+          activityMessage = "Platform announcement sent";
+        } else {
+          activityMessage = `${act.action.replace(/_/g, " ")} performed on ${act.targetModel}`;
+        }
+      }
+
+      return {
+        activity: activityMessage,
+        module: act.targetModel,
+        performedBy: performerName,
+        date: formatDateOnly(act.createdAt),
+        status: act.action.endsWith("_FAILED") || act.action.endsWith("_REJECTED") ? "Failed" : "Completed",
+      };
+    })
+  );
+
+  const activityRows = realActivityRows;
+
+  // 5. Company status breakdown (Doughnut chart)
+  const activeCount = await Admin.countDocuments({ isDeleted: false, isActive: true });
+  const suspendedCount = await Admin.countDocuments({ isDeleted: false, isActive: false });
+  const companyStatusData = [
+    { name: "Active", value: activeCount },
+    { name: "Suspended", value: suspendedCount },
+  ];
+
+  // 6. Tickets by priority (Pie chart)
+  const criticalCount = await SuperAdminTicket.countDocuments({ priority: "URGENT" });
+  const highCount = await SuperAdminTicket.countDocuments({ priority: "HIGH" });
+  const mediumCount = await SuperAdminTicket.countDocuments({ priority: "NORMAL" });
+  const lowCount = await SuperAdminTicket.countDocuments({ priority: "LOW" });
+  const ticketsData = [
+    { name: "Critical", value: criticalCount },
+    { name: "High", value: highCount },
+    { name: "Medium", value: mediumCount },
+    { name: "Low", value: lowCount },
+  ];
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        kpi: {
+          totalCompanies,
+          activeCompanies,
+          inactiveCompanies,
+          totalPlatformUsers,
+          totalLeads,
+          openSupportTickets,
+        },
+        companyRows,
+        ticketRows,
+        activityRows,
+        companyStatusData,
+        ticketsData,
+      },
+      "Super Admin dashboard metrics retrieved successfully"
+    )
+  );
+});
+
+/**
  * VIEW ALL ADMIN LOGIN LOGS
  * Requirement: Can see AdminLoginLog (all admins)
  */
@@ -601,6 +770,7 @@ exports.updateTicketStatus = catchAsync(async (req, res, next) => {
     return next(new AppError("Ticket not found", 404));
   }
 
+  const oldStatus = ticket.status;
   if (status) ticket.status = status.toUpperCase();
   if (resolutionMessage) {
     ticket.replies.push({
@@ -615,6 +785,17 @@ exports.updateTicketStatus = catchAsync(async (req, res, next) => {
   }
 
   await ticket.save();
+
+  // Audit Log for ticket response/update by Super Admin
+  await AuditLog.create({
+    performedBy: req.user._id,
+    performerType: "SUPER_ADMIN",
+    action: ticket.status === "RESOLVED" ? "TICKET_RESOLVED" : "TICKET_UPDATED",
+    targetModel: "SuperAdminTicket",
+    targetId: ticket._id,
+    ipAddress: getClientIp(req),
+    note: `Super Admin responded to ticket and changed status from ${oldStatus} to ${ticket.status}`,
+  });
 
   res
     .status(200)

@@ -306,11 +306,6 @@ const MENUS = {
             path: "/sales-executive/login-logs",
             icon: History,
           },
-          {
-            name: "Payments",
-            path: "/sales-executive/payments",
-            icon: CreditCard,
-          },
         ],
       },
       {

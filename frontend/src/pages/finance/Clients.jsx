@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import apiClient from "../../services/apiClient";
+import toast from "react-hot-toast";
 import {
   Heading,
   DashGrid,
@@ -205,6 +206,7 @@ export default function Clients() {
         setClients(prev => [newProspect, ...prev]);
         setActiveModal(null);
         closeModal("add-client-modal");
+        toast.success("Client added successfully!");
       }
     } catch (err) {
       setAddError(err?.response?.data?.message || err?.message || 'Failed to add client');
@@ -520,6 +522,7 @@ export default function Clients() {
       }
 
       closeModal("client-action");
+      toast.success("Client status updated successfully!");
     } catch (saveError) {
       setError(saveError?.message || 'Failed to send quotation to client');
     }

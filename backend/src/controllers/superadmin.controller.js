@@ -410,6 +410,36 @@ exports.getDashboardMetrics = catchAsync(async (req, res, next) => {
     { subject: "Low", ...calcRate(lowStat) },
   ];
 
+  // 7. Churn vs Retention (last 6 months)
+  const churnRetentionTrend = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const monthLabel = d.toLocaleString("en", { month: "short" });
+    const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+    const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+
+    const [retained, churned] = await Promise.all([
+      Admin.countDocuments({
+        isDeleted: false,
+        isActive: true,
+        createdAt: { $lte: endOfMonth }
+      }),
+      Admin.countDocuments({
+        $or: [
+          { isDeleted: true, updatedAt: { $gte: startOfMonth, $lte: endOfMonth } },
+          { isActive: false, updatedAt: { $gte: startOfMonth, $lte: endOfMonth } }
+        ]
+      })
+    ]);
+
+    churnRetentionTrend.push({
+      name: monthLabel,
+      retained,
+      churned
+    });
+  }
+
   res.status(200).json(
     new ApiResponse(
       200,
@@ -428,6 +458,7 @@ exports.getDashboardMetrics = catchAsync(async (req, res, next) => {
         companyStatusData,
         ticketsData,
         ticketResolutionData,
+        churnRetentionTrend,
       },
       "Super Admin dashboard metrics retrieved successfully"
     )

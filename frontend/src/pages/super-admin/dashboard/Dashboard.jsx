@@ -146,7 +146,8 @@ export default function Dashboard() {
     activityRows: [],
     companyStatusData: [],
     ticketsData: [],
-    ticketResolutionData: []
+    ticketResolutionData: [],
+    churnRetentionTrend: []
   });
 
   useEffect(() => {
@@ -216,33 +217,6 @@ export default function Dashboard() {
 
 
   // ── Churn vs Retention ───────────────────────────────────────────────────────
-  const churnAll = {
-    "This Week":    [
-      { name: "Mon", retained: 68, churned: 0 }, { name: "Tue", retained: 68, churned: 0 },
-      { name: "Wed", retained: 69, churned: 0 }, { name: "Thu", retained: 69, churned: 0 },
-      { name: "Fri", retained: 69, churned: 1 }, { name: "Sat", retained: 69, churned: 0 },
-      { name: "Sun", retained: 69, churned: 0 },
-    ],
-    "This Month":   [
-      { name: "W1", retained: 66, churned: 1 }, { name: "W2", retained: 67, churned: 1 },
-      { name: "W3", retained: 68, churned: 0 }, { name: "W4", retained: 69, churned: 1 },
-    ],
-    "This Quarter": [
-      { name: "Feb", retained: 63, churned: 3 },
-      { name: "Mar", retained: 66, churned: 2 },
-      { name: "Apr", retained: 69, churned: 1 },
-    ],
-    "This Year":    [
-      { name: "Q1", retained: 48, churned: 4 }, { name: "Q2", retained: 56, churned: 5 },
-      { name: "Q3", retained: 61, churned: 3 }, { name: "Q4", retained: 68, churned: 6 },
-    ],
-    "Overall":      [
-      { name: "2021", retained: 22, churned: 6 }, { name: "2022", retained: 38, churned: 9 },
-      { name: "2023", retained: 54, churned: 9 }, { name: "2024", retained: 64, churned: 8 },
-      { name: "2025", retained: 68, retained: 6 },
-    ],
-  };
-
 
 
   // ── Company Status (Doughnut) ────────────────────────────────────────────────
@@ -334,15 +308,23 @@ export default function Dashboard() {
   // ── Derived (period-selected) data ───────────────────────────────────────────
   const companyGrowthData = companyGrowthAll[growthPeriod];
   // Static data for charts without period filters
-  const churnData         = churnAll["This Year"];
+  const churnData = (dashboardData.churnRetentionTrend && dashboardData.churnRetentionTrend.length > 0)
+    ? dashboardData.churnRetentionTrend
+    : [
+        { name: "—", retained: 0, churned: 0 }
+      ];
+
   const companyStatusData = (dashboardData.companyStatusData && dashboardData.companyStatusData.length > 0)
     ? dashboardData.companyStatusData
     : companyStatusAll["This Year"];
-  const storageData       = storageAll["This Year"];
-  const ticketsData       = (dashboardData.ticketsData && dashboardData.ticketsData.length > 0)
+
+  const storageData = storageAll["This Year"];
+
+  const ticketsData = (dashboardData.ticketsData && dashboardData.ticketsData.length > 0)
     ? dashboardData.ticketsData
     : ticketsAll["This Year"];
-  const apiHealthData     = apiHealthAll["This Year"];
+
+  const apiHealthData = apiHealthAll["This Year"];
 
   // ── Ticket Resolution Status (radar chart in the ticket/API row) ─────────────
   const ticketResolutionData = (dashboardData.ticketResolutionData && dashboardData.ticketResolutionData.length > 0)

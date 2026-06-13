@@ -145,7 +145,8 @@ export default function Dashboard() {
     ticketRows: [],
     activityRows: [],
     companyStatusData: [],
-    ticketsData: []
+    ticketsData: [],
+    ticketResolutionData: []
   });
 
   useEffect(() => {
@@ -238,7 +239,7 @@ export default function Dashboard() {
     "Overall":      [
       { name: "2021", retained: 22, churned: 6 }, { name: "2022", retained: 38, churned: 9 },
       { name: "2023", retained: 54, churned: 9 }, { name: "2024", retained: 64, churned: 8 },
-      { name: "2025", retained: 68, churned: 6 },
+      { name: "2025", retained: 68, retained: 6 },
     ],
   };
 
@@ -344,14 +345,13 @@ export default function Dashboard() {
   const apiHealthData     = apiHealthAll["This Year"];
 
   // ── Ticket Resolution Status (radar chart in the ticket/API row) ─────────────
-  const ticketResolutionData = [
-    { subject: "Critical", resolved: 72, pending: 28 },
-    { subject: "High",     resolved: 81, pending: 19 },
-    { subject: "Medium",   resolved: 91, pending: 9  },
-    { subject: "Low",      resolved: 96, pending: 4  },
-    { subject: "Billing",  resolved: 85, pending: 15 },
-    { subject: "Tech",     resolved: 78, pending: 22 },
-  ];
+  const ticketResolutionData = (dashboardData.ticketResolutionData && dashboardData.ticketResolutionData.length > 0)
+    ? dashboardData.ticketResolutionData
+    : [
+        { subject: "High",     resolved: 0, pending: 0 },
+        { subject: "Medium",   resolved: 0, pending: 0 },
+        { subject: "Low",      resolved: 0, pending: 0 },
+      ];
 
   // ── Top Companies Table ──────────────────────────────────────────────────────
   const companyCols = [

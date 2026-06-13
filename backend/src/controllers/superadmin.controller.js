@@ -352,16 +352,62 @@ exports.getDashboardMetrics = catchAsync(async (req, res, next) => {
     { name: "Suspended", value: suspendedCount },
   ];
 
-  // 6. Tickets by priority (Pie chart)
-  const criticalCount = await SuperAdminTicket.countDocuments({ priority: "URGENT" });
-  const highCount = await SuperAdminTicket.countDocuments({ priority: "HIGH" });
-  const mediumCount = await SuperAdminTicket.countDocuments({ priority: "NORMAL" });
-  const lowCount = await SuperAdminTicket.countDocuments({ priority: "LOW" });
+  // 6. Tickets by priority (Pie chart) + Ticket Resolution Rate (Radar chart)
+  const ticketStats = await SuperAdminTicket.aggregate([
+    {
+      $group: {
+        _id: "$priority",
+        total: { $sum: 1 },
+        resolved: {
+          $sum: {
+            $cond: [
+              { $in: ["$status", ["RESOLVED", "CLOSED"]] },
+              1,
+              0
+            ]
+          }
+        }
+      }
+    }
+  ]);
+
+  const statsMap = Object.fromEntries(ticketStats.map(s => [s._id, s]));
+  const getStat = (p) => statsMap[p] || { total: 0, resolved: 0 };
+
+  const urgent = getStat("URGENT");
+  const highStat = getStat("HIGH");
+  const normal = getStat("NORMAL");
+  const mediumStat = getStat("MEDIUM");
+  const lowStat = getStat("LOW");
+
+  // Merge Urgent and High for "High" state
+  const mergedHigh = {
+    total: urgent.total + highStat.total,
+    resolved: urgent.resolved + highStat.resolved
+  };
+
+  // Merge Normal and Medium for "Medium" state
+  const mergedMedium = {
+    total: normal.total + mediumStat.total,
+    resolved: normal.resolved + mediumStat.resolved
+  };
+
   const ticketsData = [
-    { name: "Critical", value: criticalCount },
-    { name: "High", value: highCount },
-    { name: "Medium", value: mediumCount },
-    { name: "Low", value: lowCount },
+    { name: "High", value: mergedHigh.total },
+    { name: "Medium", value: mergedMedium.total },
+    { name: "Low", value: lowStat.total },
+  ];
+
+  const calcRate = (stat) => {
+    if (stat.total === 0) return { resolved: 0, pending: 0 };
+    const resPct = Math.round((stat.resolved / stat.total) * 100);
+    return { resolved: resPct, pending: 100 - resPct };
+  };
+
+  const ticketResolutionData = [
+    { subject: "High", ...calcRate(mergedHigh) },
+    { subject: "Medium", ...calcRate(mergedMedium) },
+    { subject: "Low", ...calcRate(lowStat) },
   ];
 
   res.status(200).json(
@@ -381,6 +427,7 @@ exports.getDashboardMetrics = catchAsync(async (req, res, next) => {
         activityRows,
         companyStatusData,
         ticketsData,
+        ticketResolutionData,
       },
       "Super Admin dashboard metrics retrieved successfully"
     )

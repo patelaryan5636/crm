@@ -15,6 +15,7 @@ const {
   Project,
   Payment,
   Lead,
+  ContactQuery,
 } = require("../models/index");
 const {
   comparePassword,
@@ -64,7 +65,8 @@ const formatPlatformAnnouncement = (announcement) => {
   return {
     id: announcement.platformAnnouncementKey || String(announcement._id),
     title: announcement.title,
-    type: PLATFORM_ANNOUNCEMENT_TYPE_LABELS[announcement.type] || announcement.type,
+    type:
+      PLATFORM_ANNOUNCEMENT_TYPE_LABELS[announcement.type] || announcement.type,
     audience: announcement.platformTargetAdmin ? "Admin" : "All",
     audienceDetail: announcement.platformTargetAdmin
       ? `${adminName}${company ? ` (${company})` : ""}`
@@ -83,14 +85,18 @@ const createNotificationDocsForAnnouncement = async (
 ) => {
   const [admin, users] = await Promise.all([
     includeAdmin
-      ? Admin.findOne({ _id: adminId, isDeleted: false, isActive: true }).select("_id").lean()
+      ? Admin.findOne({ _id: adminId, isDeleted: false, isActive: true })
+          .select("_id")
+          .lean()
       : null,
     includeUsers
       ? User.find({
           admin: adminId,
           isDeleted: false,
           isActive: true,
-        }).select("_id").lean()
+        })
+          .select("_id")
+          .lean()
       : [],
   ]);
 
@@ -189,6 +195,283 @@ exports.login = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * GET SUPER ADMIN DASHBOARD METRICS
+ */
+exports.getDashboardMetrics = catchAsync(async (req, res, next) => {
+  // 1. KPI Counts
+  const totalCompanies = await Admin.countDocuments({ isDeleted: false });
+  const activeCompanies = await Admin.countDocuments({ isDeleted: false, isActive: true });
+  const inactiveCompanies = await Admin.countDocuments({ isDeleted: false, isActive: false });
+  const totalPlatformUsers = await User.countDocuments({ isDeleted: false });
+  const totalLeads = await Lead.countDocuments({ isDeleted: { $ne: true } });
+  const openSupportTickets = await SuperAdminTicket.countDocuments({
+    status: { $in: ["OPEN", "IN_PROGRESS", "ESCALATED"] }
+  });
+
+  // 2. Top Companies list based on user counts
+  const topAdmins = await Admin.aggregate([
+    { $match: { isDeleted: false } },
+    {
+      $lookup: {
+        from: "users",
+        localField: "_id",
+        foreignField: "admin",
+        as: "users",
+      },
+    },
+    {
+      $addFields: {
+        userCount: {
+          $size: {
+            $filter: {
+              input: "$users",
+              as: "u",
+              cond: { $eq: ["$$u.isDeleted", false] },
+            },
+          },
+        },
+      },
+    },
+    { $sort: { userCount: -1, createdAt: -1 } },
+    { $limit: 5 },
+  ]);
+
+  const companyRows = topAdmins.map((admin) => {
+    return {
+      id: admin._id,
+      company: admin.company?.name || "No Company Name",
+      admin: admin.name,
+      plan: admin.planStatus || "TRIAL",
+      users: admin.userCount,
+      revenue: "₹0", // Omit revenue as per user request
+      renewal: formatDateOnly(admin.planExpiresAt) || "N/A",
+      status: admin.isActive ? "Completed" : "Failed",
+      date: formatDateOnly(admin.createdAt),
+    };
+  });
+
+  // 3. Support Tickets (latest 10)
+  const recentTickets = await SuperAdminTicket.find()
+    .populate("raisedBy", "name company")
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .lean();
+
+  const ticketRows = recentTickets.map((ticket) => {
+    // Priority mapping
+    let priority = "Medium";
+    if (ticket.priority === "URGENT") priority = "Critical";
+    else if (ticket.priority === "HIGH") priority = "High";
+    else if (ticket.priority === "LOW") priority = "Low";
+
+    // Status mapping
+    let status = "Pending";
+    if (ticket.status === "RESOLVED" || ticket.status === "CLOSED") status = "Completed";
+    else if (ticket.status === "IN_PROGRESS") status = "In Progress";
+    else if (ticket.status === "ESCALATED") status = "Failed";
+
+    return {
+      ticketId: `#TKT-${ticket._id.toString().slice(-4).toUpperCase()}`,
+      company: ticket.raisedBy?.company?.name || ticket.raisedBy?.name || "Unknown",
+      subject: ticket.subject,
+      priority,
+      status,
+      date: formatDateOnly(ticket.createdAt),
+    };
+  });
+
+  // 4. Recent Platform Activities (latest 10) - Filtered to exclude tenant internal activities
+  const admins = await Admin.find().select("_id").lean();
+  const adminIds = admins.map(a => a._id);
+
+  const recentActivities = await AuditLog.find({
+    $and: [
+      {
+        $or: [
+          { performerType: "SUPER_ADMIN" },
+          { action: { $in: ["ADMIN_CREATED", "ADMIN_UPDATED", "ADMIN_DEACTIVATED", "LIMIT_CHANGED"] } },
+          { targetModel: { $in: ["Admin", "SuperAdminTicket", "Query", "SuperAdmin"] } }
+        ]
+      },
+      {
+        // Skip announcements sent by regular admins to their companies
+        $or: [
+          { action: { $ne: "ANNOUNCEMENT_SENT" } },
+          { performerType: "SUPER_ADMIN" }
+        ]
+      }
+    ]
+  })
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .lean();
+
+  const realActivityRows = await Promise.all(
+    recentActivities.map(async (act) => {
+      let performerName = "System";
+      const isPerformerAdmin = act.performerType === "ADMIN" || adminIds.some(id => id.toString() === act.performedBy?.toString());
+      if (act.performerType === "SUPER_ADMIN") {
+        const sa = await SuperAdmin.findById(act.performedBy).select("name").lean();
+        if (sa) performerName = sa.name;
+      } else if (isPerformerAdmin) {
+        const adm = await Admin.findById(act.performedBy).select("name").lean();
+        if (adm) performerName = adm.name;
+      } else if (act.performerType === "USER") {
+        const usr = await User.findById(act.performedBy).select("name").lean();
+        if (usr) performerName = usr.name;
+      }
+
+      let activityMessage = act.note;
+      if (!activityMessage) {
+        if (act.action === "ADMIN_CREATED") {
+          activityMessage = "New admin account created";
+        } else if (act.action === "ADMIN_UPDATED") {
+          activityMessage = "Admin account details updated";
+        } else if (act.action === "ADMIN_DEACTIVATED") {
+          activityMessage = "Admin account deactivated";
+        } else if (act.action === "TICKET_CREATED") {
+          activityMessage = "Admin raised a support ticket";
+        } else if (act.action === "ANNOUNCEMENT_SENT") {
+          activityMessage = "Platform announcement sent";
+        } else {
+          activityMessage = `${act.action.replace(/_/g, " ")} performed on ${act.targetModel}`;
+        }
+      }
+
+      return {
+        activity: activityMessage,
+        module: act.targetModel,
+        performedBy: performerName,
+        date: formatDateOnly(act.createdAt),
+        status: act.action.endsWith("_FAILED") || act.action.endsWith("_REJECTED") ? "Failed" : "Completed",
+      };
+    })
+  );
+
+  const activityRows = realActivityRows;
+
+  // 5. Company status breakdown (Doughnut chart)
+  const activeCount = await Admin.countDocuments({ isDeleted: false, isActive: true });
+  const suspendedCount = await Admin.countDocuments({ isDeleted: false, isActive: false });
+  const companyStatusData = [
+    { name: "Active", value: activeCount },
+    { name: "Suspended", value: suspendedCount },
+  ];
+
+  // 6. Tickets by priority (Pie chart) + Ticket Resolution Rate (Radar chart)
+  const ticketStats = await SuperAdminTicket.aggregate([
+    {
+      $group: {
+        _id: "$priority",
+        total: { $sum: 1 },
+        resolved: {
+          $sum: {
+            $cond: [
+              { $in: ["$status", ["RESOLVED", "CLOSED"]] },
+              1,
+              0
+            ]
+          }
+        }
+      }
+    }
+  ]);
+
+  const statsMap = Object.fromEntries(ticketStats.map(s => [s._id, s]));
+  const getStat = (p) => statsMap[p] || { total: 0, resolved: 0 };
+
+  const urgent = getStat("URGENT");
+  const highStat = getStat("HIGH");
+  const normal = getStat("NORMAL");
+  const mediumStat = getStat("MEDIUM");
+  const lowStat = getStat("LOW");
+
+  // Merge Urgent and High for "High" state
+  const mergedHigh = {
+    total: urgent.total + highStat.total,
+    resolved: urgent.resolved + highStat.resolved
+  };
+
+  // Merge Normal and Medium for "Medium" state
+  const mergedMedium = {
+    total: normal.total + mediumStat.total,
+    resolved: normal.resolved + mediumStat.resolved
+  };
+
+  const ticketsData = [
+    { name: "High", value: mergedHigh.total },
+    { name: "Medium", value: mergedMedium.total },
+    { name: "Low", value: lowStat.total },
+  ];
+
+  const calcRate = (stat) => {
+    if (stat.total === 0) return { resolved: 0, pending: 0 };
+    const resPct = Math.round((stat.resolved / stat.total) * 100);
+    return { resolved: resPct, pending: 100 - resPct };
+  };
+
+  const ticketResolutionData = [
+    { subject: "High", ...calcRate(mergedHigh) },
+    { subject: "Medium", ...calcRate(mergedMedium) },
+    { subject: "Low", ...calcRate(lowStat) },
+  ];
+
+  // 7. Churn vs Retention (last 6 months)
+  const churnRetentionTrend = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const monthLabel = d.toLocaleString("en", { month: "short" });
+    const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+    const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+
+    const [retained, churned] = await Promise.all([
+      Admin.countDocuments({
+        isDeleted: false,
+        isActive: true,
+        createdAt: { $lte: endOfMonth }
+      }),
+      Admin.countDocuments({
+        $or: [
+          { isDeleted: true, updatedAt: { $gte: startOfMonth, $lte: endOfMonth } },
+          { isActive: false, updatedAt: { $gte: startOfMonth, $lte: endOfMonth } }
+        ]
+      })
+    ]);
+
+    churnRetentionTrend.push({
+      name: monthLabel,
+      retained,
+      churned
+    });
+  }
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        kpi: {
+          totalCompanies,
+          activeCompanies,
+          inactiveCompanies,
+          totalPlatformUsers,
+          totalLeads,
+          openSupportTickets,
+        },
+        companyRows,
+        ticketRows,
+        activityRows,
+        companyStatusData,
+        ticketsData,
+        ticketResolutionData,
+        churnRetentionTrend,
+      },
+      "Super Admin dashboard metrics retrieved successfully"
+    )
+  );
+});
+
+/**
  * VIEW ALL ADMIN LOGIN LOGS
  * Requirement: Can see AdminLoginLog (all admins)
  */
@@ -244,10 +527,12 @@ exports.getAnnouncementMeta = catchAsync(async (_req, res) => {
     new ApiResponse(
       200,
       {
-        messageTypes: Object.keys(PLATFORM_ANNOUNCEMENT_TYPE_MAP).map((label) => ({
-          label,
-          value: PLATFORM_ANNOUNCEMENT_TYPE_MAP[label],
-        })),
+        messageTypes: Object.keys(PLATFORM_ANNOUNCEMENT_TYPE_MAP).map(
+          (label) => ({
+            label,
+            value: PLATFORM_ANNOUNCEMENT_TYPE_MAP[label],
+          }),
+        ),
         audienceOptions: ["All", "Admin"],
       },
       "Platform announcement metadata retrieved successfully",
@@ -299,13 +584,17 @@ exports.createAnnouncement = catchAsync(async (req, res, next) => {
 
   let targetAdmins = [];
   if (audience === "Admin") {
-    if (!targetId) return next(new AppError("Please select a target admin", 400));
+    if (!targetId)
+      return next(new AppError("Please select a target admin", 400));
     const admin = await Admin.findOne({
       _id: targetId,
       isDeleted: false,
       isActive: true,
     });
-    if (!admin) return next(new AppError("Selected admin was not found or is inactive", 404));
+    if (!admin)
+      return next(
+        new AppError("Selected admin was not found or is inactive", 404),
+      );
     targetAdmins = [admin];
   } else {
     targetAdmins = await Admin.find({
@@ -315,7 +604,9 @@ exports.createAnnouncement = catchAsync(async (req, res, next) => {
   }
 
   if (targetAdmins.length === 0) {
-    return next(new AppError("No active admins found for this announcement", 404));
+    return next(
+      new AppError("No active admins found for this announcement", 404),
+    );
   }
 
   const announcementDocs = await Announcement.insertMany(
@@ -338,14 +629,10 @@ exports.createAnnouncement = catchAsync(async (req, res, next) => {
 
   await Promise.all(
     announcementDocs.map((announcement) =>
-      createNotificationDocsForAnnouncement(
-        announcement,
-        announcement.admin,
-        {
-          includeAdmin: true,
-          includeUsers: audience === "All",
-        },
-      ),
+      createNotificationDocsForAnnouncement(announcement, announcement.admin, {
+        includeAdmin: true,
+        includeUsers: audience === "All",
+      }),
     ),
   );
 
@@ -394,7 +681,8 @@ exports.getAnnouncements = catchAsync(async (_req, res) => {
 
   const grouped = new Map();
   announcements.forEach((announcement) => {
-    const key = announcement.platformAnnouncementKey || String(announcement._id);
+    const key =
+      announcement.platformAnnouncementKey || String(announcement._id);
     if (!grouped.has(key)) grouped.set(key, announcement);
   });
 
@@ -512,7 +800,9 @@ exports.toggleAdminStatus = catchAsync(async (req, res, next) => {
 exports.getAdminById = catchAsync(async (req, res, next) => {
   const { id } = req.params;
 
-  const admin = await Admin.findOne({ _id: id, isDeleted: false }).populate("plan");
+  const admin = await Admin.findOne({ _id: id, isDeleted: false }).populate(
+    "plan",
+  );
   if (!admin) {
     return next(new AppError("Admin not found", 404));
   }
@@ -526,7 +816,10 @@ exports.getAdminById = catchAsync(async (req, res, next) => {
     .populate("client", "name")
     .populate("project", "name");
 
-  const totalLeads = await Lead.countDocuments({ admin: id, isDeleted: { $ne: true } });
+  const totalLeads = await Lead.countDocuments({
+    admin: id,
+    isDeleted: { $ne: true },
+  });
   const activeLeads = await Lead.countDocuments({
     admin: id,
     isDeleted: { $ne: true },
@@ -601,6 +894,7 @@ exports.updateTicketStatus = catchAsync(async (req, res, next) => {
     return next(new AppError("Ticket not found", 404));
   }
 
+  const oldStatus = ticket.status;
   if (status) ticket.status = status.toUpperCase();
   if (resolutionMessage) {
     ticket.replies.push({
@@ -616,11 +910,83 @@ exports.updateTicketStatus = catchAsync(async (req, res, next) => {
 
   await ticket.save();
 
+  // Audit Log for ticket response/update by Super Admin
+  await AuditLog.create({
+    performedBy: req.user._id,
+    performerType: "SUPER_ADMIN",
+    action: ticket.status === "RESOLVED" ? "TICKET_RESOLVED" : "TICKET_UPDATED",
+    targetModel: "SuperAdminTicket",
+    targetId: ticket._id,
+    ipAddress: getClientIp(req),
+    note: `Super Admin responded to ticket and changed status from ${oldStatus} to ${ticket.status}`,
+  });
+
   res
     .status(200)
     .json(
       new ApiResponse(200, { ticket }, "Ticket status updated successfully"),
     );
+});
+
+/**
+ * CONTACT QUERIES
+ */
+
+exports.getQueries = catchAsync(async (req, res, next) => {
+  const queries = await ContactQuery.find().sort({ createdAt: -1 }).lean();
+
+  // Map to frontend structure
+  const formattedQueries = queries.map((q) => ({
+    id: q._id.toString(),
+    name: q.name,
+    company: q.company,
+    email: q.email,
+    phone: q.phone,
+    message: q.message,
+    status: q.status,
+    date: formatDateOnly(q.createdAt),
+  }));
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(200, formattedQueries, "Queries retrieved successfully"),
+    );
+});
+
+exports.updateQueryStatus = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!["Read", "Unread"].includes(status)) {
+    return next(new AppError("Status must be Read or Unread", 400));
+  }
+
+  const query = await ContactQuery.findByIdAndUpdate(
+    id,
+    { status },
+    { new: true, runValidators: true },
+  );
+
+  if (!query) {
+    return next(new AppError("Query not found", 404));
+  }
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, query, `Query status updated to ${status}`));
+});
+
+exports.deleteQuery = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  const query = await ContactQuery.findByIdAndDelete(id);
+
+  if (!query) {
+    return next(new AppError("Query not found", 404));
+  }
+
+  res.status(200).json(new ApiResponse(200, null, "Query deleted permanently"));
 });
 
 /**

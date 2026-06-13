@@ -299,17 +299,22 @@ const MENUS = {
         ],
       },
       {
+        label: "Performance",
+        items: [
+          {
+            name: "My Target",
+            path: "/sales-executive/my-target",
+            icon: Target,
+          },
+        ],
+      },
+      {
         label: "Personal",
         items: [
           {
             name: "My Login Logs",
             path: "/sales-executive/login-logs",
             icon: History,
-          },
-          {
-            name: "Payments",
-            path: "/sales-executive/payments",
-            icon: CreditCard,
           },
         ],
       },

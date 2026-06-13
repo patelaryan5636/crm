@@ -49,6 +49,7 @@ const STATUS_BADGE = {
   NOT_TALK:   "bg-orange-100 text-orange-700",
   INTERESTED: "bg-violet-100 text-violet-700",
   CONVERTED:  "bg-emerald-100 text-emerald-700",
+  Won:        "bg-emerald-100 text-emerald-700",
   DUMP:       "bg-red-100 text-red-600",
 };
 
@@ -103,7 +104,7 @@ const DailyTargetWidget = ({ data, loading, onViewReport }) => {
       <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#2a465a]/5 rounded-full blur-3xl group-hover:bg-[#2a465a]/10 transition-colors duration-500" />
       <div>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-[#2a465a]">Daily Target</h3>
+          <h3 className="text-lg font-bold text-[#2a465a]">Today's Target</h3>
           {hasTarget ? (
             <span className={`px-3 py-1 rounded-full text-xs font-bold ${pctColor}`}>
               {overallPercent}% Done
@@ -139,7 +140,7 @@ const DailyTargetWidget = ({ data, loading, onViewReport }) => {
         onClick={onViewReport}
         className="mt-8 w-full py-3 bg-[#2a465a] text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#1e3a52] transition-colors shadow-lg shadow-[#2a465a]/20"
       >
-        View Full Report <ArrowRight size={16} />
+        View Monthly Target <ArrowRight size={16} />
       </button>
     </div>
   );
@@ -509,7 +510,7 @@ const SalesExecutiveDashboard = () => {
           <DailyTargetWidget
             data={dailyTarget}
             loading={loading.dailyTarget}
-            onViewReport={() => navigate("prospects")}
+            onViewReport={() => navigate("my-target")}
           />
         </div>
       </Grid>

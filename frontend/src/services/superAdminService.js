@@ -5,6 +5,11 @@ import apiClient from "./apiClient";
 
 const BASE = "/superadmin";
 
+export const getDashboardMetrics = async () => {
+  const { data } = await apiClient.get(`${BASE}/dashboard-metrics`);
+  return data.data;
+};
+
 export const getAllAdmins = async (params = {}) => {
   const { data } = await apiClient.get(`${BASE}/admins`, { params });
   return data.data;
@@ -88,5 +93,21 @@ export const updateSuperAdminProfile = async (profileData) => {
 
   console.log("Response:", data);
 
+  return data.data;
+};
+
+// ─── Contact Queries ────────────────────────────────────────────────────────
+export const getQueries = async (params = {}) => {
+  const { data } = await apiClient.get(`${BASE}/queries`, { params });
+  return data.data;
+};
+
+export const updateQueryStatus = async (id, status) => {
+  const { data } = await apiClient.patch(`${BASE}/queries/${id}/status`, { status });
+  return data.data;
+};
+
+export const deleteQuery = async (id) => {
+  const { data } = await apiClient.delete(`${BASE}/queries/${id}`);
   return data.data;
 };

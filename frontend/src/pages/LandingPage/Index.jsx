@@ -17,6 +17,8 @@ import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
 
 
 const { useState, useEffect, useRef, useCallback } = React;
+import axios from 'axios';
+import { toast } from 'react-hot-toast';
 
 const handleExternalLink = (url) => {
   window.open(url, "_blank", "noopener,noreferrer");
@@ -1475,9 +1477,35 @@ function Contact() {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
-  const handleSubmit = (e) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setIsSubmitting(true);
+    
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      await axios.post(`${API_BASE_URL}/public/contact`, {
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        message: form.message,
+        company: form.company, // Even though not strictly required by model, good to send if needed later
+      });
+      setSubmitted(true);
+      toast.success("Query submitted successfully");
+      setForm({
+        name: "",
+        company: "",
+        email: "",
+        phone: "",
+        message: "",
+      });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to submit query. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   return (
     <section className="section section-bg-900" id="contact">
@@ -1611,13 +1639,16 @@ function Contact() {
               <button
                 type="submit"
                 className="btn-primary"
+                disabled={isSubmitting}
                 style={{
                   width: "100%",
                   justifyContent: "center",
                   padding: "16px",
+                  opacity: isSubmitting ? 0.7 : 1,
+                  cursor: isSubmitting ? "not-allowed" : "pointer",
                 }}
               >
-                Submit Enquiry →
+                {isSubmitting ? "Submitting..." : "Submit Enquiry →"}
               </button>
             </form>
           )}

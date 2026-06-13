@@ -6,7 +6,14 @@ import { motion } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { FaUsers } from "react-icons/fa";
+import {
+  FaLinkedinIn,
+  FaFacebookF,
+  FaInstagram,
+  FaXTwitter,
+} from "react-icons/fa6";
 import "./Landing.css";
+import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
 
 
 const { useState, useEffect, useRef, useCallback } = React;
@@ -92,8 +99,7 @@ function Navbar() {
         <div className="container">
           <div className="nav-inner">
             <a onClick={() => handleScrollTo("hero")} className="nav-logo">
-              <div className="nav-logo-icon">⚡</div>
-              GraphuraCRM
+              <img src={GraphuraLogo} alt="Graphura CRM" className="nav-logo-img" />
             </a>
             <div className={`nav-links ${menuOpen ? "open" : ""}`}>
               {links.map((l) => (
@@ -640,7 +646,7 @@ function HowItWorks() {
     ],
     [
       "Create Departments",
-      "Divide your workspace into Sales, Finance, HRM, and Project management departments.",
+      "Divide your workspace into Sales, Finance and management departments.",
     ],
     [
       "Create Teams",
@@ -959,7 +965,7 @@ function WorkflowViz() {
     {
       icon: "🤝",
       name: "Client",
-      sub: "Track Project & Review it ",
+      sub: "Track Project",
       color: "#ec4899",
     },
     {
@@ -1464,7 +1470,6 @@ function FAQ() {
 function Contact() {
   const [form, setForm] = useState({
     name: "",
-    company: "",
     email: "",
     phone: "",
     message: "",
@@ -1493,13 +1498,13 @@ function Contact() {
               matched to your industry and team size — no generic pitches.
             </p>
             {[
-              ["✉️", "Sales Enquiries", "sales@graphuracrm.io"],
-              ["🎧", "Technical Support", "support@graphuracrm.io"],
-              ["📞", "Phone", "+ 1 (800) 629-8724"],
+
+              ["🎧", "Technical Support", "support@graphura.in"],
+              ["📞", "Phone", "+91 73780 21327"],
               [
                 "📍",
                 "Head Office",
-                "500 Technology Square, Cambridge, MA 02139",
+                "Graphura India Private Limited, near RSF, Pataudi, Gurgaon, Haryana 122503",
               ],
             ].map(([ic, l, v]) => (
               <div className="contact-item" key={l}>
@@ -1552,31 +1557,16 @@ function Contact() {
               style={{ padding: 36 }}
               onSubmit={handleSubmit}
             >
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Full Name *</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    placeholder="Alex Reeves"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Company Name *</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    placeholder="Acme Corp"
-                    value={form.company}
-                    onChange={(e) =>
-                      setForm({ ...form, company: e.target.value })
-                    }
-                    required
-                  />
-                </div>
+              <div className="form-group">
+                <label className="form-label">Full Name *</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  placeholder="Alex Reeves"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  required
+                />
               </div>
               <div className="form-row">
                 <div className="form-group">
@@ -1584,7 +1574,7 @@ function Contact() {
                   <input
                     className="form-input"
                     type="email"
-                    placeholder="alex@acme.com"
+                    placeholder="alex@gmail.com"
                     value={form.email}
                     onChange={(e) =>
                       setForm({ ...form, email: e.target.value })
@@ -1597,7 +1587,7 @@ function Contact() {
                   <input
                     className="form-input"
                     type="tel"
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="+91 12345 67890"
                     value={form.phone}
                     onChange={(e) =>
                       setForm({ ...form, phone: e.target.value })
@@ -1681,15 +1671,7 @@ function CTA({ onWatchTutorial }) {
               🎥 Watch a CRM Tutorial
             </a>
           </div>
-          <p
-            style={{
-              marginTop: 20,
-              fontSize: "0.82rem",
-              color: "var(--text-muted)",
-            }}
-          >
-            No credit card required · 14-day free trial · Cancel anytime
-          </p>
+          
         </div>
       </div>
     </section>
@@ -1726,8 +1708,7 @@ function Footer() {
               className="nav-logo"
               style={{ textDecoration: "none", cursor: "pointer" }}
             >
-              <div className="nav-logo-icon">⚡</div>
-              GraphuraCRM
+              <img src={GraphuraLogo} alt="Graphura CRM" className="nav-logo-img" />
             </a>
             <p>
               The CRM platform that runs your entire business — sales, finance,
@@ -1735,18 +1716,39 @@ function Footer() {
             </p>
             <div className="footer-social">
               {[
-                ["💼", "https://linkedin.com"],
-                ["📘", "https://facebook.com"],
-                ["📷", "https://instagram.com"],
-                ["🐦", "https://twitter.com"],
-              ].map(([ic, h]) => (
+                {
+                  Icon: FaLinkedinIn,
+                  href: "https://www.linkedin.com/company/graphura-india-private-limited/",
+                  label: "LinkedIn",
+                  className: "social-linkedin",
+                },
+                {
+                  Icon: FaFacebookF,
+                  href: "https://www.facebook.com/Graphura.in",
+                  label: "Facebook",
+                  className: "social-facebook",
+                },
+                {
+                  Icon: FaInstagram,
+                  href: "https://www.instagram.com/graphura.in?igsh=MXZydnIxemcyeWttNg==",
+                  label: "Instagram",
+                  className: "social-instagram",
+                },
+                {
+                  Icon: FaXTwitter,
+                  href: "https://x.com/Graphura",
+                  label: "X",
+                  className: "social-x",
+                },
+              ].map(({ Icon, href, label, className }) => (
                 <a
-                  key={h}
-                  onClick={() => handleExternalLink(h)}
-                  className="social-btn"
+                  key={href}
+                  onClick={() => handleExternalLink(href)}
+                  className={`social-btn ${className}`}
+                  aria-label={label}
                   style={{ cursor: "pointer" }}
                 >
-                  {ic}
+                  <Icon />
                 </a>
               ))}
             </div>
@@ -2085,10 +2087,12 @@ function ScrollToTop() {
 export default function LandingPage() {
   const [showTutorial, setShowTutorial] = useState(false);
 
-  // Dynamic body class for Landing Page background and styling
+  // Dynamic root/body classes for Landing Page background and styling
   useEffect(() => {
+    document.documentElement.classList.add("landing-page-root");
     document.body.classList.add("landing-page-body");
     return () => {
+      document.documentElement.classList.remove("landing-page-root");
       document.body.classList.remove("landing-page-body");
     };
   }, []);

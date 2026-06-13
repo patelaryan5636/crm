@@ -42,14 +42,27 @@ apiClient.interceptors.response.use(
     const skipAuthRedirect = Boolean(error?.config?.skipAuthRedirect);
 
     if (response?.status === 401 && !skipAuthRedirect) {
-      // Unauthorized — clear storage and redirect to login
-      const hasSuperAdminSession = Boolean(sessionStorage.getItem('superAdmin'));
+      // Determine correct login page BEFORE clearing storage
+      const hasSuperAdmin = Boolean(sessionStorage.getItem('superAdmin'));
+      const hasAdmin      = Boolean(sessionStorage.getItem('admin'));
+
+      // Clear all auth state
       sessionStorage.removeItem('accessToken');
       sessionStorage.removeItem('refreshToken');
       sessionStorage.removeItem('admin');
       sessionStorage.removeItem('user');
       sessionStorage.removeItem('superAdmin');
-      window.location.href = hasSuperAdminSession ? '/super-admin-login' : '/login';
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+
+      // Redirect to the correct login page
+      if (hasSuperAdmin) {
+        window.location.href = '/super-admin-login';
+      } else if (hasAdmin) {
+        window.location.href = '/admin-login';
+      } else {
+        window.location.href = '/login';
+      }
     }
 
     return Promise.reject({

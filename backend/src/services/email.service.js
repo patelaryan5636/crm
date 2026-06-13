@@ -916,11 +916,77 @@ const sendContactAcknowledgementEmail = async (name, email) => {
   }
 };
 
+/**
+ * Send Password Reset OTP Email (Forgot Password flow)
+ * @param {string} email - Recipient email
+ * @param {string} otp - 6-digit OTP
+ * @param {string} name - User's display name
+ */
+const sendPasswordResetOTPEmail = async (email, otp, name = 'User') => {
+  try {
+    if (!process.env.BREVO_API_KEY) throw new Error('BREVO_API_KEY is not configured');
+
+    await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: getSender(),
+        to: [{ email, name }],
+        subject: 'Your Graphura CRM Password Reset Code',
+        htmlContent: `
+          <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+            <div style="background:#1e293b;color:#fff;padding:24px;border-radius:14px 14px 0 0;text-align:center;">
+              <h2 style="margin:0;font-size:22px;">Password Reset Request</h2>
+              <p style="margin:8px 0 0;color:#94a3b8;font-size:13px;">Graphura CRM</p>
+            </div>
+            <div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 14px 14px;padding:28px;background:#fff;">
+              <p style="margin:0 0 12px;color:#374151;">Hi <strong>${name}</strong>,</p>
+              <p style="margin:0 0 20px;color:#6b7280;line-height:1.6;">
+                We received a request to reset your password. Use the 6-digit code below to verify your identity.
+                This code is valid for <strong>10 minutes</strong>.
+              </p>
+              <div style="background:#f0f9ff;border:2px dashed #3b82f6;border-radius:12px;padding:24px;text-align:center;margin:20px 0;">
+                <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;color:#6b7280;letter-spacing:2px;">
+                  Verification Code
+                </p>
+                <h1 style="margin:0;font-size:40px;font-weight:900;letter-spacing:12px;color:#1e293b;">
+                  ${otp}
+                </h1>
+              </div>
+              <p style="margin:0 0 8px;color:#ef4444;font-size:13px;">⚠️ Never share this code with anyone.</p>
+              <p style="margin:0;color:#9ca3af;font-size:12px;">
+                If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
+              </p>
+              <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+              <p style="margin:0;color:#9ca3af;font-size:11px;text-align:center;">
+                Graphura CRM | Create Bold. Edit Smart. Design Loud.
+              </p>
+            </div>
+          </div>
+        `,
+      },
+      {
+        headers: {
+          'api-key': process.env.BREVO_API_KEY.trim(),
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      },
+    );
+
+    logger.info(`Password reset OTP email sent to ${email}`);
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to send password reset OTP email', error.response?.data?.message || error.message);
+    throw new Error('Unable to send password reset OTP. Please try again.');
+  }
+};
+
 module.exports = {
   sendOTPEmail,
   sendRegistrationConfirmationEmail,
   sendPasswordResetEmail,
   sendPasswordResetConfirmationEmail,
+  sendPasswordResetOTPEmail,
   sendProspectQuotationEmail,
   sendRazorpayLinkEmail,
   sendInvoiceEmail,

@@ -484,6 +484,10 @@ const AdminSchema = new Schema(
       ref: "SuperAdmin",
       default: null,
     },
+
+    // ── Password Reset Tracking (for forgot-password monthly limit) ──
+    lastPasswordResetAt: { type: Date, default: null },
+    passwordResetCount:  { type: Number, default: 0 },
   },
   { timestamps: true },
 );

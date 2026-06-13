@@ -91,7 +91,7 @@ html.landing-page-root,
 html.landing-page-root body,
 html.landing-page-root * {
   scrollbar-width: thin !important;
-  scrollbar-color: rgba(5, 47, 86, 0.45) transparent !important;
+  scrollbar-color: rgba(8, 95, 177, 0.45) transparent !important;
 }
 
 html.landing-page-root::-webkit-scrollbar,
@@ -1939,7 +1939,7 @@ footer {
 
 .footer-grid {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr 1.2fr 1fr;
   gap: 40px;
   margin-bottom: 48px;
 }
@@ -1954,7 +1954,34 @@ footer {
 
 .footer-social {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: fit-content;
+}
+
+.footer-contact-item {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.footer-contact-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.footer-contact-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.footer-contact-value {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  line-height: 1.4;
 }
 
 .social-btn {
@@ -1970,11 +1997,16 @@ footer {
   transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
   text-decoration: none;
   color: #fff;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .social-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  display: block;
+  flex-shrink: 0;
 }
 
 .social-btn:hover {
@@ -2025,8 +2057,15 @@ footer {
   margin-bottom: 16px;
 }
 
+.footer-col:last-child {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 .footer-col a {
-  display: block;
+  display: flex;
   color: var(--text-secondary);
   text-decoration: none;
   font-size: 0.85rem;
@@ -2054,15 +2093,24 @@ footer {
   color: var(--text-secondary);
 }
 
+@media (max-width: 1200px) {
+  .footer-grid {
+    grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr;
+    gap: 32px;
+  }
+}
+
 @media (max-width: 900px) {
   .footer-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 28px;
   }
 }
 
 @media (max-width: 600px) {
   .footer-grid {
     grid-template-columns: 1fr;
+    gap: 24px;
   }
 }
 

@@ -14,11 +14,16 @@ import {
 } from "react-icons/fa6";
 import "./Landing.css";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
+import Dashboard from "../../assets/Images/Dashboard.png"
+import Leads from "../../assets/Images/Leads.png"
+import Finance from "../../assets/Images/Finance.png"
+import HRM from "../../assets/Images/HRM.png"
+import Projects from "../../assets/Images/Projects.png"
+import Reports from "../../assets/Images/Reports.png"
+
 
 
 const { useState, useEffect, useRef, useCallback } = React;
-import axios from 'axios';
-import { toast } from 'react-hot-toast';
 
 const handleExternalLink = (url) => {
   window.open(url, "_blank", "noopener,noreferrer");
@@ -473,42 +478,42 @@ function ProductShowcase() {
       icon: "📊",
       desc: "Real-time KPI overview",
       color: "#2563eb",
-      image: "landscape1.png",
+      image: Dashboard,
     },
     {
       label: "Lead Management",
       icon: "🎯",
       desc: "Full lead lifecycle",
       color: "#7c3aed",
-      image: "landscape2.png",
+      image: Leads,
     },
     {
       label: "Finance",
       icon: "💰",
       desc: "Invoices & revenue",
       color: "#059669",
-      image: "landscape3.png",
+      image: Finance,
     },
     {
       label: "HRM",
       icon: "👥",
       desc: "Human resource tools",
       color: "#dc2626",
-      image: "landscape4.png",
+      image: HRM,
     },
     {
       label: "Projects",
       icon: "🚀",
       desc: "Kanban & timelines",
       color: "#d97706",
-      image: "landscape5.png",
+      image: Projects,
     },
     {
       label: "Reports",
       icon: "📋",
       desc: "Advanced analytics",
       color: "#0891b2",
-      image: "landscape6.png",
+      image: Reports,
     },
   ];
 
@@ -531,6 +536,14 @@ function ProductShowcase() {
   };
 
   const SlideContent = ({ slide }) => {
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+      setIsVisible(false);
+      const timer = setTimeout(() => setIsVisible(true), 50);
+      return () => clearTimeout(timer);
+    }, [slide]);
+
     return (
       <div className="showcase-frame">
         <div className="showcase-frame-header">
@@ -548,7 +561,7 @@ function ProductShowcase() {
           </span>
         </div>
         <div
-          className="showcase-frame-body"
+          className={`showcase-frame-body ${isVisible ? 'fade-in' : ''}`}
           style={{
             background: "var(--navy-800)",
             padding: 0,
@@ -568,6 +581,8 @@ function ProductShowcase() {
               display: "block",
               borderRadius: "0 0 10px 10px",
               objectFit: "cover",
+              opacity: isVisible ? 1 : 0,
+              transition: "opacity 0.4s ease-in-out",
             }}
           />
         </div>
@@ -1477,35 +1492,9 @@ function Contact() {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    
-    try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      await axios.post(`${API_BASE_URL}/public/contact`, {
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        message: form.message,
-        company: form.company, // Even though not strictly required by model, good to send if needed later
-      });
-      setSubmitted(true);
-      toast.success("Query submitted successfully");
-      setForm({
-        name: "",
-        company: "",
-        email: "",
-        phone: "",
-        message: "",
-      });
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to submit query. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    setSubmitted(true);
   };
   return (
     <section className="section section-bg-900" id="contact">
@@ -1639,16 +1628,13 @@ function Contact() {
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={isSubmitting}
                 style={{
                   width: "100%",
                   justifyContent: "center",
                   padding: "16px",
-                  opacity: isSubmitting ? 0.7 : 1,
-                  cursor: isSubmitting ? "not-allowed" : "pointer",
                 }}
               >
-                {isSubmitting ? "Submitting..." : "Submit Enquiry →"}
+                Submit Enquiry →
               </button>
             </form>
           )}
@@ -1702,7 +1688,6 @@ function CTA({ onWatchTutorial }) {
               🎥 Watch a CRM Tutorial
             </a>
           </div>
-          
         </div>
       </div>
     </section>
@@ -1714,21 +1699,59 @@ function Footer() {
   const cols = [
     {
       title: "Product",
-      links: ["Features", "Modules", "Security", "Changelog", "Roadmap"],
+      links: ["Features", "Modules", "Contact"],
     },
     {
-      title: "Solutions",
-      links: ["Sales Teams", "Finance Ops", "Enterprises"],
-    },
-    {
-      title: "Resources",
-      links: ["Documentation", "API Reference", "Blog", "Case Studies"],
-    },
-    {
-      title: "Company",
-      links: ["About Us", "Careers", "Security", "Contact"],
+      title: "Legal",
+      links: ["Privacy Policy", "Terms of Service", "Cookie Policy"],
     },
   ];
+
+  const contactInfo = [
+    {
+      icon: "📧",
+      label: "Email",
+      value: "support@graphura.in",
+    },
+    {
+      icon: "📞",
+      label: "Phone",
+      value: "+91 73780 21327",
+    },
+    {
+      icon: "📍",
+      label: "Address",
+      value: "Graphura India Private Limited, near RSF, Pataudi, Gurgaon, Haryana 122503",
+    },
+  ];
+
+  const socialLinks = [
+    {
+      Icon: FaLinkedinIn,
+      href: "https://www.linkedin.com/company/graphura-india-private-limited/",
+      label: "LinkedIn",
+      className: "social-linkedin",
+    },
+    {
+      Icon: FaFacebookF,
+      href: "https://www.facebook.com/Graphura.in",
+      label: "Facebook",
+      className: "social-facebook",
+    },
+    {
+      Icon: FaInstagram,
+      href: "https://www.instagram.com/graphura.in?igsh=MXZydnIxemcyeWttNg==",
+      label: "Instagram",
+      className: "social-instagram",
+    },
+    {
+      Icon: FaXTwitter,
+      href: "https://x.com/Graphura",
+      label: "X",
+      className: "social-x",
+    },
+  ];
+
   return (
     <footer>
       <div className="container">
@@ -1745,44 +1768,6 @@ function Footer() {
               The CRM platform that runs your entire business — sales, finance,
               management and projects in one connected workspace.
             </p>
-            <div className="footer-social">
-              {[
-                {
-                  Icon: FaLinkedinIn,
-                  href: "https://www.linkedin.com/company/graphura-india-private-limited/",
-                  label: "LinkedIn",
-                  className: "social-linkedin",
-                },
-                {
-                  Icon: FaFacebookF,
-                  href: "https://www.facebook.com/Graphura.in",
-                  label: "Facebook",
-                  className: "social-facebook",
-                },
-                {
-                  Icon: FaInstagram,
-                  href: "https://www.instagram.com/graphura.in?igsh=MXZydnIxemcyeWttNg==",
-                  label: "Instagram",
-                  className: "social-instagram",
-                },
-                {
-                  Icon: FaXTwitter,
-                  href: "https://x.com/Graphura",
-                  label: "X",
-                  className: "social-x",
-                },
-              ].map(({ Icon, href, label, className }) => (
-                <a
-                  key={href}
-                  onClick={() => handleExternalLink(href)}
-                  className={`social-btn ${className}`}
-                  aria-label={label}
-                  style={{ cursor: "pointer" }}
-                >
-                  <Icon />
-                </a>
-              ))}
-            </div>
           </div>
           {cols.map((col) => (
             <div className="footer-col" key={col.title}>
@@ -1802,29 +1787,37 @@ function Footer() {
               })}
             </div>
           ))}
+          <div className="footer-col">
+            <h4>Contact Us</h4>
+            {contactInfo.map((item) => (
+              <div key={item.label} className="footer-contact-item">
+                <span className="footer-contact-icon">{item.icon}</span>
+                <div>
+                  <div className="footer-contact-label">{item.label}</div>
+                  <div className="footer-contact-value">{item.value}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="footer-col">
+            <h4>Follow Us</h4>
+            <div className="footer-social">
+              {socialLinks.map(({ Icon, href, label, className }) => (
+                <a
+                  key={href}
+                  onClick={() => handleExternalLink(href)}
+                  className={`social-btn ${className}`}
+                  aria-label={label}
+                  style={{ cursor: "pointer" }}
+                >
+                  <Icon />
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="footer-bottom">
           <p>© 2026 GraphuraCRM Inc. All rights reserved.</p>
-          <div style={{ display: "flex", gap: 20 }}>
-            {["Privacy Policy", "Terms of Service", "Cookie Policy"].map(
-              (l) => (
-                <a
-                  key={l}
-                  style={{
-                    color: "var(--text-secondary)",
-                    textDecoration: "none",
-                    fontSize: "0.82rem",
-                    cursor: "pointer",
-                  }}
-                  onClick={() =>
-                    window.scrollTo({ top: 0, behavior: "smooth" })
-                  }
-                >
-                  {l}
-                </a>
-              ),
-            )}
-          </div>
         </div>
       </div>
     </footer>

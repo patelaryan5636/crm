@@ -260,10 +260,21 @@ exports.getDashboardMetrics = catchAsync(async (req, res, next) => {
   const adminIds = admins.map(a => a._id);
 
   const recentActivities = await AuditLog.find({
-    $or: [
-      { performerType: "SUPER_ADMIN" },
-      { action: { $in: ["ADMIN_CREATED", "ADMIN_UPDATED", "ADMIN_DEACTIVATED", "LIMIT_CHANGED"] } },
-      { targetModel: { $in: ["Admin", "SuperAdminTicket", "Query", "SuperAdmin"] } }
+    $and: [
+      {
+        $or: [
+          { performerType: "SUPER_ADMIN" },
+          { action: { $in: ["ADMIN_CREATED", "ADMIN_UPDATED", "ADMIN_DEACTIVATED", "LIMIT_CHANGED"] } },
+          { targetModel: { $in: ["Admin", "SuperAdminTicket", "Query", "SuperAdmin"] } }
+        ]
+      },
+      {
+        // Skip announcements sent by regular admins to their companies
+        $or: [
+          { action: { $ne: "ANNOUNCEMENT_SENT" } },
+          { performerType: "SUPER_ADMIN" }
+        ]
+      }
     ]
   })
     .sort({ createdAt: -1 })

@@ -2108,6 +2108,23 @@ const NotificationSchema = new Schema(
 NotificationSchema.index({ admin: 1, user: 1, isRead: 1, createdAt: -1 });
 
 // ════════════════════════════════════════════════════════════
+// MODEL 41b — FINANCE NOTIFICATION READ STATE
+// Tracks which finance notification events are read/dismissed.
+// eventId is a string key derived from source record (e.g. "pay-<id>")
+// ════════════════════════════════════════════════════════════
+const FinanceNotificationReadSchema = new Schema(
+  {
+    admin:       { type: Schema.Types.ObjectId, ref: 'Admin', required: true },
+    eventId:     { type: String, required: true },
+    isRead:      { type: Boolean, default: false },
+    readAt:      { type: Date,    default: null },
+    isDismissed: { type: Boolean, default: false },
+  },
+  { timestamps: true },
+);
+FinanceNotificationReadSchema.index({ admin: 1, eventId: 1 }, { unique: true });
+
+// ════════════════════════════════════════════════════════════
 // MODEL 42 — API CONFIG
 // Global API keys managed by Super Admin ONLY.
 // Razorpay, Brevo, Firebase keys.
@@ -2307,6 +2324,7 @@ module.exports = {
   SuperAdminTicket: mongoose.model("SuperAdminTicket", SuperAdminTicketSchema),
   Announcement: mongoose.model("Announcement", AnnouncementSchema),
   Notification: mongoose.model("Notification", NotificationSchema),
+  FinanceNotificationRead: mongoose.model("FinanceNotificationRead", FinanceNotificationReadSchema),
 
   // ── Config ──
   ApiConfig: mongoose.model("ApiConfig", ApiConfigSchema),

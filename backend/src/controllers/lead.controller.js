@@ -449,7 +449,14 @@ exports.getAdminTargets = catchAsync(async (req, res, next) => {
   const month   = parseInt(req.query.month) || (new Date().getMonth() + 1);
   const year    = parseInt(req.query.year)  || new Date().getFullYear();
 
-  const targets = await SalesTarget.find({ admin: adminId, month, year })
+  const from = new Date(year, month - 1, 1, 0, 0, 0, 0);
+  const to   = new Date(year, month,     0, 23, 59, 59, 999);
+
+  const targets = await SalesTarget.find({
+    admin: adminId,
+    fromDate: { $gte: from },
+    toDate:   { $lte: to },
+  })
     .populate("user",  "name role email")
     .populate("setBy", "name role")
     .sort({ createdAt: -1 })
@@ -457,24 +464,39 @@ exports.getAdminTargets = catchAsync(async (req, res, next) => {
 
   let completed = 0, inProgress = 0, pending = 0, overdue = 0;
 
+  const computeStatus = (tgt) => {
+    const salesPct = tgt.targetSales > 0 ? (tgt.achievedSales / tgt.targetSales) * 100 : 0;
+    const callsPct = tgt.targetCalls > 0 ? (tgt.achievedCalls / tgt.targetCalls) * 100 : 0;
+    const avgPct   = (salesPct + callsPct) / (tgt.targetSales > 0 && tgt.targetCalls > 0 ? 2 : 1);
+
+    if (avgPct >= 100) return 'Completed';
+    if (avgPct > 0)    return 'In Progress';
+    if (new Date() > new Date(tgt.toDate)) return 'Overdue';
+    return 'Pending';
+  };
+
   const formatted = targets.map(t => {
-    if (t.status === "Completed")  completed++;
-    else if (t.status === "In Progress") inProgress++;
-    else if (t.status === "Overdue")     overdue++;
+    const status = computeStatus(t);
+    if (status === "Completed")  completed++;
+    else if (status === "In Progress") inProgress++;
+    else if (status === "Overdue")     overdue++;
     else pending++;
 
     const callPct  = t.targetCalls > 0 ? Math.min(100, Math.round((t.achievedCalls  / t.targetCalls)  * 100)) : 0;
     const salesPct = t.targetSales > 0 ? Math.min(100, Math.round((t.achievedSales / t.targetSales) * 100)) : 0;
     const overallPct = Math.round((callPct + salesPct) / 2);
 
+    const mVal = new Date(t.fromDate).getMonth() + 1;
+    const yVal = new Date(t.fromDate).getFullYear();
+
     return {
       id:             t._id.toString(),
       memberName:     t.user?.name   || "—",
       memberRole:     (t.user?.role  || "").replace("SALES_", ""),
       setBy:          t.setBy?.name  || "—",
-      month:          t.month,
-      year:           t.year,
-      period:         `${["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][t.month]} ${t.year}`,
+      month:          mVal,
+      year:           yVal,
+      period:         `${["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][mVal]} ${yVal}`,
       targetCalls:    t.targetCalls,
       achievedCalls:  t.achievedCalls,
       remainingCalls: Math.max(0, t.targetCalls  - t.achievedCalls),
@@ -484,7 +506,7 @@ exports.getAdminTargets = catchAsync(async (req, res, next) => {
       callPct,
       salesPct,
       overallPct,
-      status:         t.status,
+      status,
       notes:          t.notes || "",
     };
   });

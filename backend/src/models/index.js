@@ -1318,6 +1318,7 @@ const SalesTargetSchema = new Schema(
     achievedCalls: { type: Number, default: 0 },
     achievedSales: { type: Number, default: 0 },
     achievedRevenue: { type: Number, default: 0 },
+    notes: { type: String, default: "" },
   },
   { timestamps: true },
 );

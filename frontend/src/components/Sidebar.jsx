@@ -232,11 +232,6 @@ const MENUS = {
             path: "/sales-team-leader/login-logs",
             icon: History,
           },
-          {
-            name: "Payment Alerts",
-            path: "/sales-team-leader/payment-alerts",
-            icon: CreditCard,
-          },
         ],
       },
       {

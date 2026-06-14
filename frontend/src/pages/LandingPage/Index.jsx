@@ -1485,17 +1485,36 @@ function FAQ() {
 
 // ─── CONTACT ──────────────────────────────────────────────────────────────────
 function Contact() {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    message: "",
-  });
+  const EMPTY_FORM = { name: "", company: "", email: "", phone: "", message: "" };
+  const [form, setForm] = useState(EMPTY_FORM);
   const [submitted, setSubmitted] = useState(false);
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const setField = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setError("");
+    setLoading(true);
+    try {
+      const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api");
+      const res = await fetch(`${API_URL}/public/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || "Submission failed. Please try again.");
+      setSubmitted(true);
+      setForm(EMPTY_FORM);
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
+
   return (
     <section className="section section-bg-900" id="contact">
       <div className="container">
@@ -1515,7 +1534,6 @@ function Contact() {
               matched to your industry and team size — no generic pitches.
             </p>
             {[
-
               ["🎧", "Technical Support", "official@graphura.in"],
               ["📞", "Phone", "+91 73780 21327"],
               [
@@ -1533,6 +1551,7 @@ function Contact() {
               </div>
             ))}
           </div>
+
           {submitted ? (
             <div
               style={{
@@ -1558,15 +1577,17 @@ function Contact() {
               >
                 Enquiry received
               </h3>
-              <p
-                style={{
-                  color: "var(--text-secondary)",
-                  fontSize: "0.95rem",
-                }}
-              >
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}>
                 Our team will reply within 2 business hours. Check your inbox
                 for a confirmation.
               </p>
+              <button
+                onClick={() => setSubmitted(false)}
+                className="btn-primary"
+                style={{ marginTop: 24, padding: "12px 28px" }}
+              >
+                Send another enquiry
+              </button>
             </div>
           ) : (
             <form
@@ -1574,17 +1595,35 @@ function Contact() {
               style={{ padding: 36 }}
               onSubmit={handleSubmit}
             >
-              <div className="form-group">
-                <label className="form-label">Full Name *</label>
-                <input
-                  className="form-input"
-                  type="text"
-                  placeholder="Alex Reeves"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                />
+              {/* Name + Company */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Full Name *</label>
+                  <input
+                    className="form-input"
+                    type="text"
+                    placeholder="Alex Reeves"
+                    value={form.name}
+                    onChange={setField("name")}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Company *</label>
+                  <input
+                    className="form-input"
+                    type="text"
+                    placeholder="Acme Corp"
+                    value={form.company}
+                    onChange={setField("company")}
+                    required
+                    disabled={loading}
+                  />
+                </div>
               </div>
+
+              {/* Email + Phone */}
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Email Address *</label>
@@ -1593,10 +1632,9 @@ function Contact() {
                     type="email"
                     placeholder="alex@gmail.com"
                     value={form.email}
-                    onChange={(e) =>
-                      setForm({ ...form, email: e.target.value })
-                    }
+                    onChange={setField("email")}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div className="form-group">
@@ -1606,12 +1644,13 @@ function Contact() {
                     type="tel"
                     placeholder="+91 12345 67890"
                     value={form.phone}
-                    onChange={(e) =>
-                      setForm({ ...form, phone: e.target.value })
-                    }
+                    onChange={setField("phone")}
+                    disabled={loading}
                   />
                 </div>
               </div>
+
+              {/* Message */}
               <div className="form-group">
                 <label className="form-label">Message *</label>
                 <textarea
@@ -1619,12 +1658,19 @@ function Contact() {
                   rows={5}
                   placeholder="Tell us about your team size, current tools, and what you're hoping to improve..."
                   value={form.message}
-                  onChange={(e) =>
-                    setForm({ ...form, message: e.target.value })
-                  }
+                  onChange={setField("message")}
                   required
+                  disabled={loading}
                 />
               </div>
+
+              {/* Inline error */}
+              {error && (
+                <p style={{ color: "#f87171", fontSize: "0.85rem", marginBottom: 12 }}>
+                  ⚠ {error}
+                </p>
+              )}
+
               <button
                 type="submit"
                 className="btn-primary"
@@ -1632,9 +1678,12 @@ function Contact() {
                   width: "100%",
                   justifyContent: "center",
                   padding: "16px",
+                  opacity: loading ? 0.7 : 1,
+                  cursor: loading ? "not-allowed" : "pointer",
                 }}
+                disabled={loading}
               >
-                Submit Enquiry →
+                {loading ? "Submitting…" : "Submit Enquiry →"}
               </button>
             </form>
           )}

@@ -16,6 +16,7 @@
  * Public routes (auth pages, landing, payment, track) — always accessible.
  */
 
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { PrivateRoute } from './guards';
 
@@ -33,10 +34,11 @@ import PaymentResult      from '../pages/public/PaymentResult';
 import ClientTrackingPage from '../pages/public/ClientTrackingPage';
 import LandingPage        from '../pages/LandingPage/Index';
 
-// ── Policy pages (public) ────────────────────────────────────
-import TermsAndConditions from '../pages/Policies/Terms&Conditions';
-import PrivacyPolicy      from '../pages/Policies/PrivacyPolicy';
-import CookiePolicy       from '../pages/Policies/CookiePolicy';
+// ── Policy pages — lazy loaded so ad-blockers blocking these
+//    filenames don't crash the entire app on startup ──────────
+const TermsAndConditions = lazy(() => import('../pages/Policies/Terms&Conditions'));
+const PrivacyPolicy      = lazy(() => import('../pages/Policies/PrivacyPolicy'));
+const CookiePolicy       = lazy(() => import('../pages/Policies/CookiePolicy'));
 
 // ── Department workspace (legacy) ───────────────────────────
 import DepartmentWorkspace from '../pages/department/DepartmentWorkspace';
@@ -61,10 +63,32 @@ function AppRoutes() {
         {/* ══ LANDING ══════════════════════════════════════════ */}
         <Route path="/" element={<LandingPage />} />
 
-        {/* Policy Pages */}
-        <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/cookie-policy" element={<CookiePolicy />} />        
+        {/* Policy Pages — wrapped in Suspense so a blocked/failed load
+            shows a simple fallback instead of crashing the whole app */}
+        <Route
+          path="/terms-and-conditions"
+          element={
+            <Suspense fallback={<PolicyFallback />}>
+              <TermsAndConditions />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/privacy-policy"
+          element={
+            <Suspense fallback={<PolicyFallback />}>
+              <PrivacyPolicy />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/cookie-policy"
+          element={
+            <Suspense fallback={<PolicyFallback />}>
+              <CookiePolicy />
+            </Suspense>
+          }
+        />
         {/* <Route path="/" element={<Navigate to="/login" replace />} /> */}
 
         {/* ── Public pages (no auth) ── */}
@@ -312,6 +336,22 @@ function AppRoutes() {
 
       </Routes>
     </BrowserRouter>
+  );
+}
+
+/** Shown while a policy page lazy-chunk is loading or if the
+ *  browser/ad-blocker prevents it from loading. */
+function PolicyFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="text-center space-y-3 p-8">
+        <div className="w-8 h-8 border-2 border-[#2a465a] border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-slate-500 text-sm">Loading page…</p>
+        <p className="text-slate-400 text-xs">
+          If this takes too long, try disabling your ad-blocker for this site.
+        </p>
+      </div>
+    </div>
   );
 }
 

@@ -8,6 +8,7 @@ const router = express.Router();
 router.use(requireAdmin);
 
 router.get('/razorpay', apiConfigController.getRazorpayConfig);
+router.get('/razorpay/history', apiConfigController.getRazorpayHistory);
 router.post('/razorpay', apiConfigController.updateRazorpayConfig);
 router.post('/razorpay/generate-secret', apiConfigController.generateRazorpaySecret);
 

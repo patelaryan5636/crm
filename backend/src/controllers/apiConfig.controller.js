@@ -5,65 +5,6 @@ const ApiResponse = require('../utils/apiResponse');
 const { encrypt, decrypt } = require('../utils/encrypt');
 const crypto = require('crypto');
 
-console.log('API Config Controller Loaded');
-
-/**
- * Update Razorpay Configuration (Dual-Key System)
- * POST /api/api-config/razorpay
- */
-exports.updateRazorpayConfig = catchAsync(async (req, res, next) => {
-  console.log('Update Razorpay Config Request:', req.body);
-  const { mode, keyId, keySecret, webhookSecret, isActive } = req.body;
-
-  if (!mode || !['test', 'live'].includes(mode)) {
-    return next(new AppError('Invalid or missing mode (must be test or live)', 400));
-  }
-
-  try {
-    const prefix = `RAZORPAY_${mode.toUpperCase()}_`;
-    const configs = [
-      { key: `${prefix}KEY_ID`, value: keyId, description: `Razorpay ${mode} API Key ID` }
-    ];
-
-    // Only update secret if it's provided and NOT a hint (••••)
-    if (keySecret && !keySecret.includes('•') && String(keySecret).trim() !== '') {
-      configs.push({ key: `${prefix}KEY_SECRET`, value: keySecret, description: `Razorpay ${mode} API Key Secret` });
-    }
-
-    if (webhookSecret && !webhookSecret.includes('•') && String(webhookSecret).trim() !== '') {
-      configs.push({ key: `${prefix}WEBHOOK_SECRET`, value: webhookSecret, description: `Razorpay ${mode} Webhook Secret` });
-    }
-
-    // If isActive is explicitly passed, update the active mode
-    if (isActive === true) {
-      configs.push({ key: 'RAZORPAY_ACTIVE_MODE', value: mode, description: 'Currently active Razorpay mode' });
-    }
-
-    for (const config of configs) {
-      await ApiConfig.findOneAndUpdate(
-        { admin: req.admin._id, key: config.key },
-        { 
-          admin: req.admin._id,
-          value: encrypt(config.value),
-          description: config.description,
-          isEncrypted: true,
-          updatedBy: req.user?._id
-        },
-        { upsert: true, new: true, runValidators: true }
-      );
-    }
-
-    console.log(`Razorpay ${mode} configuration updated successfully`);
-    res.status(200).json(new ApiResponse(200, null, `Razorpay ${mode} configuration updated successfully`));
-  } catch (error) {
-    console.error('Error in updateRazorpayConfig:', error);
-    return next(new AppError(error.message, 500));
-  }
-});
-/**
- * Helper to mask sensitive secrets for UI display
- * Returns ••••••••last4 if long enough, else just dots
- */
 const maskSecret = (secret) => {
   if (!secret) return '';
   const s = String(secret);
@@ -71,24 +12,111 @@ const maskSecret = (secret) => {
   return '••••••••••••••••' + s.slice(-4);
 };
 
-console.log('API Config Controller Loaded');
-
-/**
- * Get Razorpay Configuration (Dual-Key System)
- * GET /api/api-config/razorpay
- */
-exports.getRazorpayConfig = catchAsync(async (req, res, next) => {
-  if (!req.admin?._id) {
-    return next(new AppError('Admin context is required to load API configuration', 403));
+exports.updateRazorpayConfig = catchAsync(async (req, res, next) => {
+  console.log('--- RAZORPAY SAVE START ---', req.body);
+  const { mode, keyId, keySecret, webhookSecret, isActive, nickname } = req.body;
+  if (!mode || !['test', 'live'].includes(mode)) {
+    return next(new AppError('Invalid or missing mode', 400));
   }
+
+  try {
+    const isNewVersion = keySecret && !keySecret.includes('•');
+    if (isNewVersion) {
+      await ApiConfig.updateMany(
+        { 
+          admin: req.admin._id, 
+          status: 'ACTIVE',
+          $or: [
+            { environment: mode },
+            { key: { $regex: new RegExp('^RAZORPAY_' + mode.toUpperCase() + '_') } }
+          ]
+        },
+        { status: 'REVOKED' }
+      );
+    }
+
+    const prefix = 'RAZORPAY_' + mode.toUpperCase() + '_';
+    const defaultNickname = nickname || (mode.charAt(0).toUpperCase() + mode.slice(1) + ' Key ' + new Date().toLocaleDateString());
+
+    const configs = [
+      { key: prefix + 'KEY_ID', value: keyId, description: 'Razorpay ' + mode + ' API Key ID' }
+    ];
+
+    if (keySecret && !keySecret.includes('•') && String(keySecret).trim() !== '') {
+      configs.push({ key: prefix + 'KEY_SECRET', value: keySecret, description: 'Razorpay ' + mode + ' API Key Secret' });
+    }
+
+    if (webhookSecret && !webhookSecret.includes('•') && String(webhookSecret).trim() !== '') {
+      configs.push({ key: prefix + 'WEBHOOK_SECRET', value: webhookSecret, description: 'Razorpay ' + mode + ' Webhook Secret' });
+    }
+
+    for (const config of configs) {
+      if (isNewVersion) {
+        await ApiConfig.create({
+          admin: req.admin._id,
+          key: config.key,
+          value: encrypt(config.value),
+          description: config.description,
+          nickname: defaultNickname,
+          environment: mode,
+          status: 'ACTIVE',
+          isEncrypted: true,
+          updatedBy: req.user?._id
+        });
+      } else {
+        await ApiConfig.findOneAndUpdate(
+          { 
+            admin: req.admin._id, 
+            key: config.key, 
+            status: 'ACTIVE' 
+          },
+          { 
+            value: encrypt(config.value), 
+            environment: mode,
+            updatedBy: req.user?._id 
+          },
+          { upsert: true }
+        );
+      }
+    }
+
+    if (isActive === true) {
+      await ApiConfig.findOneAndUpdate(
+        { admin: req.admin._id, key: 'RAZORPAY_ACTIVE_MODE' },
+        {
+          admin: req.admin._id,
+          value: encrypt(mode),
+          description: 'Currently active Razorpay mode',
+          environment: 'none',
+          status: 'ACTIVE',
+          isEncrypted: true,
+          updatedBy: req.user?._id
+        },
+        { upsert: true }
+      );
+    }
+
+    console.log(`SUCCESS: Razorpay ${mode} configuration successfully saved/updated for admin ${req.admin._id}`);
+    res.status(200).json(new ApiResponse(200, null, 'Config updated'));
+  } catch (error) {
+    console.error(`FAILED: Razorpay ${mode} configuration save failed for admin ${req.admin?._id || 'unknown'}. Error:`, error.message);
+    return next(new AppError(error.message, 500));
+  }
+});
+
+exports.getRazorpayConfig = catchAsync(async (req, res, next) => {
+  if (!req.admin?._id) return next(new AppError('Admin context required', 403));
 
   const keys = [
     'RAZORPAY_TEST_KEY_ID', 'RAZORPAY_TEST_KEY_SECRET', 'RAZORPAY_TEST_WEBHOOK_SECRET',
     'RAZORPAY_LIVE_KEY_ID', 'RAZORPAY_LIVE_KEY_SECRET', 'RAZORPAY_LIVE_WEBHOOK_SECRET',
     'RAZORPAY_ACTIVE_MODE'
   ];
-  
-  const configs = await ApiConfig.find({ admin: req.admin._id, key: { $in: keys } });
+
+  let configs = await ApiConfig.find({ admin: req.admin._id, key: { $in: keys }, status: 'ACTIVE' });
+  if (configs.length === 0) {
+    configs = await ApiConfig.find({ admin: req.admin._id, key: { $in: keys } });
+  }
 
   const configMap = {};
   configs.forEach(c => {
@@ -109,49 +137,56 @@ exports.getRazorpayConfig = catchAsync(async (req, res, next) => {
     }
   };
 
-  res.status(200).json(new ApiResponse(200, responseData, 'Razorpay dual-key configuration retrieved'));
+  res.status(200).json(new ApiResponse(200, responseData, 'Config retrieved'));
 });
 
-/**
- * POST /api/api-config/razorpay/generate-secret
- * Generate a new webhook secret for the current admin (one-time reveal)
- */
+exports.getRazorpayHistory = catchAsync(async (req, res, next) => {
+  if (!req.admin?._id) return next(new AppError('Admin context required', 403));
+
+  const configs = await ApiConfig.find({
+    admin: req.admin._id,
+    environment: { $in: ['test', 'live'] },
+    key: { $regex: /KEY_ID$/ }
+  }).sort({ createdAt: -1 });
+
+  let finalConfigs = configs;
+  if (configs.length === 0) {
+    finalConfigs = await ApiConfig.find({
+      admin: req.admin._id,
+      environment: { $in: ['test', 'live'] }
+    }).sort({ createdAt: -1 });
+  }
+
+  const history = finalConfigs.map(c => ({
+    id: c._id,
+    name: c.nickname || (c.environment.toUpperCase() + ' Key'),
+    keyId: c.key.includes('KEY_ID') ? decrypt(c.value) : '•••••••• (Secret Only)',
+    environment: c.environment.toUpperCase(),
+    createdOn: c.createdAt.toISOString().split('T')[0],
+    status: c.status
+  }));
+
+  res.status(200).json(new ApiResponse(200, history, 'History retrieved'));
+});
+
 exports.generateRazorpaySecret = catchAsync(async (req, res, next) => {
   if (!req.admin?._id) return next(new AppError('Admin context required', 403));
-  const { ApiConfig, AuditLog } = require('../models');
-
-  // Generate 32-byte hex secret
+  const { AuditLog } = require('../models');
   const secret = crypto.randomBytes(32).toString('hex');
 
-  // Persist encrypted
   const doc = await ApiConfig.findOneAndUpdate(
-    { admin: req.admin._id, key: 'RAZORPAY_WEBHOOK_SECRET' },
+    { admin: req.admin._id, key: 'RAZORPAY_WEBHOOK_SECRET', status: 'ACTIVE' },
     {
       admin: req.admin._id,
       value: encrypt(secret),
       description: 'Razorpay Webhook Secret',
+      status: 'ACTIVE',
+      environment: 'none',
       isEncrypted: true,
       updatedBy: req.user?._id
     },
-    { upsert: true, new: true, runValidators: true }
+    { upsert: true, new: true }
   );
 
-  // Audit
-  try {
-    await AuditLog.create({
-      admin: req.admin._id,
-      performedBy: req.user?._id,
-      performerType: req.user ? 'ADMIN' : 'SUPER_ADMIN',
-      action: 'API_CONFIG_UPDATE',
-      targetModel: 'ApiConfig',
-      targetId: doc._id,
-      note: 'Generated new Razorpay webhook secret via admin UI'
-    });
-  } catch (err) {
-    // audit failure shouldn't block the response
-    console.warn('Failed to write audit log for webhook secret generation', err.message || err);
-  }
-
-  // Return plaintext secret once — admin must copy it now
-  res.status(200).json(new ApiResponse(200, { secret }, 'Webhook secret generated — copy it now'));
+  res.status(200).json(new ApiResponse(200, { secret }, 'Secret generated'));
 });

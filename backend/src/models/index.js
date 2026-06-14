@@ -2115,17 +2115,25 @@ NotificationSchema.index({ admin: 1, user: 1, isRead: 1, createdAt: -1 });
 const ApiConfigSchema = new Schema(
   {
     admin: { type: Schema.Types.ObjectId, ref: "Admin", required: true },
-    key: { type: String, required: true, trim: true }, // Removed unique: true
+    key: { type: String, required: true, trim: true },
     value: { type: String, required: true },
     description: { type: String, trim: true },
+    nickname: { type: String, trim: true },
+    environment: { type: String, enum: ["test", "live", "none"], default: "none" },
+    status: { type: String, enum: ["ACTIVE", "REVOKED"], default: "ACTIVE" },
     isEncrypted: { type: Boolean, default: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true },
 );
 
-// Ensure keys are unique per tenant
-ApiConfigSchema.index({ admin: 1, key: 1 }, { unique: true });
+// Indexes for performance
+ApiConfigSchema.index({ admin: 1, key: 1, status: 1 });
+ApiConfigSchema.index({ admin: 1, environment: 1 });
+ApiConfigSchema.index(
+  { admin: 1, key: 1 },
+  { unique: true, partialFilterExpression: { status: "ACTIVE" } }
+);
 
 // ════════════════════════════════════════════════════════════
 // MODEL 43A — PROJECT TASK

@@ -48,52 +48,75 @@ export default function ApiConfig() {
   const [keySecret, setKeySecret] = useState('');
   const [webhookSecretVal, setWebhookSecretVal] = useState('');
   const [isSettingActive, setIsSettingActive] = useState(false);
+  const [nickname, setNickname] = useState(''); // New field for key set nickname
   const [loading, setLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyData, setHistoryData] = useState([]);
 
   const webhookEndpointUrl = `${window.location.origin}/api/payment-webhook/razorpay`;
 
-  // ── Fetch existing config on mount ──
+  // ── Fetch existing config & history on mount ──
   useEffect(() => {
-    const fetchConfig = async () => {
+    const initData = async () => {
       try {
-        const res = await apiConfigService.getRazorpayConfig();
-        if (res.success && res.data) {
-          const { test, live, activeMode } = res.data;
+        setLoading(true);
+        const [configRes, historyRes] = await Promise.all([
+          apiConfigService.getRazorpayConfig(),
+          apiConfigService.getRazorpayHistory()
+        ]);
+
+        if (configRes.success && configRes.data) {
+          const { test, live, activeMode } = configRes.data;
           setConfigs({ test, live });
           setSystemActiveMode(activeMode);
           
-          // Initial load: populate fields from the active mode
-          const current = res.data[activeMode] || res.data.test;
+          const current = configRes.data[activeMode] || configRes.data.test;
           setKeyId(current.keyId || '');
           setKeySecret(current.keySecret || '');
           setWebhookSecretVal(current.webhookSecret || '');
           setViewMode(activeMode);
-          setIsSettingActive(true); // Since it's the active one
+          setIsSettingActive(true);
+        }
+
+        if (historyRes.success) {
+          setHistoryData(historyRes.data);
         }
       } catch (err) {
-        console.error('Failed to fetch API config:', err);
+        console.error('Failed to fetch API config/history:', err);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchConfig();
+    initData();
   }, []);
+
+  const fetchHistory = async () => {
+    try {
+      const historyRes = await apiConfigService.getRazorpayHistory();
+      if (historyRes.success) setHistoryData(historyRes.data);
+    } catch (err) {
+      console.error('Failed to fetch history:', err);
+    }
+  };
 
   // ── Handle View Mode Toggle ──
   const handleToggleViewMode = (newMode) => {
     if (newMode === viewMode) return;
 
-    // Save current fields into the previous mode's config state before switching
+    // Save current fields into memory before switching
     setConfigs(prev => ({
       ...prev,
       [viewMode]: { keyId, keySecret, webhookSecret: webhookSecretVal }
     }));
 
-    // Switch to new mode and populate fields
+    // Switch
     const nextConfig = configs[newMode];
     setKeyId(nextConfig.keyId || '');
     setKeySecret(nextConfig.keySecret || '');
     setWebhookSecretVal(nextConfig.webhookSecret || '');
     setIsSettingActive(systemActiveMode === newMode);
     setViewMode(newMode);
+    setNickname(''); // Clear nickname for the new edit
   };
 
   // ── Save handler ──
@@ -109,17 +132,20 @@ export default function ApiConfig() {
         keyId,
         keySecret,
         webhookSecret: webhookSecretVal,
-        isActive: isSettingActive
+        isActive: isSettingActive,
+        nickname: nickname.trim() || undefined
       });
 
       if (res.success) {
         toast.success(`Razorpay ${viewMode} configuration saved successfully`);
-        // Update local memory of configs
+        // Refresh local state
         setConfigs(prev => ({
           ...prev,
           [viewMode]: { keyId, keySecret, webhookSecret: webhookSecretVal }
         }));
         if (isSettingActive) setSystemActiveMode(viewMode);
+        setNickname('');
+        fetchHistory(); // Refresh the history table
       } else {
         toast.error(res.message || 'Failed to save configuration');
       }
@@ -137,7 +163,7 @@ export default function ApiConfig() {
   const [copiedField, setCopiedField] = useState(null);
   const copyToClipboard = (text, field) => {
     // If copying a hint, don't allow it
-    if (text.includes('•')) {
+    if (text && String(text).includes('•')) {
       return toast.error('Cannot copy a masked secret. Please enter a new one if needed.');
     }
     navigator.clipboard.writeText(text);
@@ -166,16 +192,57 @@ export default function ApiConfig() {
     return '•'.repeat(Math.min(val.length, 20));
   };
 
-  // ── Saved API Keys State (Wire up ready) ──
-  const [savedKeys, setSavedKeys] = useState([]);
+  // ── Table Column Mapping ──
   const savedKeysColumns = [
-    { key: 'name', label: 'Key Name', width: '20%' },
+    { key: 'name', label: 'Key Nickname', width: '20%' },
     { key: 'keyId_val', label: 'Key ID', width: '25%' },
     { key: 'environment_val', label: 'Environment', width: '15%' },
     { key: 'createdOn', label: 'Created On', width: '15%' },
     { key: 'status_val', label: 'Status', width: '15%' },
     { key: 'actions', label: 'Actions', width: '10%' },
   ];
+
+  // ── Table Row Mapping ──
+  const savedKeysRows = historyData.map((k, idx) => ({
+    ...k,
+    keyId_val: (
+      <div className="flex items-center gap-1.5">
+        <span className="font-mono text-xs text-slate-600">{k.keyId}</span>
+        <button
+          onClick={() => copyToClipboard(k.keyId, `history-${k.id}`)}
+          className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-400 hover:bg-slate-200 transition duration-150 active:scale-95"
+          title="Copy Key ID"
+        >
+          {copiedField === `history-${k.id}` ? <CheckCircle2 size={12} className="text-emerald-500" /> : <Copy size={12} />}
+        </button>
+      </div>
+    ),
+    environment_val: (
+      <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${
+        k.environment === 'LIVE' ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
+      }`}>
+        {k.environment}
+      </span>
+    ),
+    status_val: (
+      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-black/5 ${
+        k.status === 'ACTIVE' ? 'bg-emerald-500/15 text-emerald-600' : 'bg-rose-500/15 text-rose-600'
+      }`}>
+        {k.status}
+      </span>
+    ),
+    actions: (
+      <div className="flex items-center gap-2">
+        <button
+          className="flex items-center justify-center w-8 h-8 rounded-xl bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100 transition duration-150 active:scale-95 disabled:opacity-30"
+          title="History view only"
+          disabled
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+    )
+  }));
 
   return (
     <div className="w-full max-w-[1600px] mx-auto space-y-6">
@@ -552,7 +619,7 @@ export default function ApiConfig() {
 
           <DataTable
             columns={savedKeysColumns}
-            rows={savedKeys}
+            rows={savedKeysRows}
             size={12}
             pageSize={5}
             searchable={true}

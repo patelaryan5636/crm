@@ -55,6 +55,7 @@ const logsRoutes = require('./routes/logs');
 const adminRoutes = require('./routes/admin');
 const apiConfigRoutes = require('./routes/apiConfig');
 const financeRoutes = require('./routes/finance');
+const financeNotificationRoutes = require('./routes/financeNotifications');
 const targetsRoutes = require('./routes/targets');
 
 const app = express();
@@ -206,6 +207,8 @@ try {
   console.log('✓ /api/admin routes registered');
 	app.use('/api/finance', financeRoutes);
 	console.log('✓ /api/finance routes registered');
+	app.use('/api/finance/notifications', financeNotificationRoutes);
+	console.log('✓ /api/finance/notifications routes registered');
 	app.use('/api/targets', targetsRoutes);
 	console.log('✓ /api/targets routes registered');
 } catch (error) {

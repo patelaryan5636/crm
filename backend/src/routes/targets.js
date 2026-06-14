@@ -17,6 +17,10 @@ router.delete('/tl/:id',       requireUser, ctrl.deleteTarget);
 // ── SE routes ─────────────────────────────────────────────────────────────────
 router.get('/se/my', requireUser, ctrl.getMyTargets);
 
+// ── Manager routes ─────────────────────────────────────────────────────────────
+router.get('/manager/overview', requireUser, ctrl.getPerformanceOverview);
+router.post('/manager/alert',    requireUser, ctrl.sendPerformanceAlert);
+
 // ── Sync (TL / Admin manual trigger) ─────────────────────────────────────────
 router.post('/sync', requireUser, ctrl.syncTargetProgress);
 

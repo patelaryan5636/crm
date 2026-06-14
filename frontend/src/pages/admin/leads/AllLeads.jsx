@@ -1,139 +1,99 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { getAdminLeads } from "../../../services/leadService";
 import {
-  Users,
-  Flame,
-  TrendingUp,
-  Search,
-  Download,
-  Filter,
-  SlidersHorizontal,
-  Plus,
-  Phone,
-  Mail,
-  Eye,
-  ArrowRightCircle,
-  Trash2,
-  LayoutGrid,
-  LayoutList,
-  Globe,
-  Share2,
-  PhoneCall,
-  Megaphone,
-  Target,
-  X,
-  Clock,
-  MessageSquare,
-  Paperclip,
+  Users, Flame, TrendingUp, ArrowRightCircle,
+  Eye, LayoutGrid, LayoutList,
+  Mail, Target, RefreshCw, AlertCircle,
 } from "lucide-react";
 import {
-  DashGrid,
-  EnhancedDashCard,
-  DataTable,
-  PanelModal as Modal,
-  openModal,
-  closeModal,
-  DataField,
-  SelectField,
-  Option,
-  Grid,
+  DashGrid, EnhancedDashCard, DataTable,
+  PanelModal as Modal, openModal, closeModal,
 } from "../../../components/shared/Common_Components";
 
-// Removed mockLeads in favor of dynamic fetching
+// ─── constants ───────────────────────────────────────────────────────────────
 
-const statusOptions = ["All", "New", "Contacted", "Interested", "Proposal", "Won", "Lost"];
-const sourceOptions = ["All Sources", "Website", "Referral", "Cold Call", "Social", "Ads"];
-const ownerOptions = ["All Owners", "Rahul S.", "Neha S.", "Deepika N.", "Anita B."];
+const STATUS_OPTIONS = ["All", "New", "Contacted", "Interested", "Won", "Lost", "Not Interested"];
 
-const statusColors = {
-  New: { bg: "bg-blue-100", text: "text-blue-700" },
-  Contacted: { bg: "bg-amber-100", text: "text-amber-700" },
-  Interested: { bg: "bg-purple-100", text: "text-purple-700" },
-  Proposal: { bg: "bg-indigo-100", text: "text-indigo-700" },
-  Won: { bg: "bg-emerald-100", text: "text-emerald-700" },
-  Lost: { bg: "bg-rose-100", text: "text-rose-700" },
+const STATUS_COLORS = {
+  New:            { bg: "bg-blue-100",    text: "text-blue-700" },
+  Contacted:      { bg: "bg-amber-100",   text: "text-amber-700" },
+  Interested:     { bg: "bg-purple-100",  text: "text-purple-700" },
+  Proposal:       { bg: "bg-indigo-100",  text: "text-indigo-700" },
+  Won:            { bg: "bg-emerald-100", text: "text-emerald-700" },
+  Lost:           { bg: "bg-rose-100",    text: "text-rose-700" },
+  "Not Interested": { bg: "bg-slate-100", text: "text-slate-600" },
 };
 
-export default function AllLeads() {
-  const [leads, setLeads] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+const columns = [
+  { key: "name",        label: "Lead Name" },
+  { key: "mobile",      label: "Mobile" },
+  { key: "email",       label: "Email" },
+  { key: "source",      label: "Source" },
+  { key: "statusBadge", label: "Status" },
+  { key: "owner",       label: "Owner" },
+  { key: "value",       label: "Deal Value" },
+  { key: "lastContact", label: "Last Contact" },
+];
 
-  const fetchLeads = async () => {
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+function StatusBadge({ status }) {
+  const sc = STATUS_COLORS[status] || { bg: "bg-slate-100", text: "text-slate-600" };
+  return (
+    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${sc.bg} ${sc.text} border border-black/5`}>
+      {status}
+    </span>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function AllLeads() {
+  const [leads,        setLeads]        = useState([]);
+  const [stats,        setStats]        = useState({ totalLeads: 0, newToday: 0, hotLeads: 0, converted: 0 });
+  const [filterOpts,   setFilterOpts]   = useState({ owners: [], sources: [] });
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState("");
+  const [selectedLead, setSelectedLead] = useState(null);
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [sourceFilter, setSourceFilter] = useState("All Sources");
+  const [ownerFilter,  setOwnerFilter]  = useState("All Owners");
+  const [viewMode,     setViewMode]     = useState("table");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
-      setLoading(true);
-      const response = await getAdminLeads();
-      if (response.success && response.data && response.data.leads) {
-        setLeads(response.data.leads);
-      } else {
-        setLeads([]);
+      const res = await getAdminLeads();
+      if (res?.data) {
+        setLeads(res.data.leads || []);
+        setStats(res.data.stats || {});
+        setFilterOpts(res.data.filters || { owners: [], sources: [] });
       }
-      setError('');
-    } catch (err) {
-      console.error("Error fetching leads:", err);
-      setError("Failed to load leads");
+    } catch (e) {
+      setError(e.response?.data?.message || e.message || "Failed to load leads");
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchLeads();
   }, []);
-  const [activeTab, setActiveTab] = useState("all");
 
-  const handleExport = () => {
-    const csvContent = "data:text/csv;charset=utf-8,Name,Email,Company,Status\n" + 
-      leads.map(l => `${l.name},${l.email},${l.company || "N/A"},${l.status}`).join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "leads_export.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [sourceFilter, setSourceFilter] = useState("All Sources");
-  const [ownerFilter, setOwnerFilter] = useState("All Owners");
-  const [viewMode, setViewMode] = useState("table");
-  const [selectedLead, setSelectedLead] = useState(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEffect(() => { load(); }, [load]);
 
-  // Stats
-  const totalLeads = leads.length;
-  const newToday = leads.filter((l) => l.lastContact === "Today").length;
-  const hotLeads = leads.filter((l) => l.status === "Interested" || l.status === "Proposal").length;
-  const converted = leads.filter((l) => l.status === "Won").length;
+  // Client-side filtering
+  const filtered = useMemo(() => leads.filter(l => {
+    const matchStatus = statusFilter === "All" || l.status === statusFilter;
+    const matchSource = sourceFilter === "All Sources" || l.source === sourceFilter;
+    const matchOwner  = ownerFilter  === "All Owners"  || l.owner  === ownerFilter;
+    return matchStatus && matchSource && matchOwner;
+  }), [leads, statusFilter, sourceFilter, ownerFilter]);
 
-  // Filtered
-  const filtered = useMemo(() => {
-    return leads.filter((lead) => {
-      const q = searchQuery.toLowerCase();
-      const matchSearch = !q || lead.name.toLowerCase().includes(q) || lead.mobile.includes(q) || lead.email.toLowerCase().includes(q);
-      const matchStatus = statusFilter === "All" || lead.status === statusFilter;
-      const matchSource = sourceFilter === "All Sources" || lead.source === sourceFilter;
-      const matchOwner = ownerFilter === "All Owners" || lead.owner === ownerFilter;
-      return matchSearch && matchStatus && matchSource && matchOwner;
-    });
-  }, [leads, searchQuery, statusFilter, sourceFilter, ownerFilter]);
-
-  // Table columns
-  const columns = [
-    { key: "name", label: "Lead Name" },
-    { key: "mobile", label: "Mobile" },
-    { key: "email", label: "Email" },
-    { key: "source", label: "Source" },
-    { key: "status", label: "Status" },
-    { key: "owner", label: "Owner" },
-    { key: "value", label: "Deal Value" },
-  ];
-
-  const actions = [
-    { label: "Call", icon: <Phone size={14} />, variant: "primary", onClick: (row) => { window.dispatchEvent(new CustomEvent("open-global-call", { detail: { name: row.name, mobile: row.mobile } })); } },
-    { label: "View", icon: <Eye size={14} />, variant: "ghost", onClick: (row) => { setSelectedLead(row); openModal("lead-detail-modal"); } },
-  ];
+  // Enrich rows with JSX cells
+  const rows = filtered.map(l => ({
+    ...l,
+    statusBadge: <StatusBadge status={l.status} />,
+  }));
 
   return (
     <div className="space-y-6">
@@ -141,51 +101,68 @@ export default function AllLeads() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-bold text-[#2a465a]">All Leads</h2>
-          <p className="text-sm text-slate-500 mt-0.5">Track and manage your complete lead pipeline</p>
+          <p className="text-sm text-slate-500 mt-0.5">Complete lead pipeline — tenant scoped</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={handleExport} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 hover:-translate-y-0.5 active:scale-95">
-            <Download size={14} /> Export
-          </button>
-          <button onClick={() => openModal("add-lead-modal")} className="flex items-center gap-2 rounded-xl bg-[#2a465a] px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-[#2a465a]/20 transition hover:bg-gradient-to-r hover:from-[#1e3a52] hover:to-[#2b5a7a] hover:shadow-xl hover:-translate-y-0.5 active:scale-95">
-            <Plus size={14} /> Add Lead
-          </button>
-        </div>
+        <button
+          onClick={load}
+          disabled={loading}
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+        >
+          <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+          Refresh
+        </button>
       </div>
 
-      {loading && <div className="text-center text-slate-500 py-10">Loading leads...</div>}
-      {error && <div className="text-center text-red-500 py-10">{error}</div>}
-      {!loading && !error && <>
+      {error && (
+        <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm">
+          <AlertCircle size={15} className="shrink-0" /> {error}
+          <button onClick={load} className="ml-auto text-xs underline">Retry</button>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <DashGrid cols={12} gap={4}>
-        <EnhancedDashCard title="Total Leads" value={String(totalLeads)} icon={<Users size={22} />} accentColor="#38bdf8" size={3} />
-        <EnhancedDashCard title="New Today" value={String(newToday)} icon={<TrendingUp size={22} />} accentColor="#3b82f6" size={3} />
-        <EnhancedDashCard title="Hot Leads" value={String(hotLeads)} icon={<Flame size={22} />} accentColor="#f59e0b" size={3} />
-        <EnhancedDashCard title="Converted" value={String(converted)} icon={<ArrowRightCircle size={22} />} accentColor="#22c55e" size={3} />
+        <EnhancedDashCard title="Total Leads"  value={String(stats.totalLeads  || 0)} icon={<Users           size={22} />} accentColor="#38bdf8" size={3} />
+        <EnhancedDashCard title="New Today"    value={String(stats.newToday    || 0)} icon={<TrendingUp       size={22} />} accentColor="#3b82f6" size={3} />
+        <EnhancedDashCard title="Hot Leads"    value={String(stats.hotLeads    || 0)} icon={<Flame            size={22} />} accentColor="#f59e0b" size={3} />
+        <EnhancedDashCard title="Converted"    value={String(stats.converted   || 0)} icon={<ArrowRightCircle size={22} />} accentColor="#22c55e" size={3} />
       </DashGrid>
 
       {/* Filters */}
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200/60 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-2 flex-wrap">
-            <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 cursor-pointer">
-              {sourceOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 cursor-pointer">
-              {ownerOptions.map((o) => <option key={o} value={o}>{o}</option>)}
-            </select>
-            <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 p-0.5">
-              <button onClick={() => setViewMode("table")} className={`p-2 rounded-lg transition ${viewMode === "table" ? "bg-[#2a465a] text-white shadow-sm" : "text-slate-400 hover:text-[#2a465a]"}`}><LayoutList size={16} /></button>
-              <button onClick={() => setViewMode("card")} className={`p-2 rounded-lg transition ${viewMode === "card" ? "bg-[#2a465a] text-white shadow-sm" : "text-slate-400 hover:text-[#2a465a]"}`}><LayoutGrid size={16} /></button>
-            </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={sourceFilter}
+            onChange={e => setSourceFilter(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 cursor-pointer"
+          >
+            <option value="All Sources">All Sources</option>
+            {filterOpts.sources.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select
+            value={ownerFilter}
+            onChange={e => setOwnerFilter(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-[#2a465a] focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 cursor-pointer"
+          >
+            <option value="All Owners">All Owners</option>
+            {filterOpts.owners.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+          <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 p-0.5 ml-auto">
+            <button onClick={() => setViewMode("table")} className={`p-2 rounded-lg transition ${viewMode === "table" ? "bg-[#2a465a] text-white" : "text-slate-400 hover:text-[#2a465a]"}`}><LayoutList size={16} /></button>
+            <button onClick={() => setViewMode("card")}  className={`p-2 rounded-lg transition ${viewMode === "card"  ? "bg-[#2a465a] text-white" : "text-slate-400 hover:text-[#2a465a]"}`}><LayoutGrid size={16} /></button>
           </div>
         </div>
 
         {/* Status pills */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {statusOptions.map((s) => (
-            <button key={s} onClick={() => setStatusFilter(s)} className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all duration-200 ${statusFilter === s ? "bg-[#2a465a] text-white shadow-md" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>{s}</button>
+          {STATUS_OPTIONS.map(s => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all duration-200 ${statusFilter === s ? "bg-[#2a465a] text-white shadow-md" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
+            >
+              {s}
+            </button>
           ))}
         </div>
       </div>
@@ -195,31 +172,49 @@ export default function AllLeads() {
         <DataTable
           title="Lead Records"
           columns={columns}
-          rows={filtered}
-          actions={actions}
-          pageSize={5}
+          rows={rows}
+          loading={loading}
+          actions={[
+            {
+              icon:    <Eye size={14} />,
+              tooltip: "View Details",
+              variant: "ghost",
+              onClick: (row) => { setSelectedLead(leads.find(l => l.id === row.id)); openModal("admin-lead-view"); },
+            },
+          ]}
+          pageSize={10}
           searchable
+          exportable
+          exportFileName="leads_export"
           size={12}
           filters={[
-            { title: "Source", type: "select", key: "source", options: ["Website", "Referral", "Cold Call", "Social", "Ads"] },
-            { title: "Status", type: "toggle", key: "status", options: ["New", "Contacted", "Interested", "Proposal", "Won", "Lost"] },
+            { title: "Source", type: "select", key: "source",
+              options: filterOpts.sources.length ? filterOpts.sources : ["Website", "Referral", "Cold Call", "Social", "Ads"] },
+            { title: "Status", type: "toggle", key: "status",
+              options: ["New","Contacted","Interested","Won","Lost"] },
           ]}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((lead) => {
-            const sc = statusColors[lead.status] || { bg: "bg-slate-100", text: "text-slate-600" };
+          {rows.map(lead => {
+            const sc = STATUS_COLORS[lead.status] || { bg: "bg-slate-100", text: "text-slate-600" };
             return (
-              <div key={lead.id} className="rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group" onClick={() => { setSelectedLead(lead); openModal("lead-detail-modal"); }}>
+              <div
+                key={lead.id}
+                className="rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group"
+                onClick={() => { setSelectedLead(lead); openModal("admin-lead-view"); }}
+              >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#2a465a] flex items-center justify-center text-white font-black text-sm shadow-lg group-hover:scale-110 transition-transform">{lead.avatar}</div>
+                    <div className="w-12 h-12 rounded-2xl bg-[#2a465a] flex items-center justify-center text-white font-black text-sm shadow-lg group-hover:scale-110 transition-transform">
+                      {lead.avatar}
+                    </div>
                     <div>
                       <p className="text-base font-black text-[#2a465a]">{lead.name}</p>
-                      <p className="text-xs font-bold text-slate-400 tracking-wider">{lead.mobile}</p>
+                      <p className="text-xs font-bold text-slate-400">{lead.mobile}</p>
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${sc.bg} ${sc.text} shadow-sm border border-black/5`}>{lead.status}</span>
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${sc.bg} ${sc.text} border border-black/5`}>{lead.status}</span>
                 </div>
                 <div className="space-y-2 mb-6">
                   <p className="text-sm font-bold text-slate-600 flex items-center gap-2.5"><Mail size={14} className="text-slate-400" /> {lead.email}</p>
@@ -237,96 +232,51 @@ export default function AllLeads() {
           })}
         </div>
       )}
-      </>}
 
-      {/* Lead Detail Modal */}
-      <Modal id="lead-detail-modal" title="Lead Details">
+      {/* Lead Detail Modal — NO Call button */}
+      <Modal id="admin-lead-view" title="Lead Details">
         {selectedLead && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-4 pb-5 border-b border-slate-100">
-              <div className="w-14 h-14 rounded-2xl bg-[#2a465a] flex items-center justify-center text-white font-black text-xl shadow-lg">{selectedLead.avatar}</div>
+          <div className="space-y-5">
+            <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
+              <div className="w-14 h-14 rounded-2xl bg-[#2a465a] flex items-center justify-center text-white font-black text-xl shadow-lg">
+                {selectedLead.avatar}
+              </div>
               <div>
                 <h3 className="text-xl font-black text-[#2a465a]">{selectedLead.name}</h3>
                 <p className="text-sm font-bold text-slate-500">{selectedLead.email}</p>
               </div>
+              <div className="ml-auto">
+                <StatusBadge status={selectedLead.status} />
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {[
-                { label: "Mobile", val: selectedLead.mobile },
-                { label: "Source", val: selectedLead.source },
-                { label: "Status", val: selectedLead.status },
-                { label: "Owner", val: selectedLead.owner },
-                { label: "Value", val: selectedLead.value },
+                { label: "Mobile",       val: selectedLead.mobile },
+                { label: "Source",       val: selectedLead.source },
+                { label: "Owner",        val: selectedLead.owner },
+                { label: "Assigned By",  val: selectedLead.assignedBy },
+                { label: "Deal Value",   val: selectedLead.value },
+                { label: "Last Contact", val: selectedLead.lastContact },
                 { label: "Next Follow-up", val: selectedLead.nextFollowup },
+                { label: "Talk Count",   val: String(selectedLead.talkCount ?? "—") },
               ].map(({ label, val }) => (
                 <div key={label}>
-                  <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">{label}</span>
-                  <span className="text-[#2a465a] font-bold bg-slate-50 px-3 py-2.5 rounded-xl block border border-slate-100 text-sm">{val}</span>
+                  <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</span>
+                  <span className="text-[#2a465a] font-bold bg-slate-50 px-3 py-2.5 rounded-xl block border border-slate-100 text-sm">{val || "—"}</span>
                 </div>
               ))}
             </div>
-            <div>
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
-                <Clock size={13} /> Activity Timeline
-              </h4>
-              <div className="space-y-4 relative ml-3 border-l-2 border-slate-100 pl-6">
-                {[
-                  { icon: <Phone size={13} />, text: "Call made — discussed requirements", time: "Today 2:30 PM", color: "#3b82f6" },
-                  { icon: <Mail size={13} />, text: "Email sent — proposal attached", time: "Apr 19 11:00 AM", color: "#8b5cf6" },
-                  { icon: <MessageSquare size={13} />, text: "Note: Very interested in premium plan", time: "Apr 18 4:15 PM", color: "#f59e0b" },
-                  { icon: <Clock size={13} />, text: "Lead created from website form", time: "Apr 15 9:30 AM", color: "#22c55e" },
-                ].map((activity, i) => (
-                  <div key={i} className="relative">
-                    <div className="absolute -left-[33px] top-1 w-4 h-4 rounded-full bg-white border-[3px] border-slate-200" />
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50/50 hover:bg-slate-50 transition">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${activity.color}15`, color: activity.color }}>{activity.icon}</div>
-                      <div>
-                        <p className="text-sm text-[#2a465a] font-bold">{activity.text}</p>
-                        <p className="text-[11px] text-slate-400 font-bold mt-0.5">{activity.time}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="pt-4 border-t border-slate-100 flex gap-3">
-              <button onClick={() => { window.dispatchEvent(new CustomEvent("open-global-call", { detail: { name: selectedLead.name, mobile: selectedLead.mobile } })); }} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black text-white bg-[#2a465a] shadow-lg shadow-[#2a465a]/20 hover:bg-[#1e3a52] transition active:scale-95"><Phone size={16} fill="currentColor" /> Call</button>
-              <button onClick={() => { window.location.href = `mailto:${selectedLead.email}`; }} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black text-[#2a465a] border border-slate-200 bg-white hover:bg-slate-50 transition active:scale-95"><Mail size={16} /> Email</button>
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <button
+                onClick={() => closeModal("admin-lead-view")}
+                className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition"
+              >
+                Close
+              </button>
             </div>
           </div>
         )}
       </Modal>
-
-      {/* Add Lead Modal */}
-      <Modal id="add-lead-modal" title="Capture New Lead">
-        <div className="space-y-6 pt-2">
-          <Grid cols={12} gap={4}>
-            <DataField label="Lead Full Name" id="lead-name" size={12} placeholder="e.g. Arun Kapoor" />
-            <DataField label="Mobile Number" id="lead-mobile" type="tel" size={6} placeholder="+91 98123 45678" />
-            <DataField label="Work Email" id="lead-email" type="email" size={6} placeholder="name@company.com" />
-            <SelectField label="Lead Source" id="lead-source" size={6} placeholder="How did they find you?">
-              <Option value="website" label="Website" />
-              <Option value="referral" label="Referral" />
-              <Option value="cold_call" label="Cold Call" />
-              <Option value="social" label="Social Media" />
-              <Option value="ads" label="Ads" />
-            </SelectField>
-            <DataField label="Expected Deal Value (₹)" id="lead-value" type="number" size={6} placeholder="50000" />
-            <SelectField label="Account Owner" id="lead-owner" size={12} placeholder="Assign to representative">
-              <Option value="rahul" label="Rahul S." />
-              <Option value="neha" label="Neha S." />
-              <Option value="deepika" label="Deepika N." />
-              <Option value="anita" label="Anita B." />
-            </SelectField>
-          </Grid>
-          <div className="flex justify-end gap-3 mt-8 pt-5 border-t border-slate-100">
-            <button onClick={() => closeModal("add-lead-modal")} className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition">Cancel</button>
-            <button onClick={() => { closeModal("add-lead-modal"); alert("Lead added to pipeline!"); }} className="px-6 py-2.5 rounded-xl text-sm font-black text-white bg-[#2a465a] shadow-lg shadow-[#2a465a]/20 hover:bg-[#1e3a52] transition active:scale-95">Save Lead</button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }
-
-

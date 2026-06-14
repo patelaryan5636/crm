@@ -58,6 +58,19 @@ const salesTargetService = {
     apiClient
       .get(`${BASE}/se/my`, { params: { month, year } })
       .then(r => r.data.data),
+
+  // ── Manager ──────────────────────────────────────────────────────────────
+
+  /** Fetch Sales Manager performance overview stats */
+  getPerformanceOverview: () =>
+    apiClient.get(`${BASE}/manager/overview`).then(r => r.data.data),
+
+  /**
+   * Send performance alert (warning or appreciation) to a user
+   * @param {object} payload { userId, type, message }
+   */
+  sendPerformanceAlert: (payload) =>
+    apiClient.post(`${BASE}/manager/alert`, payload).then(r => r.data),
 };
 
 export default salesTargetService;

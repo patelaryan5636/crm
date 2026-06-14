@@ -33,6 +33,11 @@ import PaymentResult      from '../pages/public/PaymentResult';
 import ClientTrackingPage from '../pages/public/ClientTrackingPage';
 import LandingPage        from '../pages/LandingPage/Index';
 
+// ── Policy pages (public) ────────────────────────────────────
+import TermsAndConditions from '../pages/Policies/Terms&Conditions';
+import PrivacyPolicy      from '../pages/Policies/PrivacyPolicy';
+import CookiePolicy       from '../pages/Policies/CookiePolicy';
+
 // ── Department workspace (legacy) ───────────────────────────
 import DepartmentWorkspace from '../pages/department/DepartmentWorkspace';
 

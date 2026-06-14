@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   DataTable, Modal, Button, DataField, SelectField, Option,
   openModal, closeModal, ModalProfile, ModalData, ModalGrid, Grid,
@@ -7,18 +7,10 @@ import {
 import {
   Eye, CheckCircle2, RotateCcw, CalendarClock, AlertTriangle, Calendar,
 } from "lucide-react";
-import {
-  INITIAL_FOLLOWUPS, FOLLOWUP_TYPES, FOLLOWUP_PRIORITIES,
-  executiveNames, teamExecutives,
-} from "./leadsStore";
+import apiClient from "../../../../services/apiClient";
+import toast from "react-hot-toast";
 
 const TODAY = new Date().toISOString().split("T")[0];
-
-// Promote any pending follow-up dated before today to "Overdue" automatically.
-const promoteOverdue = (rows) =>
-  rows.map((r) =>
-    r.status === "Pending" && r.date < TODAY ? { ...r, status: "Overdue" } : r
-  );
 
 const COLS = [
   { key: "leadName",     label: "Lead" },
@@ -27,16 +19,23 @@ const COLS = [
   { key: "time",         label: "Time" },
   { key: "priority",     label: "Priority" },
   { key: "assignedExec", label: "Executive" },
-  { key: "status",       label: "Status" }, // auto-renders as colored badge
+  { key: "status",       label: "Status" },
 ];
+
+const FOLLOWUP_TYPES = ["Call", "Email", "Meeting", "Whatsapp", "Demo"];
+const FOLLOWUP_PRIORITIES = ["High", "Medium", "Low"];
 
 const initialForm = {
   leadName: "", date: TODAY, time: "10:00", type: "Call",
-  priority: "Medium", assignedExec: "", notes: "",
+  priority: "Medium", assignedExec: "", notes: "", leadId: ""
 };
 
 export default function FollowUps() {
-  const [rows,     setRows]     = useState(promoteOverdue(INITIAL_FOLLOWUPS));
+  const [rows, setRows] = useState([]);
+  const [stats, setStats] = useState({});
+  const [executives, setExecutives] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [viewRow,  setViewRow]  = useState(null);
   const [reschRow, setReschRow] = useState(null);
   const [reschTo,  setReschTo]  = useState({ date: "", time: "" });
@@ -44,13 +43,45 @@ export default function FollowUps() {
   const [form,     setForm]     = useState(initialForm);
   const [formErr,  setFormErr]  = useState({});
 
-  const today    = useMemo(() => rows.filter((r) => r.date === TODAY && r.status !== "Done").length, [rows]);
-  const overdue  = useMemo(() => rows.filter((r) => r.status === "Overdue").length, [rows]);
-  const upcoming = useMemo(() => rows.filter((r) => r.date > TODAY && r.status !== "Done").length, [rows]);
-  const done     = useMemo(() => rows.filter((r) => r.status === "Done").length, [rows]);
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [followupsRes, workspaceRes] = await Promise.all([
+        apiClient.get("/sales-team-leader/follow-ups"),
+        apiClient.get("/sales-team-leader/leads/workspace")
+      ]);
+      if (followupsRes.data.success) {
+        setRows(followupsRes.data.data.followUps || []);
+        setStats(followupsRes.data.data.stats || {});
+      }
+      if (workspaceRes.data.success) {
+        setExecutives(workspaceRes.data.data.targets || []);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load follow-ups");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const markDone = (row) => {
-    setRows((prev) => prev.map((r) => r.id === row.id ? { ...r, status: "Done" } : r));
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const executiveNames = useMemo(() => executives.map(e => e.name), [executives]);
+
+  const markDone = async (row) => {
+    try {
+      const res = await apiClient.patch(`/sales-team-leader/follow-ups/${row.id}/done`);
+      if (res.data.success) {
+        toast.success("Follow-up marked as done");
+        fetchData();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to mark done");
+    }
   };
 
   const openResch = (row) => {
@@ -59,15 +90,19 @@ export default function FollowUps() {
     openModal("tl-fu-resch");
   };
 
-  const confirmResch = () => {
-    setRows((prev) =>
-      prev.map((r) =>
-        r.id === reschRow.id
-          ? { ...r, date: reschTo.date, time: reschTo.time, status: reschTo.date < TODAY ? "Overdue" : "Pending" }
-          : r
-      )
-    );
-    closeModal("tl-fu-resch");
+  const confirmResch = async () => {
+    try {
+      const remindAt = new Date(`${reschTo.date}T${reschTo.time}`).toISOString();
+      const res = await apiClient.put(`/sales-team-leader/follow-ups/${reschRow.id}/reschedule`, { remindAt });
+      if (res.data.success) {
+        toast.success("Follow-up rescheduled");
+        fetchData();
+        closeModal("tl-fu-resch");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to reschedule");
+    }
   };
 
   const openAdd = () => {
@@ -76,37 +111,45 @@ export default function FollowUps() {
     openModal("tl-fu-add");
   };
 
-  const saveAdd = () => {
+  const saveAdd = async () => {
     const errs = {};
-    if (!form.leadName.trim())   errs.leadName     = "Lead name is required.";
     if (!form.date)              errs.date         = "Date is required.";
     if (!form.time)              errs.time         = "Time is required.";
     if (!form.assignedExec)      errs.assignedExec = "Pick an executive.";
     if (Object.keys(errs).length) { setFormErr(errs); return; }
 
-    const newRow = {
-      id:           `FU-${Date.now()}`,
-      leadName:     form.leadName.trim(),
-      date:         form.date,
-      time:         form.time,
-      type:         form.type,
-      priority:     form.priority,
-      assignedExec: form.assignedExec,
-      notes:        form.notes.trim(),
-      status:       form.date < TODAY ? "Overdue" : "Pending",
-    };
-    setRows((prev) => [newRow, ...prev]);
-    closeModal("tl-fu-add");
+    try {
+      const remindAt = new Date(`${form.date}T${form.time}`).toISOString();
+      const payload = {
+        title: form.leadName || "Follow-up",
+        note: form.notes,
+        remindAt,
+        type: form.type,
+        priority: form.priority,
+        executiveId: form.assignedExec
+      };
+      const res = await apiClient.post("/sales-team-leader/follow-ups", payload);
+      if (res.data.success) {
+        toast.success("Reminder added");
+        fetchData();
+        closeModal("tl-fu-add");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to add reminder");
+    }
   };
+
+  if (loading) return <div className="p-10 text-center">Loading follow-ups...</div>;
 
   return (
     <div className="flex flex-col gap-6">
       {/* ── KPI cards ────────────────────────────────────────────────────── */}
       <DashGrid cols={12} gap={4}>
-        <EnhancedDashCard title="Today"     value={String(today)}    icon={<CalendarClock size={22} />} accentColor="#3b82f6" size={3} />
-        <EnhancedDashCard title="Overdue"   value={String(overdue)}  icon={<AlertTriangle size={22} />} accentColor="#f43f5e" size={3} />
-        <EnhancedDashCard title="Upcoming"  value={String(upcoming)} icon={<Calendar      size={22} />} accentColor="#14b8a6" size={3} />
-        <EnhancedDashCard title="Completed" value={String(done)}     icon={<CheckCircle2  size={22} />} accentColor="#22c55e" size={3} />
+        <EnhancedDashCard title="Today"     value={String(stats.today || 0)}    icon={<CalendarClock size={22} />} accentColor="#3b82f6" size={3} />
+        <EnhancedDashCard title="Overdue"   value={String(stats.overdue || 0)}  icon={<AlertTriangle size={22} />} accentColor="#f43f5e" size={3} />
+        <EnhancedDashCard title="Upcoming"  value={String(stats.pending || 0)} icon={<Calendar      size={22} />} accentColor="#14b8a6" size={3} />
+        <EnhancedDashCard title="Completed" value={String(stats.completed || 0)}     icon={<CheckCircle2  size={22} />} accentColor="#22c55e" size={3} />
       </DashGrid>
 
       {/* ── Add reminder button ──────────────────────────────────────────── */}
@@ -125,7 +168,7 @@ export default function FollowUps() {
         exportable
         exportFileName="team_followups"
         filters={[
-          { title: "Status",    type: "toggle", key: "status",       options: ["Pending", "Overdue", "Done"] },
+          { title: "Status",    type: "toggle", key: "status",       options: ["Pending", "Overdue", "Done", "Missed"] },
           { title: "Type",      type: "toggle", key: "type",         options: FOLLOWUP_TYPES },
           { title: "Priority",  type: "toggle", key: "priority",     options: FOLLOWUP_PRIORITIES },
           { title: "Executive", type: "select", key: "assignedExec", options: executiveNames },
@@ -173,7 +216,7 @@ export default function FollowUps() {
       <Modal id="tl-fu-add" title="Add Reminder" size="md">
         <div className="space-y-4">
           <Grid cols={12} gap={4}>
-            <DataField label="Lead Name" id="tl-fu-lead" value={form.leadName} size={12}
+            <DataField label="Lead Name / Title" id="tl-fu-lead" value={form.leadName} size={12}
               onChange={(e) => { setForm((p) => ({ ...p, leadName: e.target.value })); setFormErr((er) => ({ ...er, leadName: "" })); }} />
             {formErr.leadName && <p className="col-span-12 -mt-2 text-xs text-rose-600 px-1">{formErr.leadName}</p>}
 
@@ -192,7 +235,7 @@ export default function FollowUps() {
             <SelectField label="Assigned Executive" value={form.assignedExec} size={12}
               onChange={(e) => { setForm((p) => ({ ...p, assignedExec: e.target.value })); setFormErr((er) => ({ ...er, assignedExec: "" })); }}>
               <Option value="" label="-- Pick an executive --" />
-              {teamExecutives.map((ex) => <Option key={ex.id} value={ex.name} label={ex.name} />)}
+              {executives.map((ex) => <Option key={ex.id} value={ex.name} label={ex.name} />)}
             </SelectField>
             {formErr.assignedExec && <p className="col-span-12 -mt-2 text-xs text-rose-600 px-1">{formErr.assignedExec}</p>}
 

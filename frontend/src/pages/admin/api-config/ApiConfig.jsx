@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import apiConfigService from '../../../services/apiConfigService';
 import {
   Grid,
   Heading,
@@ -29,62 +31,126 @@ import {
 } from 'lucide-react';
 
 export default function ApiConfig() {
-  // ── Mode toggle ──
-  const [mode, setMode] = useState('live'); // 'test' | 'live'
+  // ── View Mode (what we are looking at) ──
+  const [viewMode, setViewMode] = useState('test');
+  
+  // ── Active Mode (what the system uses) ──
+  const [systemActiveMode, setSystemActiveMode] = useState('test');
 
-  // ── Key fields ──
-  const [keyId, setKeyId] = useState('rzp_live_xxxxxxxx');
+  // ── Configuration State ──
+  const [configs, setConfigs] = useState({
+    test: { keyId: '', keySecret: '', webhookSecret: '' },
+    live: { keyId: '', keySecret: '', webhookSecret: '' }
+  });
+
+  // ── Current editing values (bound to inputs) ──
+  const [keyId, setKeyId] = useState('');
   const [keySecret, setKeySecret] = useState('');
   const [webhookSecretVal, setWebhookSecretVal] = useState('');
-  const webhookEndpointUrl = `${window.location.origin}/api/webhook/razorpay`;
+  const [isSettingActive, setIsSettingActive] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const webhookEndpointUrl = `${window.location.origin}/api/payment-webhook/razorpay`;
+
+  // ── Fetch existing config on mount ──
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await apiConfigService.getRazorpayConfig();
+        if (res.success && res.data) {
+          const { test, live, activeMode } = res.data;
+          setConfigs({ test, live });
+          setSystemActiveMode(activeMode);
+          
+          // Initial load: populate fields from the active mode
+          const current = res.data[activeMode] || res.data.test;
+          setKeyId(current.keyId || '');
+          setKeySecret(current.keySecret || '');
+          setWebhookSecretVal(current.webhookSecret || '');
+          setViewMode(activeMode);
+          setIsSettingActive(true); // Since it's the active one
+        }
+      } catch (err) {
+        console.error('Failed to fetch API config:', err);
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  // ── Handle View Mode Toggle ──
+  const handleToggleViewMode = (newMode) => {
+    if (newMode === viewMode) return;
+
+    // Save current fields into the previous mode's config state before switching
+    setConfigs(prev => ({
+      ...prev,
+      [viewMode]: { keyId, keySecret, webhookSecret: webhookSecretVal }
+    }));
+
+    // Switch to new mode and populate fields
+    const nextConfig = configs[newMode];
+    setKeyId(nextConfig.keyId || '');
+    setKeySecret(nextConfig.keySecret || '');
+    setWebhookSecretVal(nextConfig.webhookSecret || '');
+    setIsSettingActive(systemActiveMode === newMode);
+    setViewMode(newMode);
+  };
+
+  // ── Save handler ──
+  const handleSave = async () => {
+    if (!keyId || !keySecret) {
+      return toast.error('Key ID and Key Secret are required');
+    }
+
+    setLoading(true);
+    try {
+      const res = await apiConfigService.updateRazorpayConfig({
+        mode: viewMode,
+        keyId,
+        keySecret,
+        webhookSecret: webhookSecretVal,
+        isActive: isSettingActive
+      });
+
+      if (res.success) {
+        toast.success(`Razorpay ${viewMode} configuration saved successfully`);
+        // Update local memory of configs
+        setConfigs(prev => ({
+          ...prev,
+          [viewMode]: { keyId, keySecret, webhookSecret: webhookSecretVal }
+        }));
+        if (isSettingActive) setSystemActiveMode(viewMode);
+      } else {
+        toast.error(res.message || 'Failed to save configuration');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error saving configuration');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ── Visibility toggles ──
   const [showKeyId, setShowKeyId] = useState(false);
-  const [showKeySecret, setShowKeySecret] = useState(false);
-  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
 
   // ── Copy feedback ──
   const [copiedField, setCopiedField] = useState(null);
   const copyToClipboard = (text, field) => {
+    // If copying a hint, don't allow it
+    if (text.includes('•')) {
+      return toast.error('Cannot copy a masked secret. Please enter a new one if needed.');
+    }
     navigator.clipboard.writeText(text);
     setCopiedField(field);
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  // ── Stats ──
+  // ── Stats (Placeholder) ──
   const stats = [
-    { title: 'Total Payments', value: '₹4.2L', icon: <CreditCard size={24} />, color: '#3b82f6' },
-    { title: 'Success Rate', value: '97.8%', icon: <CheckCircle2 size={24} />, color: '#22c55e' },
-    { title: 'Failed Payments', value: '12', icon: <AlertTriangle size={24} />, color: '#f59e0b' },
-    { title: 'Webhooks Received', value: '342', icon: <Webhook size={24} />, color: '#8b5cf6' },
-  ];
-
-  // ── Connection Status items ──
-  const connectionItems = [
-    {
-      icon: <Key size={16} className="text-blue-500" />,
-      label: 'API Key ID',
-      status: keyId ? 'CONFIGURED' : 'NOT SET',
-      color: keyId ? 'emerald' : 'rose',
-    },
-    {
-      icon: <Lock size={16} className="text-blue-500" />,
-      label: 'API Key Secret',
-      status: keySecret ? 'CONFIGURED' : 'NOT SET',
-      color: keySecret ? 'emerald' : 'rose',
-    },
-    {
-      icon: <Webhook size={16} className="text-blue-500" />,
-      label: 'Webhook',
-      status: webhookSecretVal ? 'CONFIGURED' : 'OPTIONAL',
-      color: webhookSecretVal ? 'emerald' : 'amber',
-    },
-    {
-      icon: <Zap size={16} className="text-blue-500" />,
-      label: 'Environment',
-      status: mode === 'live' ? 'LIVE' : 'TEST',
-      color: mode === 'live' ? 'blue' : 'amber',
-    },
+    { title: 'Total Payments', value: '₹0', icon: <CreditCard size={24} />, color: '#3b82f6' },
+    { title: 'Success Rate', value: '0%', icon: <CheckCircle2 size={24} />, color: '#22c55e' },
+    { title: 'Failed Payments', value: '0', icon: <AlertTriangle size={24} />, color: '#f59e0b' },
+    { title: 'Webhooks Received', value: '0', icon: <Webhook size={24} />, color: '#8b5cf6' },
   ];
 
   const badgeColors = {
@@ -100,17 +166,8 @@ export default function ApiConfig() {
     return '•'.repeat(Math.min(val.length, 20));
   };
 
-  // ── Saved API Keys Data ──
-  const [savedKeys, setSavedKeys] = useState([
-    { id: 1, name: 'Production Key 1', keyId: 'rzp_live_1DP5mmOlF5G5ag', environment: 'Live', createdOn: '2025-05-10', status: 'Active' },
-    { id: 2, name: 'Testing Env Key', keyId: 'rzp_test_9AksL1pQr6T5op', environment: 'Test', createdOn: '2025-05-15', status: 'Active' },
-    { id: 3, name: 'Old Staging Key', keyId: 'rzp_test_3VbnM4lKi8J2wq', environment: 'Test', createdOn: '2024-11-20', status: 'Revoked' },
-  ]);
-
-  const handleDeleteKey = (id) => {
-    setSavedKeys(savedKeys.filter(k => k.id !== id));
-  };
-
+  // ── Saved API Keys State (Wire up ready) ──
+  const [savedKeys, setSavedKeys] = useState([]);
   const savedKeysColumns = [
     { key: 'name', label: 'Key Name', width: '20%' },
     { key: 'keyId_val', label: 'Key ID', width: '25%' },
@@ -119,47 +176,6 @@ export default function ApiConfig() {
     { key: 'status_val', label: 'Status', width: '15%' },
     { key: 'actions', label: 'Actions', width: '10%' },
   ];
-
-  const savedKeysRows = savedKeys.map(k => ({
-    ...k,
-    keyId_val: (
-      <div className="flex items-center gap-1.5">
-        <span className="font-mono text-xs text-slate-600">{k.keyId}</span>
-        <button
-          onClick={() => copyToClipboard(k.keyId, `saved-${k.id}`)}
-          className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-400 hover:bg-slate-200 transition duration-150 active:scale-95"
-          title="Copy Key ID"
-        >
-          {copiedField === `saved-${k.id}` ? <CheckCircle2 size={12} className="text-emerald-500" /> : <Copy size={12} />}
-        </button>
-      </div>
-    ),
-    environment_val: (
-      <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${
-        k.environment === 'Live' ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
-      }`}>
-        {k.environment}
-      </span>
-    ),
-    status_val: (
-      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-black/5 ${
-        k.status === 'Active' ? 'bg-emerald-500/15 text-emerald-600' : 'bg-rose-500/15 text-rose-600'
-      }`}>
-        {k.status}
-      </span>
-    ),
-    actions: (
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => handleDeleteKey(k.id)}
-          className="flex items-center justify-center w-8 h-8 rounded-xl bg-rose-50 text-rose-500 border border-rose-200 hover:bg-rose-100 transition duration-150 active:scale-95"
-          title="Delete"
-        >
-          <Trash2 size={14} />
-        </button>
-      </div>
-    )
-  }));
 
   return (
     <div className="w-full max-w-[1600px] mx-auto space-y-6">
@@ -203,17 +219,24 @@ export default function ApiConfig() {
               </div>
               <div>
                 <h3 className="text-base font-bold text-[#0f172a]">Razorpay Payment Gateway</h3>
-                <p className="text-sm text-slate-500">Configure your Razorpay API credentials for payment processing</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-sm text-slate-500">Manage credentials for your environments</p>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                    systemActiveMode === 'live' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'
+                  }`}>
+                    Currently Using: {systemActiveMode}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Mode Toggle */}
+            {/* View Mode Toggle */}
             <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
-              <span className="text-xs font-semibold text-slate-500 px-2 select-none">MODE:</span>
+              <span className="text-xs font-semibold text-slate-500 px-2 select-none">VIEWING:</span>
               <button
-                onClick={() => setMode('test')}
+                onClick={() => handleToggleViewMode('test')}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${
-                  mode === 'test'
+                  viewMode === 'test'
                     ? 'bg-white text-slate-700 shadow-sm'
                     : 'text-slate-400 hover:text-slate-600'
                 }`}
@@ -221,9 +244,9 @@ export default function ApiConfig() {
                 Test
               </button>
               <button
-                onClick={() => setMode('live')}
+                onClick={() => handleToggleViewMode('live')}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${
-                  mode === 'live'
+                  viewMode === 'live'
                     ? 'bg-blue-500 text-white shadow-sm'
                     : 'text-slate-400 hover:text-slate-600'
                 }`}
@@ -234,11 +257,11 @@ export default function ApiConfig() {
           </div>
 
           {/* Mode Warning Banner */}
-          {mode === 'live' ? (
+          {viewMode === 'live' ? (
             <div className="mx-6 mt-5 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700">
               <AlertTriangle size={16} className="flex-shrink-0" />
               <p className="text-sm">
-                <span className="font-bold">Live Mode</span> — Real payments will be processed. Ensure your keys are correct. Live Key IDs start with{' '}
+                <span className="font-bold">Live Credentials</span> — Real payments will be processed if this mode is set to active. Live Key IDs start with{' '}
                 <code className="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 font-mono text-xs font-semibold">rzp_live_</code>
               </p>
             </div>
@@ -246,7 +269,7 @@ export default function ApiConfig() {
             <div className="mx-6 mt-5 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-700">
               <HelpCircle size={16} className="flex-shrink-0" />
               <p className="text-sm">
-                <span className="font-bold">Test Mode</span> — No real payments will be processed. Test Key IDs start with{' '}
+                <span className="font-bold">Test Credentials</span> — Use these for sandbox transactions. Test Key IDs start with{' '}
                 <code className="px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800 font-mono text-xs font-semibold">rzp_test_</code>
               </p>
             </div>
@@ -259,7 +282,7 @@ export default function ApiConfig() {
             <div>
               <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-2 select-none">
                 <Key size={13} className="text-slate-400" />
-                Razorpay Key ID
+                Razorpay {viewMode} Key ID
               </label>
               <div className="flex items-center gap-2">
                 <div className="flex-1 relative">
@@ -267,7 +290,7 @@ export default function ApiConfig() {
                     type={showKeyId ? 'text' : 'password'}
                     value={keyId}
                     onChange={(e) => setKeyId(e.target.value)}
-                    placeholder={mode === 'live' ? 'rzp_live_xxxxxxxxxxxxxxxx' : 'rzp_test_xxxxxxxxxxxxxxxx'}
+                    placeholder={viewMode === 'live' ? 'rzp_live_xxxxxxxxxxxxxxxx' : 'rzp_test_xxxxxxxxxxxxxxxx'}
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50/90 py-3.5 px-4 text-[#2a465a] placeholder:text-slate-400 text-sm font-mono font-medium focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40 transition duration-200"
                   />
                 </div>
@@ -292,25 +315,21 @@ export default function ApiConfig() {
             <div>
               <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-2 select-none">
                 <Lock size={13} className="text-slate-400" />
-                Razorpay Key Secret
+                Razorpay {viewMode} Key Secret
               </label>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <input
-                    type={showKeySecret ? 'text' : 'password'}
+                    type="text"
                     value={keySecret}
+                    onFocus={() => {
+                      if (keySecret.includes('•')) setKeySecret('');
+                    }}
                     onChange={(e) => setKeySecret(e.target.value)}
                     placeholder="Enter your Razorpay Key Secret"
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50/90 py-3.5 px-4 text-[#2a465a] placeholder:text-slate-400 text-sm font-mono font-medium focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40 transition duration-200"
                   />
                 </div>
-                <button
-                  onClick={() => setShowKeySecret(!showKeySecret)}
-                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 transition duration-150 active:scale-95"
-                  title={showKeySecret ? 'Hide' : 'Show'}
-                >
-                  {showKeySecret ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
                 <button
                   onClick={() => copyToClipboard(keySecret, 'keySecret')}
                   className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 transition duration-150 active:scale-95"
@@ -325,25 +344,21 @@ export default function ApiConfig() {
             <div>
               <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-2 select-none">
                 <Shield size={13} className="text-slate-400" />
-                Webhook Secret <span className="text-slate-400 normal-case tracking-normal font-medium">(Optional)</span>
+                Webhook Secret ({viewMode}) <span className="text-slate-400 normal-case tracking-normal font-medium">(Optional)</span>
               </label>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <input
-                    type={showWebhookSecret ? 'text' : 'password'}
+                    type="text"
                     value={webhookSecretVal}
+                    onFocus={() => {
+                      if (webhookSecretVal.includes('•')) setWebhookSecretVal('');
+                    }}
                     onChange={(e) => setWebhookSecretVal(e.target.value)}
                     placeholder="Webhook Secret from Razorpay Dashboard"
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50/90 py-3.5 px-4 text-[#2a465a] placeholder:text-slate-400 text-sm font-mono font-medium focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40 transition duration-200"
                   />
                 </div>
-                <button
-                  onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 transition duration-150 active:scale-95"
-                  title={showWebhookSecret ? 'Hide' : 'Show'}
-                >
-                  {showWebhookSecret ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
                 <button
                   onClick={() => copyToClipboard(webhookSecretVal, 'whSecret')}
                   className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 transition duration-150 active:scale-95"
@@ -382,10 +397,31 @@ export default function ApiConfig() {
               </p>
             </div>
 
+            {/* Set as Active Environment */}
+            <div className="flex items-center gap-3 py-2">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <div 
+                  onClick={() => setIsSettingActive(!isSettingActive)}
+                  className={`w-5 h-5 rounded border flex items-center justify-center transition ${
+                    isSettingActive ? 'bg-[#2a465a] border-[#2a465a]' : 'bg-white border-slate-300 group-hover:border-slate-400'
+                  }`}
+                >
+                  {isSettingActive && <CheckCircle2 size={12} className="text-white" />}
+                </div>
+                <span className="text-sm font-medium text-slate-600 select-none">
+                  Use this environment ({viewMode}) for current CRM operations
+                </span>
+              </label>
+            </div>
+
             {/* Action Buttons */}
             <div className="flex items-center gap-3 pt-2">
-              <button className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#2a465a] text-white text-sm font-bold hover:bg-[#1e3a52] transition-all duration-200 active:scale-95 shadow-lg shadow-[#2a465a]/20">
-                Save Keys
+              <button 
+                onClick={handleSave}
+                disabled={loading}
+                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#2a465a] text-white text-sm font-bold hover:bg-[#1e3a52] transition-all duration-200 active:scale-95 shadow-lg shadow-[#2a465a]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Saving...' : `Save ${viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} Keys`}
               </button>
               <button className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-[#2a465a] text-sm font-bold border border-slate-200 hover:bg-slate-50 transition-all duration-200 active:scale-95">
                 Test Connection
@@ -462,20 +498,42 @@ export default function ApiConfig() {
           </h3>
 
           <div className="space-y-3">
-            {connectionItems.map((item, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between px-4 py-3.5 rounded-xl bg-white/5 border border-white/10"
-              >
-                <div className="flex items-center gap-3">
-                  {item.icon}
-                  <span className="text-sm font-medium text-slate-200">{item.label}</span>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${badgeColors[item.color]}`}>
-                  {item.status}
-                </span>
+            <div className="flex items-center justify-between px-4 py-3.5 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex items-center gap-3">
+                <Key size={16} className="text-blue-500" />
+                <span className="text-sm font-medium text-slate-200">API Key ID</span>
               </div>
-            ))}
+              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${keyId ? badgeColors.emerald : badgeColors.rose}`}>
+                {keyId ? 'CONFIGURED' : 'NOT SET'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3.5 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex items-center gap-3">
+                <Lock size={16} className="text-blue-500" />
+                <span className="text-sm font-medium text-slate-200">API Key Secret</span>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${keySecret ? badgeColors.emerald : badgeColors.rose}`}>
+                {keySecret ? 'CONFIGURED' : 'NOT SET'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3.5 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex items-center gap-3">
+                <Webhook size={16} className="text-blue-500" />
+                <span className="text-sm font-medium text-slate-200">Webhook</span>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${webhookSecretVal ? badgeColors.emerald : badgeColors.amber}`}>
+                {webhookSecretVal ? 'CONFIGURED' : 'OPTIONAL'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3.5 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex items-center gap-3">
+                <Zap size={16} className="text-blue-500" />
+                <span className="text-sm font-medium text-slate-200">Active Environment</span>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${systemActiveMode === 'live' ? badgeColors.blue : badgeColors.amber}`}>
+                {systemActiveMode.toUpperCase()}
+              </span>
+            </div>
           </div>
         </div>
       </Grid>
@@ -490,16 +548,11 @@ export default function ApiConfig() {
               </h3>
               <p className="text-sm text-slate-500 mt-0.5">Manage your existing Razorpay API keys and environments.</p>
             </div>
-            <button
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 text-slate-600 text-sm font-semibold border border-slate-200 hover:bg-slate-100 transition-all duration-200 active:scale-95"
-            >
-              Add New Key
-            </button>
           </div>
 
           <DataTable
             columns={savedKeysColumns}
-            rows={savedKeysRows}
+            rows={savedKeys}
             size={12}
             pageSize={5}
             searchable={true}

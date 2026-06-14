@@ -209,12 +209,12 @@ const SuperAdminLogin = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <button className="text-[11px] font-bold px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100">
+            <Link to="/terms-and-conditions" className="text-[11px] font-bold px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-[#2a465a] transition-colors">
               Terms of Service
-            </button>
-            <button className="text-[11px] font-bold px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100">
+            </Link>
+            <Link to="/privacy-policy" className="text-[11px] font-bold px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-[#2a465a] transition-colors">
               Privacy Policy
-            </button>
+            </Link>
           </div>
         </div>
 

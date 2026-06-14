@@ -19,6 +19,7 @@ import {
   TrendingUp,
   FileText,
   Briefcase,
+  Home,
 } from "lucide-react";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
 import { sendOTP, verifyOTP, registerAdmin } from "../../services/authService";
@@ -356,6 +357,17 @@ const AdminRegister = () => {
         {/* ── Left Panel ── */}
         <div className="hidden lg:flex w-5/12 bg-slate-50 p-12 flex-col justify-between border-r border-slate-100">
           <div>
+            {/* Home button — above the logo */}
+            <div className="mb-6">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-bold hover:bg-[#2a465a] hover:text-white hover:border-[#2a465a] transition-all duration-200 shadow-sm"
+              >
+                <Home size={13} />
+                Home
+              </Link>
+            </div>
+
             <div className="mb-10">
               <img src={GraphuraLogo} alt="Graphura Logo" className="h-20" />
             </div>
@@ -392,12 +404,12 @@ const AdminRegister = () => {
           </div>
 
           <div className="flex gap-2">
-            <button className="text-[11px] font-bold px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100">
+            <Link to="/terms-and-conditions" className="text-[11px] font-bold px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-[#2a465a] transition-colors">
               Terms of Service
-            </button>
-            <button className="text-[11px] font-bold px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100">
+            </Link>
+            <Link to="/privacy-policy" className="text-[11px] font-bold px-4 py-2 bg-white rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-[#2a465a] transition-colors">
               Privacy Policy
-            </button>
+            </Link>
           </div>
         </div>
 

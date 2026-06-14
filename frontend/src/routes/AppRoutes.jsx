@@ -19,6 +19,9 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 import PaymentResult from "../pages/public/PaymentResult";
 import ClientTrackingPage from "../pages/public/ClientTrackingPage";
 import LandingPage from "../pages/LandingPage/Index";
+import TermsAndConditions from "../pages/Policies/Terms&Conditions";
+import PrivacyPolicy from "../pages/Policies/PrivacyPolicy";
+import CookiePolicy from "../pages/Policies/CookiePolicy";
 
 function AppRoutes() {
   return (
@@ -26,7 +29,11 @@ function AppRoutes() {
       <Routes>
         {/* Landing Page */}
         <Route path="/" element={<LandingPage />} />
-        
+
+        {/* Policy Pages */}
+        <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/cookie-policy" element={<CookiePolicy />} />        
         {/* <Route path="/" element={<Navigate to="/login" replace />} /> */}
 
         {/* ── Public pages (no auth) ── */}

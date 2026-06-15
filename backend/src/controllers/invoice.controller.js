@@ -252,6 +252,7 @@ exports.sendInvoice = catchAsync(async (req, res, next) => {
       senderAddress: admin?.company?.address
         ? `${admin.company.address.line1 || ''}, ${admin.company.address.city || ''}`
         : '',
+      pdfBase64: req.body.pdfBase64,
     });
 
     // Update invoice status to SENT if it was DRAFT

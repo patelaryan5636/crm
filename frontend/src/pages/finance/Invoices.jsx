@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import apiClient from "../../services/apiClient";
+import html2pdf from "html2pdf.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
@@ -29,7 +30,7 @@ const statusColor = (s) => {
 };
 
 // ── PDF Generator — uses iframe print, no external deps ──────────────────────
-function printInvoicePDF(inv, company = {}) {
+const generateInvoiceInnerHtml = (inv, company = {}) => {
   const gst = inv.gstAmount || Math.round((inv.amount * (inv.gstPct || 18)) / 118);
   const total = inv.amount;
   const subtotal = total - gst;
@@ -49,71 +50,79 @@ function printInvoicePDF(inv, company = {}) {
   const statusFg = inv.status === "PAID" ? "#065f46" : inv.status === "SENT" ? "#1e40af" : "#92400e";
   const statusLabel = STATUS_LABEL[inv.status] || inv.status;
 
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
-<title>Invoice ${inv.invoiceNumber}</title>
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;padding:40px}
-  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px}
-  .company h1{font-size:22px;font-weight:900;color:#1e293b}
-  .company p{font-size:12px;color:#64748b;margin-top:3px}
-  .meta{text-align:right}
-  .meta h2{font-size:18px;font-weight:900;color:#1e293b}
-  .meta p{font-size:12px;color:#64748b;margin-top:3px}
-  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:${statusBg};color:${statusFg};margin-top:6px}
-  hr{border:none;border-top:2px solid #e2e8f0;margin:20px 0}
-  .section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:6px}
-  .bill-to{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:20px}
-  .bill-to p{font-size:13px;color:#334155;margin:2px 0}
-  table{width:100%;border-collapse:collapse;margin-bottom:20px}
-  thead{background:#1e293b}
-  thead th{color:#fff;text-align:left;padding:10px 12px;font-size:12px;font-weight:700}
-  .totals{width:260px;margin-left:auto}
-  .totals td{padding:6px 12px;font-size:13px}
-  .totals tr:last-child td{font-weight:900;font-size:15px;color:#1e293b;border-top:2px solid #1e293b;padding-top:10px}
-  .footer{margin-top:28px;text-align:center;font-size:11px;color:#94a3b8}
-  @media print{body{padding:20px}}
-</style></head><body>
-<div class="header">
-  <div class="company">
-    <h1>${company.name || "Graphura CRM"}</h1>
-    ${company.address?.line1 ? `<p>${company.address.line1}${company.address.city ? ", " + company.address.city : ""}</p>` : ""}
-    ${company.email ? `<p>${company.email}</p>` : ""}
-    ${company.phone ? `<p>${company.phone}</p>` : ""}
+  return `
+<div class="invoice-container" style="font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;padding:40px;width:794px;box-sizing:border-box;">
+  <style>
+    .invoice-container *{margin:0;padding:0;box-sizing:border-box}
+    .invoice-container .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px}
+    .invoice-container .company h1{font-size:22px;font-weight:900;color:#1e293b}
+    .invoice-container .company p{font-size:12px;color:#64748b;margin-top:3px}
+    .invoice-container .meta{text-align:right}
+    .invoice-container .meta h2{font-size:18px;font-weight:900;color:#1e293b}
+    .invoice-container .meta p{font-size:12px;color:#64748b;margin-top:3px}
+    .invoice-container .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:${statusBg};color:${statusFg};margin-top:6px}
+    .invoice-container hr{border:none;border-top:2px solid #e2e8f0;margin:20px 0}
+    .invoice-container .section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:6px}
+    .invoice-container .bill-to{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:20px}
+    .invoice-container .bill-to p{font-size:13px;color:#334155;margin:2px 0}
+    .invoice-container table{width:100%;border-collapse:collapse;margin-bottom:20px}
+    .invoice-container thead{background:#1e293b}
+    .invoice-container thead th{color:#fff;text-align:left;padding:10px 12px;font-size:12px;font-weight:700}
+    .invoice-container .totals{width:260px;margin-left:auto}
+    .invoice-container .totals td{padding:6px 12px;font-size:13px}
+    .invoice-container .totals tr:last-child td{font-weight:900;font-size:15px;color:#1e293b;border-top:2px solid #1e293b;padding-top:10px}
+    .invoice-container .footer{margin-top:28px;text-align:center;font-size:11px;color:#94a3b8}
+    @media print{
+      .invoice-container {padding:20px}
+    }
+  </style>
+  <div class="header">
+    <div class="company">
+      <h1>${company.name || "Graphura CRM"}</h1>
+      ${company.address?.line1 ? `<p>${company.address.line1}${company.address.city ? ", " + company.address.city : ""}</p>` : ""}
+      ${company.email ? `<p>${company.email}</p>` : ""}
+      ${company.phone ? `<p>${company.phone}</p>` : ""}
+    </div>
+    <div class="meta">
+      <h2>TAX INVOICE</h2>
+      <p><strong>${inv.invoiceNumber}</strong></p>
+      <p>Date: ${fmtD(inv.date)}</p>
+      ${inv.dueDate ? `<p>Due: ${fmtD(inv.dueDate)}</p>` : ""}
+      <span class="badge">${statusLabel}</span>
+    </div>
   </div>
-  <div class="meta">
-    <h2>TAX INVOICE</h2>
-    <p><strong>${inv.invoiceNumber}</strong></p>
-    <p>Date: ${fmtD(inv.date)}</p>
-    ${inv.dueDate ? `<p>Due: ${fmtD(inv.dueDate)}</p>` : ""}
-    <span class="badge">${statusLabel}</span>
+  <hr/>
+  <div class="section-label">Bill To</div>
+  <div class="bill-to">
+    <p><strong>${inv.client || "Client"}</strong></p>
+    ${inv.companyName ? `<p>${inv.companyName}</p>` : ""}
+    ${inv.email ? `<p>${inv.email}</p>` : ""}
+    ${inv.mobile ? `<p>${inv.mobile}</p>` : ""}
   </div>
-</div>
-<hr/>
-<div class="section-label">Bill To</div>
-<div class="bill-to">
-  <p><strong>${inv.client || "Client"}</strong></p>
-  ${inv.companyName ? `<p>${inv.companyName}</p>` : ""}
-  ${inv.email ? `<p>${inv.email}</p>` : ""}
-  ${inv.mobile ? `<p>${inv.mobile}</p>` : ""}
-</div>
-<div class="section-label">Services / Items</div>
-<table>
-  <thead><tr><th>#</th><th>Description</th><th>Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th></tr></thead>
-  <tbody>${itemRows}</tbody>
-</table>
-<table class="totals">
-  <tr><td>Subtotal (Service Amount)</td><td style="text-align:right">${fmtAmt(subtotal)}</td></tr>
-  <tr><td>GST (${inv.gstPct || 18}%)</td><td style="text-align:right">${fmtAmt(gst)}</td></tr>
-  ${(inv.discount || 0) > 0 ? `<tr><td>Discount</td><td style="text-align:right;color:#ef4444">- ${fmtAmt(inv.discount)}</td></tr>` : ""}
-  <tr><td><strong>Grand Total</strong></td><td style="text-align:right"><strong>${fmtAmt(total)}</strong></td></tr>
-</table>
-${inv.notes ? `<p style="font-size:12px;color:#64748b;margin-bottom:16px"><strong>Notes:</strong> ${inv.notes}</p>` : ""}
-<hr/>
-<p style="font-size:12px;color:#334155"><strong>Terms:</strong> Payment due within 15 days of invoice date.</p>
-<div class="footer"><p>Thank you for your business! · ${company.name || "Graphura CRM"}</p></div>
-</body></html>`;
+  <div class="section-label">Services / Items</div>
+  <table>
+    <thead><tr><th>#</th><th>Description</th><th>Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th></tr></thead>
+    <tbody>${itemRows}</tbody>
+  </table>
+  <table class="totals">
+    <tr><td>Subtotal (Service Amount)</td><td style="text-align:right">${fmtAmt(subtotal)}</td></tr>
+    <tr><td>GST (${inv.gstPct || 18}%)</td><td style="text-align:right">${fmtAmt(gst)}</td></tr>
+    ${(inv.discount || 0) > 0 ? `<tr><td>Discount</td><td style="text-align:right;color:#ef4444">- ${fmtAmt(inv.discount)}</td></tr>` : ""}
+    <tr><td><strong>Grand Total</strong></td><td style="text-align:right"><strong>${fmtAmt(total)}</strong></td></tr>
+  </table>
+  ${inv.notes ? `<p style="font-size:12px;color:#64748b;margin-bottom:16px"><strong>Notes:</strong> ${inv.notes}</p>` : ""}
+  <hr/>
+  <div class="footer"><p>Thank you for your business! · ${company.name || "Graphura CRM"}</p></div>
+</div>`;
+};
 
+const generateInvoiceHtml = (inv, company = {}) => {
+  const innerHtml = generateInvoiceInnerHtml(inv, company);
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Invoice ${inv.invoiceNumber}</title></head><body style="margin:0;padding:0;">${innerHtml}</body></html>`;
+};
+
+function printInvoicePDF(inv, company = {}) {
+  const html = generateInvoiceHtml(inv, company);
   const iframe = document.createElement("iframe");
   iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:800px;height:600px";
   document.body.appendChild(iframe);
@@ -198,7 +207,40 @@ export default function Invoices() {
     if (!sendEmail) { toast.error("Email is required"); return; }
     setActionLoading("send");
     try {
-      await apiClient.post(`/finance/invoices/${selected.id}/send`, { email: sendEmail });
+      const res = await apiClient.get(`/finance/invoices/${selected.id}/pdf-data`);
+      const { invoice, company: co } = res?.data?.data || {};
+
+      const html = generateInvoiceInnerHtml(invoice || selected, co || {});
+
+      const opt = {
+        margin: 0,
+        filename: `Invoice_${selected.invoiceNumber}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          logging: false,
+          scrollX: 0,
+          scrollY: 0
+        },
+        jsPDF: { unit: "in", format: "a4", orientation: "portrait" }
+      };
+
+      const pdfDataUri = await new Promise((resolve, reject) => {
+        html2pdf()
+          .from(html)
+          .set(opt)
+          .outputPdf("datauristring")
+          .then((uri) => resolve(uri))
+          .catch((err) => reject(err));
+      });
+      const pdfBase64 = pdfDataUri.split(",")[1];
+
+      await apiClient.post(`/finance/invoices/${selected.id}/send`, {
+        email: sendEmail,
+        pdfBase64
+      });
+
       toast.success(`Invoice sent to ${sendEmail}`);
       closeModal("inv-send");
       await loadInvoices();

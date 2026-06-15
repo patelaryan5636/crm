@@ -107,8 +107,8 @@ app.use('/api/payments/webhook', (req, res, next) => {
 app.use('/api/payments/webhook', paymentWebhookRoutes);
 
 // Capture raw body for the rest of the app as well.
-app.use(express.json({ limit: '64kb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
-app.use(express.urlencoded({ limit: '64kb', extended: true, verify: (req, _res, buf) => { req.rawBody = buf; } }));
+app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
+app.use(express.urlencoded({ limit: '10mb', extended: true, verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(morgan('dev')); // HTTP request logging
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 

@@ -3,8 +3,6 @@ import {
   Grid,
   Heading,
   EnhancedDashCard,
-  GAreaChart,
-  GLineChart,
   GColumnChart,
   GBarChart,
   GDoughnutChart,
@@ -182,158 +180,25 @@ export default function Dashboard() {
   const handleEditField = (field) => (e) =>
     setEditForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  // ── Company Growth ───────────────────────────────────────────────────────────
-  const companyGrowthAll = {
-    "This Week":    [
-      { name: "Mon", companies: 1 }, { name: "Tue", companies: 2 },
-      { name: "Wed", companies: 1 }, { name: "Thu", companies: 3 },
-      { name: "Fri", companies: 2 }, { name: "Sat", companies: 1 },
-      { name: "Sun", companies: 0 },
-    ],
-    "This Month":   [
-      { name: "W1", companies: 4 }, { name: "W2", companies: 6 },
-      { name: "W3", companies: 5 }, { name: "W4", companies: 8 },
-    ],
-    "This Quarter": [
-      { name: "Feb", companies: 16 }, { name: "Mar", companies: 19 },
-      { name: "Apr", companies: 23 },
-    ],
-    "This Year":    [
-      { name: "Jan", companies: 4  }, { name: "Feb", companies: 7  },
-      { name: "Mar", companies: 5  }, { name: "Apr", companies: 9  },
-      { name: "May", companies: 12 }, { name: "Jun", companies: 8  },
-      { name: "Jul", companies: 15 }, { name: "Aug", companies: 11 },
-      { name: "Sep", companies: 18 }, { name: "Oct", companies: 14 },
-      { name: "Nov", companies: 20 }, { name: "Dec", companies: 23 },
-    ],
-    "Overall":      [
-      { name: "2021", companies: 28 }, { name: "2022", companies: 47 },
-      { name: "2023", companies: 63 }, { name: "2024", companies: 85 },
-      { name: "2025", companies: 100 },
-    ],
-  };
-
-  // ── Revenue / Expense / Profit ───────────────────────────────────────────────
-
-
   // ── Churn vs Retention ───────────────────────────────────────────────────────
-
-
-  // ── Company Status (Doughnut) ────────────────────────────────────────────────
-  const companyStatusAll = {
-    "This Week":    [
-      { name: "Active", value: 69 }, { name: "Trial", value: 16 },
-      { name: "Inactive", value: 9 }, { name: "Suspended", value: 6 },
-    ],
-    "This Month":   [
-      { name: "Active", value: 68 }, { name: "Trial", value: 17 },
-      { name: "Inactive", value: 9 }, { name: "Suspended", value: 6 },
-    ],
-    "This Quarter": [
-      { name: "Active", value: 65 }, { name: "Trial", value: 19 },
-      { name: "Inactive", value: 10 }, { name: "Suspended", value: 6 },
-    ],
-    "This Year":    [
-      { name: "Active", value: 68 }, { name: "Trial", value: 17 },
-      { name: "Inactive", value: 9 }, { name: "Suspended", value: 6 },
-    ],
-    "Overall":      [
-      { name: "Active", value: 60 }, { name: "Trial", value: 22 },
-      { name: "Inactive", value: 12 }, { name: "Suspended", value: 6 },
-    ],
-  };
-
-  // ── Storage Usage (Doughnut) ─────────────────────────────────────────────────
-  const storageAll = {
-    "This Week":    [{ name: "Used", value: 682 }, { name: "Free", value: 318 }],
-    "This Month":   [{ name: "Used", value: 680 }, { name: "Free", value: 320 }],
-    "This Quarter": [{ name: "Used", value: 650 }, { name: "Free", value: 350 }],
-    "This Year":    [{ name: "Used", value: 680 }, { name: "Free", value: 320 }],
-    "Overall":      [{ name: "Used", value: 820 }, { name: "Free", value: 180 }],
-  };
-
-  // ── Tickets by Priority (Pie) ────────────────────────────────────────────────
-  const ticketsAll = {
-    "This Week":    [
-      { name: "Critical", value: 3  }, { name: "High", value: 7  },
-      { name: "Medium", value: 11   }, { name: "Low", value: 6   },
-    ],
-    "This Month":   [
-      { name: "Critical", value: 11 }, { name: "High", value: 28 },
-      { name: "Medium", value: 38   }, { name: "Low", value: 19  },
-    ],
-    "This Quarter": [
-      { name: "Critical", value: 24 }, { name: "High", value: 61 },
-      { name: "Medium", value: 98   }, { name: "Low", value: 47  },
-    ],
-    "This Year":    [
-      { name: "Critical", value: 8  }, { name: "High", value: 23 },
-      { name: "Medium", value: 41   }, { name: "Low", value: 28  },
-    ],
-    "Overall":      [
-      { name: "Critical", value: 42 }, { name: "High", value: 118 },
-      { name: "Medium", value: 203  }, { name: "Low", value: 97   },
-    ],
-  };
-
-  // ── API Health (Bar) ─────────────────────────────────────────────────────────
-  const apiHealthAll = {
-    "This Week":    [
-      { name: "Razorpay", uptime: 100,  latency: 112 }, { name: "Brevo",    uptime: 95.8, latency: 310 },
-      { name: "Firebase", uptime: 99.9, latency: 90  }, { name: "Twilio",   uptime: 98.9, latency: 198 },
-      { name: "AWS S3",   uptime: 100,  latency: 82  }, { name: "Webhook",  uptime: 78.4, latency: 820 },
-    ],
-    "This Month":   [
-      { name: "Razorpay", uptime: 99.9, latency: 118 }, { name: "Brevo",    uptime: 94.6, latency: 328 },
-      { name: "Firebase", uptime: 99.8, latency: 93  }, { name: "Twilio",   uptime: 98.6, latency: 205 },
-      { name: "AWS S3",   uptime: 99.9, latency: 85  }, { name: "Webhook",  uptime: 74.2, latency: 860 },
-    ],
-    "This Quarter": [
-      { name: "Razorpay", uptime: 99.8, latency: 122 }, { name: "Brevo",    uptime: 93.1, latency: 352 },
-      { name: "Firebase", uptime: 99.6, latency: 98  }, { name: "Twilio",   uptime: 98.2, latency: 218 },
-      { name: "AWS S3",   uptime: 99.7, latency: 91  }, { name: "Webhook",  uptime: 70.5, latency: 910 },
-    ],
-    "This Year":    [
-      { name: "Razorpay", uptime: 99.9, latency: 120 }, { name: "Brevo",    uptime: 94.2, latency: 340 },
-      { name: "Firebase", uptime: 99.7, latency: 95  }, { name: "Twilio",   uptime: 98.5, latency: 210 },
-      { name: "AWS S3",   uptime: 99.8, latency: 88  }, { name: "Webhook",  uptime: 72.1, latency: 890 },
-    ],
-    "Overall":      [
-      { name: "Razorpay", uptime: 99.6, latency: 130 }, { name: "Brevo",    uptime: 91.8, latency: 390 },
-      { name: "Firebase", uptime: 99.4, latency: 105 }, { name: "Twilio",   uptime: 97.9, latency: 240 },
-      { name: "AWS S3",   uptime: 99.5, latency: 98  }, { name: "Webhook",  uptime: 65.3, latency: 980 },
-    ],
-  };
-
-  // ── Derived (period-selected) data ───────────────────────────────────────────
-  const companyGrowthData = companyGrowthAll[growthPeriod];
-  // Static data for charts without period filters
   const churnData = (dashboardData.churnRetentionTrend && dashboardData.churnRetentionTrend.length > 0)
     ? dashboardData.churnRetentionTrend
-    : [
-        { name: "—", retained: 0, churned: 0 }
-      ];
+    : [];
 
+  // ── Company Status (Doughnut) ────────────────────────────────────────────────
   const companyStatusData = (dashboardData.companyStatusData && dashboardData.companyStatusData.length > 0)
     ? dashboardData.companyStatusData
-    : companyStatusAll["This Year"];
+    : [];
 
-  const storageData = storageAll["This Year"];
-
+  // ── Tickets by Priority (Pie) ────────────────────────────────────────────────
   const ticketsData = (dashboardData.ticketsData && dashboardData.ticketsData.length > 0)
     ? dashboardData.ticketsData
-    : ticketsAll["This Year"];
+    : [];
 
-  const apiHealthData = apiHealthAll["This Year"];
-
-  // ── Ticket Resolution Status (radar chart in the ticket/API row) ─────────────
+  // ── Ticket Resolution Status ─────────────────────────────────────────────────
   const ticketResolutionData = (dashboardData.ticketResolutionData && dashboardData.ticketResolutionData.length > 0)
     ? dashboardData.ticketResolutionData
-    : [
-        { subject: "High",     resolved: 0, pending: 0 },
-        { subject: "Medium",   resolved: 0, pending: 0 },
-        { subject: "Low",      resolved: 0, pending: 0 },
-      ];
+    : [];
 
   // ── Top Companies Table ──────────────────────────────────────────────────────
   const companyCols = [
@@ -392,17 +257,8 @@ export default function Dashboard() {
         <EnhancedDashCard title="Open Support Tickets"   value={String(dashboardData.kpi?.openSupportTickets ?? 0)}        icon={<HeadphonesIcon size={22} />} accentColor="#64748b" size={4} />
       </DashGrid>
 
-      {/* ── 3 & 4. Growth + Retention Charts ── */}
+      {/* ── 3. Churn vs Retention + Company Status + Tickets ── */}
       <Grid cols={12} gap={4}>
-        <GLineChart
-          title="Company Growth"
-          subtitle="New companies onboarded per period"
-          data={companyGrowthData}
-          lines={[{ key: "companies", label: "New Companies", color: "#3b82f6" }]}
-          size={8}
-          height={300}
-          filters={makePeriodFilters(setGrowthPeriod)}
-        />
         <GColumnChart
           title="Churn vs Retention"
           subtitle="Company retention performance"
@@ -411,27 +267,15 @@ export default function Dashboard() {
             { key: "retained", label: "Retained", color: "#22c55e" },
             { key: "churned",  label: "Churned",  color: "#f43f5e" },
           ]}
-          size={4}
+          size={6}
           height={300}
         />
-      </Grid>
-
-      {/* ── Doughnut & Pie Charts ── */}
-      <Grid cols={12} gap={4}>
         <GDoughnutChart
           title="Company Status"
-          subtitle="Active, trial, inactive & suspended"
+          subtitle="Active, trial, inactive &amp; suspended"
           data={companyStatusData}
           colors={["#3b82f6", "#8b5cf6", "#64748b", "#f43f5e"]}
-          size={4}
-          height={300}
-        />
-        <GDoughnutChart
-          title="Storage Usage"
-          subtitle="Used vs Free (GB)"
-          data={storageData}
-          colors={["#f43f5e", "#22c55e"]}
-          size={4}
+          size={6}
           height={300}
         />
         <GPieChart
@@ -439,13 +283,9 @@ export default function Dashboard() {
           subtitle="Open support tickets breakdown"
           data={ticketsData}
           colors={["#f43f5e", "#f59e0b", "#38bdf8", "#22c55e"]}
-          size={4}
+          size={6}
           height={300}
         />
-      </Grid>
-
-      {/* ── Ticket & API Health Charts ── */}
-      <Grid cols={12} gap={4}>
         <GRadarChart
           title="Ticket Resolution Rate"
           subtitle="Resolved vs pending % by category"
@@ -453,17 +293,6 @@ export default function Dashboard() {
           radars={[
             { key: "resolved", label: "Resolved (%)", color: "#22c55e" },
             { key: "pending",  label: "Pending (%)",  color: "#f43f5e" },
-          ]}
-          size={6}
-          height={300}
-        />
-        <GBarChart
-          title="API & Integration Health"
-          subtitle="Uptime % and avg latency (ms) per integration"
-          data={apiHealthData}
-          bars={[
-            { key: "uptime",  label: "Uptime (%)",   color: "#22c55e" },
-            { key: "latency", label: "Latency (ms)", color: "#f59e0b" },
           ]}
           size={6}
           height={300}

@@ -2508,9 +2508,73 @@ const ChartCard = ({
           transition: "opacity 180ms ease, transform 180ms ease",
         }}
       >
-        <ResponsiveContainer width="100%" height={height}>
-          {displayed}
-        </ResponsiveContainer>
+        {(() => {
+          // Detect empty/blank data — covers all chart types:
+          //   1. Empty array []
+          //   2. Array where every numeric value across every row is 0
+          //      (handles pie/doughnut with {value:0}, bar/line with {retained:0,churned:0}, etc.)
+          let isEmpty = false;
+          try {
+            const parsed = JSON.parse(dataKey);
+            if (Array.isArray(parsed)) {
+              if (parsed.length === 0) {
+                isEmpty = true;
+              } else {
+                // Collect all numeric leaf values from every row
+                const allNums = parsed.flatMap((row) =>
+                  Object.values(row).filter((v) => typeof v === "number"),
+                );
+                // Empty if there are no numeric fields at all, or every number is 0
+                isEmpty =
+                  allNums.length === 0 || allNums.every((n) => n === 0);
+              }
+            }
+          } catch {
+            // dataKey not parseable (e.g. a plain string id) — render normally
+          }
+
+          if (isEmpty) {
+            return (
+              <div
+                style={{ height }}
+                className="flex flex-col items-center justify-center gap-3"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+                  <svg
+                    className="w-6 h-6 text-slate-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 13.5l4.5-4.5L11 12.5l4-5 5.5 5.5"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 20h18"
+                    />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-slate-400">
+                  No Records Found
+                </p>
+                <p className="text-xs text-slate-300 text-center max-w-[180px]">
+                  No data available for this period
+                </p>
+              </div>
+            );
+          }
+
+          return (
+            <ResponsiveContainer width="100%" height={height}>
+              {displayed}
+            </ResponsiveContainer>
+          );
+        })()}
       </div>
     </div>
   );

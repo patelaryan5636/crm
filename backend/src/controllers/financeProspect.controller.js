@@ -304,42 +304,44 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
   }
 
   let emailResult = null;
-  try {
-    const recipientEmail = String(prospect.client?.email || '').trim();
-    if (!recipientEmail) {
-      throw new AppError('Client email is missing. Please update the client record before sending the quotation.', 400);
+  if (normalizedStatus === 'Interested') {
+    try {
+      const recipientEmail = String(prospect.client?.email || '').trim();
+      if (!recipientEmail) {
+        throw new AppError('Client email is missing. Please update the client record before sending the quotation.', 400);
+      }
+
+      const pdfUrl = prospect.termsAndConditionsPdf || null;
+
+      emailResult = await sendProspectQuotationEmail({
+        email: recipientEmail,
+        clientName: prospect.client.name || 'Client',
+        companyName: prospect.client.companyName || prospect.company || '',
+        serviceName: selectedService || finalServices[0]?.name || 'Custom package',
+        requirements: finalServices.map(s => ({
+          title: s.name,
+          cost: s.price,
+          description: s.discountAmount > 0 ? `Discount: ₹${s.discountAmount}` : ''
+        })),
+        baseCost: totalCost,
+        discountAmount: totalDiscount,
+        finalAmount,
+        paymentStatus,
+        termsAndConditions,
+        pdfPath: prospect.termsAndConditionsPdf,
+        pdfUrl: prospect.termsAndConditionsPdf?.startsWith('http') ? prospect.termsAndConditionsPdf : null,
+      });
+
+      prospect.clientEmailStatus = 'SENT';
+      prospect.clientEmailMessageId = emailResult.messageId || null;
+      prospect.clientEmailError = null;
+      await prospect.save();
+    } catch (error) {
+      prospect.clientEmailStatus = 'FAILED';
+      prospect.clientEmailError = error.message;
+      await prospect.save();
+      return next(new AppError(error.message || 'Failed to send quotation email', 502));
     }
-
-    const pdfUrl = prospect.termsAndConditionsPdf || null;
-
-    emailResult = await sendProspectQuotationEmail({
-      email: recipientEmail,
-      clientName: prospect.client.name || 'Client',
-      companyName: prospect.client.companyName || prospect.company || '',
-      serviceName: selectedService || finalServices[0]?.name || 'Custom package',
-      requirements: finalServices.map(s => ({
-        title: s.name,
-        cost: s.price,
-        description: s.discountAmount > 0 ? `Discount: ₹${s.discountAmount}` : ''
-      })),
-      baseCost: totalCost,
-      discountAmount: totalDiscount,
-      finalAmount,
-      paymentStatus,
-      termsAndConditions,
-      pdfPath: prospect.termsAndConditionsPdf,
-      pdfUrl: prospect.termsAndConditionsPdf?.startsWith('http') ? prospect.termsAndConditionsPdf : null,
-    });
-
-    prospect.clientEmailStatus = 'SENT';
-    prospect.clientEmailMessageId = emailResult.messageId || null;
-    prospect.clientEmailError = null;
-    await prospect.save();
-  } catch (error) {
-    prospect.clientEmailStatus = 'FAILED';
-    prospect.clientEmailError = error.message;
-    await prospect.save();
-    return next(new AppError(error.message || 'Failed to send quotation email', 502));
   }
 
   res.status(200).json(
@@ -354,7 +356,7 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
         }),
         email: emailResult ? { success: true, messageId: emailResult.messageId || null } : { success: false },
       },
-      'Quotation sent to client successfully'
+      normalizedStatus === 'Interested' ? 'Quotation sent to client successfully' : 'Client status saved successfully'
     )
   );
 });

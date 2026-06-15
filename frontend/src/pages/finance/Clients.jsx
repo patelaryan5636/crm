@@ -529,9 +529,13 @@ export default function Clients() {
       }
 
       closeModal("client-action");
-      toast.success("Client status updated successfully!");
+      if (actionForm.status === "Interested") {
+        toast.success("Quotation sent to client successfully!");
+      } else {
+        toast.success("Client status saved successfully!");
+      }
     } catch (saveError) {
-      setError(saveError?.message || 'Failed to send quotation to client');
+      setError(saveError?.message || (actionForm.status === "Interested" ? 'Failed to send quotation to client' : 'Failed to save client status'));
     }
   };
 
@@ -1460,7 +1464,7 @@ export default function Clients() {
                 onClick={() => closeModal("client-action")}
               />
               <Button
-                text="Send To Client"
+                text={actionForm.status === "Interested" ? "Send To Client" : "Save"}
                 variant="primary"
                 size={3}
                 onClick={saveActionForm}

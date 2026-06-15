@@ -357,7 +357,10 @@ const sendProspectQuotationEmail = async (payload) => {
               <div style="margin-top:18px;display:grid;gap:8px;">
                 <div style="display:flex;justify-content:space-between;font-size:14px;color:#4b5563;"><span>Service Value</span><strong>₹${Number(payload.baseCost || 0).toLocaleString("en-IN")}</strong></div>
                 <div style="display:flex;justify-content:space-between;font-size:14px;color:#4b5563;"><span>Discount</span><strong>- ₹${Number(payload.discountAmount || 0).toLocaleString("en-IN")}</strong></div>
-                <div style="display:flex;justify-content:space-between;font-size:14px;color:#4b5563;padding-bottom:8px;border-bottom:1px dashed #e5e7eb;"><span>GST (18%)</span><strong>+ ₹${Math.round((Number(payload.baseCost || 0) - Number(payload.discountAmount || 0)) * 0.18).toLocaleString("en-IN")}</strong></div>
+                <div style="display:flex;justify-content:space-between;font-size:14px;color:#4b5563;padding-bottom:8px;border-bottom:1px dashed #e5e7eb;">
+                  <span>GST ${payload.gstAmount !== undefined && payload.gstAmount !== null && payload.gstAmount !== Math.round((Number(payload.baseCost || 0) - Number(payload.discountAmount || 0)) * 0.18) ? "(Manual)" : "(18%)"}</span>
+                  <strong>+ ₹${(payload.gstAmount !== undefined && payload.gstAmount !== null ? payload.gstAmount : Math.round((Number(payload.baseCost || 0) - Number(payload.discountAmount || 0)) * 0.18)).toLocaleString("en-IN")}</strong>
+                </div>
                 <div style="display:flex;justify-content:space-between;padding-top:10px;font-size:16px;color:#0f172a;"><span>Final Project Value</span><strong>₹${Number(payload.finalAmount || 0).toLocaleString("en-IN")}</strong></div>
               </div>
 

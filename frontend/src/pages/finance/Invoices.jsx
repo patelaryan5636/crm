@@ -31,7 +31,7 @@ const statusColor = (s) => {
 
 // ── PDF Generator — uses iframe print, no external deps ──────────────────────
 const generateInvoiceInnerHtml = (inv, company = {}) => {
-  const gst = inv.gstAmount || Math.round((inv.amount * (inv.gstPct || 18)) / 118);
+  const gst = inv.gstAmount || Math.round((inv.amount * (inv.gstPct || 0)) / 100);
   const total = inv.amount;
   const subtotal = total - gst;
   const fmtAmt = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
@@ -106,7 +106,7 @@ const generateInvoiceInnerHtml = (inv, company = {}) => {
   </table>
   <table class="totals">
     <tr><td>Subtotal (Service Amount)</td><td style="text-align:right">${fmtAmt(subtotal)}</td></tr>
-    <tr><td>GST (${inv.gstPct || 18}%)</td><td style="text-align:right">${fmtAmt(gst)}</td></tr>
+    <tr><td>GST (${inv.gstPct !== undefined && inv.gstPct !== null ? inv.gstPct : 0}%)</td><td style="text-align:right">${fmtAmt(gst)}</td></tr>
     ${(inv.discount || 0) > 0 ? `<tr><td>Discount</td><td style="text-align:right;color:#ef4444">- ${fmtAmt(inv.discount)}</td></tr>` : ""}
     <tr><td><strong>Grand Total</strong></td><td style="text-align:right"><strong>${fmtAmt(total)}</strong></td></tr>
   </table>
@@ -353,7 +353,7 @@ export default function Invoices() {
       {/* ── View / Preview Modal ─────────────────────────────────────────── */}
       <Modal id="inv-view" title="Invoice Preview" size="xl">
         {selected && (() => {
-          const gst = selected.gstAmount || Math.round((selected.amount * (selected.gstPct || 18)) / 118);
+          const gst = selected.gstAmount || Math.round((selected.amount * (selected.gstPct || 0)) / 100);
           const total = selected.amount;
           const subtotal = total - gst;
           return (
@@ -406,7 +406,7 @@ export default function Invoices() {
 
               <ModalGrid title="Amounts" cols={2}>
                 <ModalData label="Subtotal (Service Amount)" value={fmt(subtotal)} />
-                <ModalData label={`GST (${selected.gstPct || 18}%)`} value={fmt(gst)} />
+                <ModalData label={`GST (${selected.gstPct !== undefined && selected.gstPct !== null ? selected.gstPct : 0}%)`} value={fmt(gst)} />
                 <ModalData label="Discount" value={fmt(selected.discount || 0)} />
                 <ModalData label="Due Date" value={fmtDate(selected.dueDate)} />
               </ModalGrid>

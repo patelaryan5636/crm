@@ -1190,6 +1190,8 @@ const ProspectFormSchema = new Schema(
     // ── Financials ──
     totalAmount: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
+    gstPercent: { type: Number, default: 0 },
+    gstAmount: { type: Number, default: 0 },
     finalAmount: { type: Number, default: 0 },
     advanceAmount: { type: Number, default: 0 },
     advancePayments: [
@@ -1601,6 +1603,8 @@ const WorkOrderSchema = new Schema(
     },
     discountValue: { type: String, default: "" },
     discountAmt: { type: Number, default: 0 },
+    gstPercent: { type: Number, default: 0 },
+    gstAmount: { type: Number, default: 0 },
     netPayable: { type: Number, default: 0 },
     paymentStatus: {
       type: String,
@@ -1706,7 +1710,7 @@ const InvoiceSchema = new Schema(
 
     amount: { type: Number, required: true, min: 0 },
     discount: { type: Number, default: 0, min: 0 },
-    gstPercent: { type: Number, default: 18, min: 0 },
+    gstPercent: { type: Number, default: 0, min: 0 },
     gstAmount: { type: Number, default: 0, min: 0 },
     isCustomGst: { type: Boolean, default: false },
     totalAmount: { type: Number, required: true, min: 0 },

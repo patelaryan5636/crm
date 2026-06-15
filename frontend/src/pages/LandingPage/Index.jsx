@@ -242,7 +242,7 @@ function Hero({ onWatchTutorial }) {
               <a
                 onClick={() =>
                   handleExternalLink(
-                    "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                    "https://www.youtube.com/@graphura-India-private-limited",
                   )
                 }
                 className="btn-outline"

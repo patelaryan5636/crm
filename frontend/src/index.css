@@ -4,6 +4,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Fix shimmer/skeleton bounce ─────────────────────────────────────────────
+   Tailwind's built-in pulse keyframe includes transform:scale which causes
+   skeleton blocks to zoom in/out. We redefine the keyframe AND override the
+   utility class inside @layer utilities so it wins over Tailwind's generated
+   styles. Result: pure opacity fade, zero movement.
+   ─────────────────────────────────────────────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: none;
+  }
+  50% {
+    opacity: 0.45;
+    transform: none;
+  }
+}
+
+@layer utilities {
+  .animate-pulse {
+    animation: pulse 2s ease-in-out infinite !important;
+    transform: none !important;
+  }
+}
+
 @layer base {
   body {
     @apply bg-gray-50 text-gray-900 font-sans antialiased;

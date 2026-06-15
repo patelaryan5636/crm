@@ -1062,4 +1062,299 @@ exports.changePassword = catchAsync(async (req, res, next) => {
   );
 });
 
+// ────────────────────────────────────────────────────────────
+// FORGOT PASSWORD — OTP FLOW (Admin + Department Users)
+// ────────────────────────────────────────────────────────────
+//
+// Flow:
+//   Step 1: POST /api/auth/forgot-password/send-otp  → send 6-digit OTP to email
+//   Step 2: POST /api/auth/forgot-password/verify-otp → verify OTP, return session token
+//   Step 3: POST /api/auth/forgot-password/reset      → set new password using session token
+//
+// Rules:
+//   - Works for Admin AND department User accounts (not SuperAdmin)
+//   - Max 2 password resets per calendar month
+//   - OTP: 6 digits, bcrypt-hashed in DB, 10-minute TTL
+//   - OTP max 5 attempts before invalidation
+//   - Resend cooldown: 2 minutes
+//   - New password cannot match current or last 5 passwords
+// ────────────────────────────────────────────────────────────
+
+/**
+ * Helper: count resets this calendar month
+ */
+const countResetsThisMonth = (account) => {
+  if (!account.lastPasswordResetAt) return 0;
+  const last = new Date(account.lastPasswordResetAt);
+  const now = new Date();
+  const sameMonth = last.getMonth() === now.getMonth() && last.getFullYear() === now.getFullYear();
+  if (!sameMonth) return 0;
+  return account.passwordResetCount || 0;
+};
+
+/**
+ * STEP 1 — Send OTP
+ * POST /api/auth/forgot-password/send-otp
+ * Body: { email }
+ */
+exports.forgotPasswordSendOTP = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+  if (!email?.trim()) return next(new AppError('Email is required', 400));
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const ipAddress = getClientIp(req);
+  const userAgent = req.get('user-agent') || 'unknown';
+
+  // Find account — Admin or User
+  let account = await User.findOne({ email: normalizedEmail, isDeleted: false, isActive: true });
+  let holderType = 'USER';
+  if (!account) {
+    account = await Admin.findOne({ email: normalizedEmail, isDeleted: false, isActive: true });
+    holderType = 'ADMIN';
+  }
+
+  // Email enumeration protection — always return success
+  if (!account) {
+    return res.status(200).json(new ApiResponse(200, null, 'If that email is registered, you will receive an OTP shortly.'));
+  }
+
+  // Check monthly reset limit (max 2 per calendar month)
+  const resetsThisMonth = countResetsThisMonth(account);
+  if (resetsThisMonth >= 2) {
+    return next(new AppError('You have reached the maximum of 2 password resets per month. Please contact your administrator.', 429));
+  }
+
+  // Resend cooldown — 2 minutes
+  const recent = await PasswordReset.findOne({
+    userId:   account._id,
+    isUsed:   false,
+    expiresAt: { $gt: new Date() },
+    createdAt: { $gte: new Date(Date.now() - 2 * 60 * 1000) },
+  });
+  if (recent) {
+    return next(new AppError('OTP already sent. Please wait 2 minutes before requesting a new one.', 429));
+  }
+
+  // Generate 6-digit OTP
+  const rawOTP = String(Math.floor(100000 + Math.random() * 900000));
+  const hashedOTP = await bcrypt.hash(rawOTP, 10);
+
+  // Invalidate any existing unused OTPs for this user
+  await PasswordReset.updateMany(
+    { userId: account._id, isUsed: false },
+    { $set: { isUsed: true, usedAt: new Date() } },
+  );
+
+  // Save new OTP record (expires in 10 minutes)
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  await PasswordReset.create({
+    userId:     account._id,
+    email:      normalizedEmail,
+    token:      hashedOTP,     // store hashed OTP in `token` field
+    expiresAt,
+    ipAddress,
+    userAgent,
+    attemptCount: 0,
+  });
+
+  // Send OTP email
+  const { sendPasswordResetOTPEmail } = require('../services/email.service');
+  try {
+    await sendPasswordResetOTPEmail(normalizedEmail, rawOTP, account.name || 'User');
+  } catch (emailErr) {
+    logger.error('Forgot password OTP email failed', emailErr.message);
+    return next(new AppError('Failed to send OTP email. Please try again.', 500));
+  }
+
+  logger.info(`Forgot-password OTP sent to ${normalizedEmail} [${holderType}]`);
+
+  res.status(200).json(new ApiResponse(200, { email: normalizedEmail }, 'OTP sent to your registered email address.'));
+});
+
+/**
+ * STEP 2 — Verify OTP
+ * POST /api/auth/forgot-password/verify-otp
+ * Body: { email, otp }
+ * Returns: { resetToken } — short-lived session token for Step 3
+ */
+exports.forgotPasswordVerifyOTP = catchAsync(async (req, res, next) => {
+  const { email, otp } = req.body;
+  if (!email?.trim() || !otp?.trim()) return next(new AppError('Email and OTP are required', 400));
+
+  const normalizedEmail = email.toLowerCase().trim();
+
+  const record = await PasswordReset.findOne({
+    email:    normalizedEmail,
+    isUsed:   false,
+    expiresAt: { $gt: new Date() },
+  }).sort({ createdAt: -1 });
+
+  if (!record) {
+    return next(new AppError('OTP has expired or is invalid. Please request a new one.', 400));
+  }
+
+  if (record.attemptCount >= 5) {
+    record.isUsed = true;
+    await record.save();
+    return next(new AppError('Too many failed attempts. Please request a new OTP.', 429));
+  }
+
+  const isValid = await bcrypt.compare(otp.trim(), record.token);
+  if (!isValid) {
+    record.attemptCount += 1;
+    await record.save();
+    const remaining = 5 - record.attemptCount;
+    return next(new AppError(`Invalid OTP. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.`, 400));
+  }
+
+  // OTP verified — generate a short-lived reset session token (valid 15 min)
+  // We reuse the PasswordReset doc: mark verified but NOT used yet
+  const { generateResetToken } = require('../utils/tokenGenerator');
+  const { rawToken, hashedToken } = await generateResetToken();
+  record.token = hashedToken;      // replace OTP hash with session token hash
+  record.expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min window
+  record.attemptCount = 0;
+  await record.save();
+
+  // Build a lookup key: userId.rawToken (same pattern as existing resetPassword)
+  const sessionToken = `${record.userId.toString()}.${rawToken}`;
+
+  logger.info(`Forgot-password OTP verified for ${normalizedEmail}`);
+
+  res.status(200).json(new ApiResponse(200, {
+    resetToken: sessionToken,
+    email:      normalizedEmail,
+  }, 'OTP verified. You may now reset your password.'));
+});
+
+/**
+ * STEP 3 — Reset Password
+ * POST /api/auth/forgot-password/reset
+ * Body: { resetToken, newPassword }
+ */
+exports.forgotPasswordReset = catchAsync(async (req, res, next) => {
+  const { resetToken, newPassword } = req.body;
+  if (!resetToken?.trim() || !newPassword?.trim()) {
+    return next(new AppError('Reset token and new password are required', 400));
+  }
+  if (newPassword.length < 8) {
+    return next(new AppError('Password must be at least 8 characters', 400));
+  }
+
+  const ipAddress = getClientIp(req);
+
+  if (!resetToken.includes('.')) {
+    return next(new AppError('Invalid or expired reset session. Please start again.', 400));
+  }
+
+  const [userId, rawToken] = resetToken.split('.');
+
+  const record = await PasswordReset.findOne({
+    userId,
+    isUsed:   false,
+    expiresAt: { $gt: new Date() },
+  }).sort({ createdAt: -1 });
+
+  if (!record) {
+    return next(new AppError('Reset session has expired. Please start the process again.', 400));
+  }
+
+  const isValid = await bcrypt.compare(rawToken, record.token);
+  if (!isValid) {
+    return next(new AppError('Invalid reset session. Please start again.', 400));
+  }
+
+  // Find account
+  let account = await User.findById(userId);
+  let isUserAccount = true;
+  if (!account) {
+    account = await Admin.findById(userId);
+    isUserAccount = false;
+  }
+  if (!account) return next(new AppError('Account not found', 404));
+
+  // Check monthly limit
+  const resetsThisMonth = countResetsThisMonth(account);
+  if (resetsThisMonth >= 2) {
+    return next(new AppError('Monthly password reset limit (2) reached. Contact your administrator.', 429));
+  }
+
+  // Cannot reuse current password
+  const isSameCurrent = await comparePassword(newPassword, account.password);
+  if (isSameCurrent) {
+    return next(new AppError('New password cannot be the same as your current password.', 422));
+  }
+
+  // Password history check (Users only)
+  if (isUserAccount && account.passwordHistory?.length > 0) {
+    for (const past of account.passwordHistory) {
+      const reused = await bcrypt.compare(newPassword, past.hash);
+      if (reused) return next(new AppError('Cannot reuse a recently used password.', 422));
+    }
+  }
+
+  const newHashedPassword = await hashPassword(newPassword);
+  account.password = newHashedPassword;
+
+  if (isUserAccount) {
+    account.mustChangePassword = false;
+    account.isFirstLogin = false;
+    account.lastPasswordResetAt = new Date();
+    // Increment monthly count — only track within calendar month
+    const lastReset = account.lastPasswordResetAt ? new Date(account.lastPasswordResetAt) : null;
+    const now = new Date();
+    const inSameMonth = lastReset &&
+      lastReset.getMonth() === now.getMonth() &&
+      lastReset.getFullYear() === now.getFullYear();
+    account.passwordResetCount = inSameMonth ? (account.passwordResetCount || 0) + 1 : 1;
+    account.lastPasswordResetAt = now;
+
+    if (!account.passwordHistory) account.passwordHistory = [];
+    account.passwordHistory.unshift({ hash: newHashedPassword, changedAt: now });
+    if (account.passwordHistory.length > 5) account.passwordHistory = account.passwordHistory.slice(0, 5);
+  } else {
+    // Admin — track reset count too
+    const now = new Date();
+    const lastReset = account.lastPasswordResetAt ? new Date(account.lastPasswordResetAt) : null;
+    const inSameMonth = lastReset &&
+      lastReset.getMonth() === now.getMonth() &&
+      lastReset.getFullYear() === now.getFullYear();
+    account.passwordResetCount = inSameMonth ? (account.passwordResetCount || 0) + 1 : 1;
+    account.lastPasswordResetAt = now;
+  }
+
+  await account.save();
+
+  // Mark record as used
+  record.isUsed = true;
+  record.usedAt = new Date();
+  await record.save();
+
+  // Revoke all active refresh tokens (force re-login everywhere)
+  await RefreshToken.updateMany(
+    { holderId: account._id, isRevoked: false },
+    { $set: { isRevoked: true, revokedAt: new Date(), revokedReason: 'PASSWORD_CHANGED' } },
+  );
+
+  // Send confirmation email (async, non-blocking)
+  const { sendPasswordResetConfirmationEmail } = require('../services/email.service');
+  sendPasswordResetConfirmationEmail(account.email, account.name || 'User').catch(() => {});
+
+  // Audit log
+  await AuditLog.create({
+    admin:         isUserAccount ? account.admin : account._id,
+    performedBy:   account._id,
+    performerType: isUserAccount ? 'USER' : 'ADMIN',
+    action:        'PASSWORD_CHANGED',
+    targetModel:   isUserAccount ? 'User' : 'Admin',
+    targetId:      account._id,
+    ipAddress,
+    note:          'Password reset via forgot-password OTP flow',
+  }).catch(() => {});
+
+  logger.info(`Password reset successful for ${account.email}`);
+
+  res.status(200).json(new ApiResponse(200, { redirectUrl: '/login' }, 'Password reset successfully. Please sign in with your new password.'));
+});
+
 module.exports = exports;

@@ -79,8 +79,40 @@ router.post(
 );
 
 /**
+ * POST /api/auth/forgot-password/send-otp
+ * Step 1: Send 6-digit OTP to registered email (Admin or User)
+ * Body: { email }
+ */
+router.post(
+  '/forgot-password/send-otp',
+  passwordResetLimiter,
+  authController.forgotPasswordSendOTP
+);
+
+/**
+ * POST /api/auth/forgot-password/verify-otp
+ * Step 2: Verify 6-digit OTP, returns a session token for Step 3
+ * Body: { email, otp }
+ */
+router.post(
+  '/forgot-password/verify-otp',
+  authController.forgotPasswordVerifyOTP
+);
+
+/**
+ * POST /api/auth/forgot-password/reset
+ * Step 3: Set new password using the session token from Step 2
+ * Body: { resetToken, newPassword }
+ * Rules: max 2 resets/month, no reuse of last 5 passwords
+ */
+router.post(
+  '/forgot-password/reset',
+  authController.forgotPasswordReset
+);
+
+/**
  * POST /api/auth/forget-password
- * Request a password reset link
+ * Legacy: Request a password reset link (kept for backward compat)
  * Body: { email }
  */
 router.post(

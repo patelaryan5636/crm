@@ -1,17 +1,29 @@
 import React from "react";
 import ReactDOM from 'react-dom/client';
 import { Fragment } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { FaUsers } from "react-icons/fa";
+import {
+  FaLinkedinIn,
+  FaFacebookF,
+  FaInstagram,
+  FaXTwitter,
+} from "react-icons/fa6";
 import "./Landing.css";
+import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
+import Dashboard from "../../assets/Images/Dashboard.png"
+import Leads from "../../assets/Images/Leads.png"
+import Finance from "../../assets/Images/Finance.png"
+import HRM from "../../assets/Images/HRM.png"
+import Projects from "../../assets/Images/Projects.png"
+import Reports from "../../assets/Images/Reports.png"
+
 
 
 const { useState, useEffect, useRef, useCallback } = React;
-import axios from 'axios';
-import { toast } from 'react-hot-toast';
 
 const handleExternalLink = (url) => {
   window.open(url, "_blank", "noopener,noreferrer");
@@ -94,8 +106,7 @@ function Navbar() {
         <div className="container">
           <div className="nav-inner">
             <a onClick={() => handleScrollTo("hero")} className="nav-logo">
-              <div className="nav-logo-icon">⚡</div>
-              GraphuraCRM
+              <img src={GraphuraLogo} alt="Graphura CRM" className="nav-logo-img" />
             </a>
             <div className={`nav-links ${menuOpen ? "open" : ""}`}>
               {links.map((l) => (
@@ -467,42 +478,42 @@ function ProductShowcase() {
       icon: "📊",
       desc: "Real-time KPI overview",
       color: "#2563eb",
-      image: "landscape1.png",
+      image: Dashboard,
     },
     {
       label: "Lead Management",
       icon: "🎯",
       desc: "Full lead lifecycle",
       color: "#7c3aed",
-      image: "landscape2.png",
+      image: Leads,
     },
     {
       label: "Finance",
       icon: "💰",
       desc: "Invoices & revenue",
       color: "#059669",
-      image: "landscape3.png",
+      image: Finance,
     },
     {
       label: "HRM",
       icon: "👥",
       desc: "Human resource tools",
       color: "#dc2626",
-      image: "landscape4.png",
+      image: HRM,
     },
     {
       label: "Projects",
       icon: "🚀",
       desc: "Kanban & timelines",
       color: "#d97706",
-      image: "landscape5.png",
+      image: Projects,
     },
     {
       label: "Reports",
       icon: "📋",
       desc: "Advanced analytics",
       color: "#0891b2",
-      image: "landscape6.png",
+      image: Reports,
     },
   ];
 
@@ -525,6 +536,14 @@ function ProductShowcase() {
   };
 
   const SlideContent = ({ slide }) => {
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+      setIsVisible(false);
+      const timer = setTimeout(() => setIsVisible(true), 50);
+      return () => clearTimeout(timer);
+    }, [slide]);
+
     return (
       <div className="showcase-frame">
         <div className="showcase-frame-header">
@@ -542,7 +561,7 @@ function ProductShowcase() {
           </span>
         </div>
         <div
-          className="showcase-frame-body"
+          className={`showcase-frame-body ${isVisible ? 'fade-in' : ''}`}
           style={{
             background: "var(--navy-800)",
             padding: 0,
@@ -562,6 +581,8 @@ function ProductShowcase() {
               display: "block",
               borderRadius: "0 0 10px 10px",
               objectFit: "cover",
+              opacity: isVisible ? 1 : 0,
+              transition: "opacity 0.4s ease-in-out",
             }}
           />
         </div>
@@ -642,7 +663,7 @@ function HowItWorks() {
     ],
     [
       "Create Departments",
-      "Divide your workspace into Sales, Finance, HRM, and Project management departments.",
+      "Divide your workspace into Sales, Finance and management departments.",
     ],
     [
       "Create Teams",
@@ -961,7 +982,7 @@ function WorkflowViz() {
     {
       icon: "🤝",
       name: "Client",
-      sub: "Track Project & Review it ",
+      sub: "Track Project",
       color: "#ec4899",
     },
     {
@@ -1464,44 +1485,36 @@ function FAQ() {
 
 // ─── CONTACT ──────────────────────────────────────────────────────────────────
 function Contact() {
-  const [form, setForm] = useState({
-    name: "",
-    company: "",
-    email: "",
-    phone: "",
-    message: "",
-  });
+  const EMPTY_FORM = { name: "", company: "", email: "", phone: "", message: "" };
+  const [form, setForm] = useState(EMPTY_FORM);
   const [submitted, setSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const setField = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    
+    setError("");
+    setLoading(true);
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      await axios.post(`${API_BASE_URL}/public/contact`, {
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        message: form.message,
-        company: form.company, // Even though not strictly required by model, good to send if needed later
+      const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api");
+      const res = await fetch(`${API_URL}/public/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
       });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || "Submission failed. Please try again.");
       setSubmitted(true);
-      toast.success("Query submitted successfully");
-      setForm({
-        name: "",
-        company: "",
-        email: "",
-        phone: "",
-        message: "",
-      });
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to submit query. Please try again.");
+      setForm(EMPTY_FORM);
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
+
   return (
     <section className="section section-bg-900" id="contact">
       <div className="container">
@@ -1521,13 +1534,12 @@ function Contact() {
               matched to your industry and team size — no generic pitches.
             </p>
             {[
-              ["✉️", "Sales Enquiries", "sales@graphuracrm.io"],
-              ["🎧", "Technical Support", "support@graphuracrm.io"],
-              ["📞", "Phone", "+ 1 (800) 629-8724"],
+              ["🎧", "Technical Support", "official@graphura.in"],
+              ["📞", "Phone", "+91 73780 21327"],
               [
                 "📍",
                 "Head Office",
-                "500 Technology Square, Cambridge, MA 02139",
+                "Graphura India Private Limited, near RSF, Pataudi, Gurgaon, Haryana 122503",
               ],
             ].map(([ic, l, v]) => (
               <div className="contact-item" key={l}>
@@ -1539,6 +1551,7 @@ function Contact() {
               </div>
             ))}
           </div>
+
           {submitted ? (
             <div
               style={{
@@ -1564,15 +1577,17 @@ function Contact() {
               >
                 Enquiry received
               </h3>
-              <p
-                style={{
-                  color: "var(--text-secondary)",
-                  fontSize: "0.95rem",
-                }}
-              >
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}>
                 Our team will reply within 2 business hours. Check your inbox
                 for a confirmation.
               </p>
+              <button
+                onClick={() => setSubmitted(false)}
+                className="btn-primary"
+                style={{ marginTop: 24, padding: "12px 28px" }}
+              >
+                Send another enquiry
+              </button>
             </div>
           ) : (
             <form
@@ -1580,6 +1595,7 @@ function Contact() {
               style={{ padding: 36 }}
               onSubmit={handleSubmit}
             >
+              {/* Name + Company */}
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Full Name *</label>
@@ -1588,36 +1604,37 @@ function Contact() {
                     type="text"
                     placeholder="Alex Reeves"
                     value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    onChange={setField("name")}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Company Name *</label>
+                  <label className="form-label">Company *</label>
                   <input
                     className="form-input"
                     type="text"
                     placeholder="Acme Corp"
                     value={form.company}
-                    onChange={(e) =>
-                      setForm({ ...form, company: e.target.value })
-                    }
+                    onChange={setField("company")}
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
+
+              {/* Email + Phone */}
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Email Address *</label>
                   <input
                     className="form-input"
                     type="email"
-                    placeholder="alex@acme.com"
+                    placeholder="alex@gmail.com"
                     value={form.email}
-                    onChange={(e) =>
-                      setForm({ ...form, email: e.target.value })
-                    }
+                    onChange={setField("email")}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div className="form-group">
@@ -1625,14 +1642,15 @@ function Contact() {
                   <input
                     className="form-input"
                     type="tel"
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="+91 12345 67890"
                     value={form.phone}
-                    onChange={(e) =>
-                      setForm({ ...form, phone: e.target.value })
-                    }
+                    onChange={setField("phone")}
+                    disabled={loading}
                   />
                 </div>
               </div>
+
+              {/* Message */}
               <div className="form-group">
                 <label className="form-label">Message *</label>
                 <textarea
@@ -1640,25 +1658,32 @@ function Contact() {
                   rows={5}
                   placeholder="Tell us about your team size, current tools, and what you're hoping to improve..."
                   value={form.message}
-                  onChange={(e) =>
-                    setForm({ ...form, message: e.target.value })
-                  }
+                  onChange={setField("message")}
                   required
+                  disabled={loading}
                 />
               </div>
+
+              {/* Inline error */}
+              {error && (
+                <p style={{ color: "#f87171", fontSize: "0.85rem", marginBottom: 12 }}>
+                  ⚠ {error}
+                </p>
+              )}
+
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={isSubmitting}
                 style={{
                   width: "100%",
                   justifyContent: "center",
                   padding: "16px",
-                  opacity: isSubmitting ? 0.7 : 1,
-                  cursor: isSubmitting ? "not-allowed" : "pointer",
+                  opacity: loading ? 0.7 : 1,
+                  cursor: loading ? "not-allowed" : "pointer",
                 }}
+                disabled={loading}
               >
-                {isSubmitting ? "Submitting..." : "Submit Enquiry →"}
+                {loading ? "Submitting…" : "Submit Enquiry →"}
               </button>
             </form>
           )}
@@ -1712,15 +1737,6 @@ function CTA({ onWatchTutorial }) {
               🎥 Watch a CRM Tutorial
             </a>
           </div>
-          <p
-            style={{
-              marginTop: 20,
-              fontSize: "0.82rem",
-              color: "var(--text-muted)",
-            }}
-          >
-            No credit card required · 14-day free trial · Cancel anytime
-          </p>
         </div>
       </div>
     </section>
@@ -1732,21 +1748,59 @@ function Footer() {
   const cols = [
     {
       title: "Product",
-      links: ["Features", "Modules", "Security", "Changelog", "Roadmap"],
+      links: ["Features", "Modules", "Contact"],
     },
     {
-      title: "Solutions",
-      links: ["Sales Teams", "Finance Ops", "Enterprises"],
-    },
-    {
-      title: "Resources",
-      links: ["Documentation", "API Reference", "Blog", "Case Studies"],
-    },
-    {
-      title: "Company",
-      links: ["About Us", "Careers", "Security", "Contact"],
+      title: "Legal",
+      links: ["Privacy Policy", "Terms of Service", "Cookie Policy"],
     },
   ];
+
+  const contactInfo = [
+    {
+      icon: "📧",
+      label: "Email",
+      value: "official@graphura.in",
+    },
+    {
+      icon: "📞",
+      label: "Phone",
+      value: "+91 73780 21327",
+    },
+    {
+      icon: "📍",
+      label: "Address",
+      value: "Graphura India Private Limited, near RSF, Pataudi, Gurgaon, Haryana 122503",
+    },
+  ];
+
+  const socialLinks = [
+    {
+      Icon: FaLinkedinIn,
+      href: "https://www.linkedin.com/company/graphura-india-private-limited/",
+      label: "LinkedIn",
+      className: "social-linkedin",
+    },
+    {
+      Icon: FaFacebookF,
+      href: "https://www.facebook.com/Graphura.in",
+      label: "Facebook",
+      className: "social-facebook",
+    },
+    {
+      Icon: FaInstagram,
+      href: "https://www.instagram.com/graphura.in?igsh=MXZydnIxemcyeWttNg==",
+      label: "Instagram",
+      className: "social-instagram",
+    },
+    {
+      Icon: FaXTwitter,
+      href: "https://x.com/Graphura",
+      label: "X",
+      className: "social-x",
+    },
+  ];
+
   return (
     <footer>
       <div className="container">
@@ -1757,30 +1811,12 @@ function Footer() {
               className="nav-logo"
               style={{ textDecoration: "none", cursor: "pointer" }}
             >
-              <div className="nav-logo-icon">⚡</div>
-              GraphuraCRM
+              <img src={GraphuraLogo} alt="Graphura CRM" className="nav-logo-img" />
             </a>
             <p>
               The CRM platform that runs your entire business — sales, finance,
               management and projects in one connected workspace.
             </p>
-            <div className="footer-social">
-              {[
-                ["💼", "https://linkedin.com"],
-                ["📘", "https://facebook.com"],
-                ["📷", "https://instagram.com"],
-                ["🐦", "https://twitter.com"],
-              ].map(([ic, h]) => (
-                <a
-                  key={h}
-                  onClick={() => handleExternalLink(h)}
-                  className="social-btn"
-                  style={{ cursor: "pointer" }}
-                >
-                  {ic}
-                </a>
-              ))}
-            </div>
           </div>
           {cols.map((col) => (
             <div className="footer-col" key={col.title}>
@@ -1800,29 +1836,37 @@ function Footer() {
               })}
             </div>
           ))}
+          <div className="footer-col">
+            <h4>Contact Us</h4>
+            {contactInfo.map((item) => (
+              <div key={item.label} className="footer-contact-item">
+                <span className="footer-contact-icon">{item.icon}</span>
+                <div>
+                  <div className="footer-contact-label">{item.label}</div>
+                  <div className="footer-contact-value">{item.value}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="footer-col">
+            <h4>Follow Us</h4>
+            <div className="footer-social">
+              {socialLinks.map(({ Icon, href, label, className }) => (
+                <a
+                  key={href}
+                  onClick={() => handleExternalLink(href)}
+                  className={`social-btn ${className}`}
+                  aria-label={label}
+                  style={{ cursor: "pointer" }}
+                >
+                  <Icon />
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="footer-bottom">
           <p>© 2026 GraphuraCRM Inc. All rights reserved.</p>
-          <div style={{ display: "flex", gap: 20 }}>
-            {["Privacy Policy", "Terms of Service", "Cookie Policy"].map(
-              (l) => (
-                <a
-                  key={l}
-                  style={{
-                    color: "var(--text-secondary)",
-                    textDecoration: "none",
-                    fontSize: "0.82rem",
-                    cursor: "pointer",
-                  }}
-                  onClick={() =>
-                    window.scrollTo({ top: 0, behavior: "smooth" })
-                  }
-                >
-                  {l}
-                </a>
-              ),
-            )}
-          </div>
         </div>
       </div>
     </footer>
@@ -2116,10 +2160,12 @@ function ScrollToTop() {
 export default function LandingPage() {
   const [showTutorial, setShowTutorial] = useState(false);
 
-  // Dynamic body class for Landing Page background and styling
+  // Dynamic root/body classes for Landing Page background and styling
   useEffect(() => {
+    document.documentElement.classList.add("landing-page-root");
     document.body.classList.add("landing-page-body");
     return () => {
+      document.documentElement.classList.remove("landing-page-root");
       document.body.classList.remove("landing-page-body");
     };
   }, []);

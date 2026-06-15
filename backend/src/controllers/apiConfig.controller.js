@@ -57,48 +57,16 @@ exports.updateRazorpayConfig = catchAsync(async (req, res, next) => {
           key: config.key,
           value: encrypt(config.value),
           description: config.description,
-          nickname: defaultNickname,
-          environment: mode,
-          status: 'ACTIVE',
           isEncrypted: true,
-          updatedBy: req.user?._id
-        });
-      } else {
-        await ApiConfig.findOneAndUpdate(
-          { 
-            admin: req.admin._id, 
-            key: config.key, 
-            status: 'ACTIVE' 
-          },
-          { 
-            value: encrypt(config.value), 
-            environment: mode,
-            updatedBy: req.user?._id 
-          },
-          { upsert: true }
-        );
-      }
-    }
-
-    if (isActive === true) {
-      await ApiConfig.findOneAndUpdate(
-        { admin: req.admin._id, key: 'RAZORPAY_ACTIVE_MODE' },
-        {
-          admin: req.admin._id,
-          value: encrypt(mode),
-          description: 'Currently active Razorpay mode',
-          environment: 'none',
-          status: 'ACTIVE',
-          isEncrypted: true,
-          updatedBy: req.user?._id
+          updatedBy: req.admin._id,
         },
-        { upsert: true }
+        { upsert: true, new: true, runValidators: true }
       );
     }
 
     console.log(`SUCCESS: Razorpay ${mode} configuration successfully saved/updated for admin ${req.admin._id}`);
     res.status(200).json(new ApiResponse(200, null, 'Config updated'));
-  } catch (error) {
+  } }catch (error) {
     console.error(`FAILED: Razorpay ${mode} configuration save failed for admin ${req.admin?._id || 'unknown'}. Error:`, error.message);
     return next(new AppError(error.message, 500));
   }
@@ -188,5 +156,21 @@ exports.generateRazorpaySecret = catchAsync(async (req, res, next) => {
     { upsert: true, new: true }
   );
 
-  res.status(200).json(new ApiResponse(200, { secret }, 'Secret generated'));
+  try {
+    await AuditLog.create({
+      admin: req.admin._id,
+      performedBy: req.admin._id,
+      performerType: 'ADMIN',
+      action: 'ADMIN_UPDATED',
+      targetModel: 'ApiConfig',
+      targetId: doc._id,
+      note: 'Generated new Razorpay webhook secret via admin UI'
+    });
+  } catch (err) {
+    // audit failure shouldn't block the response
+    console.warn('Failed to write audit log for webhook secret generation', err.message || err);
+  }
+
+  // Return plaintext secret once — admin must copy it now
+  res.status(200).json(new ApiResponse(200, { secret }, 'Webhook secret generated — copy it now'));
 });

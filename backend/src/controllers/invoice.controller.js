@@ -375,6 +375,7 @@ exports.autoCreateInvoice = async ({ adminId, paymentId, prospectId, createdBy =
 
     const inv = await Invoice.create({
       admin: adminId,
+      project: payment.project || null,   // ← link to project for direct lookup
       prospectForm: prospectId || null,
       payment: paymentId,
       client: client._id || null,

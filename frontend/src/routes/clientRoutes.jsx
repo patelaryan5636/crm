@@ -7,7 +7,7 @@ function ClientRoutes() {
   return (
     <Routes>
       <Route element={<MainLayout />}>
-        <Route index element={<ClientTrackingPage />} />
+        <Route index element={<ClientPanel />} />
         <Route path="*" element={<Navigate to="/client" replace />} />
       </Route>
     </Routes>

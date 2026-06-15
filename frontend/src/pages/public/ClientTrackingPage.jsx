@@ -15,7 +15,7 @@ import {
   ExternalLink, Loader2, AlertTriangle, XCircle,
 } from "lucide-react";
 import {
-  EnhancedDashCard, DashGrid, DataTable, ModalGrid, ModalData,
+  EnhancedDashCard, DashGrid, DataTable,
 } from "../../components/shared/Common_Components";
 import axios from "axios";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
@@ -111,7 +111,7 @@ function Section({ title, icon: Icon, children, open: def = true }) {
 }
 
 // ── Project list ──────────────────────────────────────────────────────────────
-function ProjectList({ projects, stats, onSelect }) {
+function ProjectList({ projects, stats, onSelect, company, manager }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -132,8 +132,8 @@ function ProjectList({ projects, stats, onSelect }) {
   return (
     <main className="space-y-6">
       <div>
-        <h1 className="text-3xl font-black text-white">Track Your <span className="text-[#38bdf8]">Projects</span></h1>
-        <p className="text-slate-400 text-sm mt-1">Real-time progress, milestones & payment status</p>
+        <h1 className="text-3xl font-black text-[#1e293b]">Track Your <span className="text-[#2a465a]">Projects</span></h1>
+        <p className="text-slate-500 text-sm mt-1">Real-time progress, milestones & payment status</p>
       </div>
 
       <DashGrid cols={12} gap={4}>
@@ -223,12 +223,142 @@ function ProjectList({ projects, stats, onSelect }) {
           })}
         </div>
       )}
+
+      {/* ── Company & Contact Section ── */}
+      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        {/* Header bar */}
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-[#2a465a]/10 flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#2a465a]">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+          <span className="text-sm font-bold text-[#1e293b]">Company & Contact</span>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          {/* Company details */}
+          {company && (
+            <div className="space-y-3">
+              {company.name && (
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#2a465a] flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-sm font-black">{company.name.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <p className="text-base font-black text-[#1e293b]">{company.name}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Your service provider</p>
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {company.email && (
+                  <a href={`mailto:${company.email}`}
+                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-[#2a465a]/30 hover:bg-[#2a465a]/5 transition-all group">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#2a465a] flex-shrink-0">
+                      <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                    </svg>
+                    <span className="text-xs text-slate-600 group-hover:text-[#2a465a] font-medium truncate">{company.email}</span>
+                  </a>
+                )}
+                {company.phone && (
+                  <a href={`tel:${company.phone}`}
+                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-[#2a465a]/30 hover:bg-[#2a465a]/5 transition-all group">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#2a465a] flex-shrink-0">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.58 3.44 2 2 0 0 1 3.54 1.25h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l1.14-1.83a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                    </svg>
+                    <span className="text-xs text-slate-600 group-hover:text-[#2a465a] font-medium">{company.phone}</span>
+                  </a>
+                )}
+                {company.website && (
+                  <a href={company.website} target="_blank" rel="noreferrer"
+                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-[#2a465a]/30 hover:bg-[#2a465a]/5 transition-all group sm:col-span-2">
+                    <ExternalLink size={14} className="text-[#2a465a] flex-shrink-0" />
+                    <span className="text-xs text-slate-600 group-hover:text-[#2a465a] font-medium truncate">{company.website}</span>
+                  </a>
+                )}
+                {company.address && (company.address.line1 || company.address.city) && (
+                  <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 sm:col-span-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#2a465a] flex-shrink-0 mt-0.5">
+                      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    <span className="text-xs text-slate-600 font-medium leading-relaxed">
+                      {[company.address.line1, company.address.line2, company.address.city, company.address.state, company.address.pincode]
+                        .filter(Boolean).join(', ')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Divider + Manager */}
+          {manager && (
+            <>
+              <div className="border-t border-slate-100" />
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Your Account Manager</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#f59e0b]/15 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[#f59e0b] text-sm font-black">{manager.name?.charAt(0)?.toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[#1e293b]">{manager.name}</p>
+                    <p className="text-[11px] text-slate-400">Management Manager</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  {manager.email && (
+                    <a href={`mailto:${manager.email}`}
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-[#f59e0b]/40 hover:bg-[#f59e0b]/5 transition-all group">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#f59e0b] flex-shrink-0">
+                        <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                      </svg>
+                      <span className="text-xs text-slate-600 group-hover:text-[#f59e0b] font-medium truncate">{manager.email}</span>
+                    </a>
+                  )}
+                  {manager.phone && (
+                    <a href={`tel:${manager.phone}`}
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-[#f59e0b]/40 hover:bg-[#f59e0b]/5 transition-all group">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#f59e0b] flex-shrink-0">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.58 3.44 2 2 0 0 1 3.54 1.25h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l1.14-1.83a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                      </svg>
+                      <span className="text-xs text-slate-600 group-hover:text-[#f59e0b] font-medium">{manager.phone}</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Contact us message */}
+          <div className="border-t border-slate-100 pt-4">
+            <div className="rounded-2xl bg-gradient-to-br from-[#2a465a]/8 to-[#2a465a]/4 border border-[#2a465a]/15 px-4 py-3.5 flex items-start gap-3">
+              <div className="w-7 h-7 rounded-lg bg-[#2a465a]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-[#2a465a]">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-[#2a465a] mb-0.5">Have a question or concern?</p>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  Reach out to us at any time — we're here to help. Contact your account manager directly or email us at{" "}
+                  {company?.email
+                    ? <a href={`mailto:${company.email}`} className="font-bold text-[#2a465a] hover:underline">{company.email}</a>
+                    : <span className="font-bold text-[#2a465a]">the address above</span>
+                  } and we'll get back to you promptly.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
 
 // ── Project detail ────────────────────────────────────────────────────────────
-function ProjectDetail({ p, onBack }) {
+function ProjectDetail({ p, onBack, company, manager }) {
   const remaining = p.remainingAmount || 0;
   const payLabel  = p.paidAmount >= p.totalAmount && p.totalAmount > 0 ? "Paid"
                   : p.paidAmount > 0 ? "Partially Paid" : "Pending";
@@ -325,12 +455,126 @@ function ProjectDetail({ p, onBack }) {
       {/* Payment Details */}
       <Section title="Payment Details" icon={CreditCard}>
         <div className="mt-4 space-y-4">
-          <ModalGrid title="Summary" cols={2}>
-            <ModalData label="Total Cost"    value={fmtINR(p.totalAmount)} />
-            <ModalData label="Amount Paid"   value={fmtINR(p.paidAmount)} />
-            <ModalData label="Remaining"     value={fmtINR(remaining)} />
-            <ModalData label="Payment Status" value={payLabel} />
-          </ModalGrid>
+
+          {/* ── Price Breakdown Card ── */}
+          <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+
+            {/* Line items */}
+            <div className="bg-white divide-y divide-slate-100">
+
+              {/* Invoice line items */}
+              {p.pricing?.source === 'invoice' && (p.pricing.lineItems || []).map((li, i) => (
+                <div key={i} className="flex items-start justify-between px-5 py-3.5 gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#1e293b]">{li.name}</p>
+                    {li.qty > 1 && (
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {li.qty} × {fmtINR(li.price)}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-sm font-bold text-[#1e293b] tabular-nums">{fmtINR(li.amount)}</p>
+                </div>
+              ))}
+
+              {/* WorkOrder requirements */}
+              {p.pricing?.source === 'workorder' && (p.pricing.requirements || []).map((r, i) => (
+                <div key={i} className="flex items-center justify-between px-5 py-3.5 gap-4">
+                  <p className="text-sm font-semibold text-[#1e293b] flex-1 min-w-0">{r.title}</p>
+                  <p className="text-sm font-bold text-[#1e293b] tabular-nums">{fmtINR(r.cost)}</p>
+                </div>
+              ))}
+
+              {/* Fallback — no itemized data */}
+              {(!p.pricing || p.pricing.source === 'invoice_simple') && (
+                <div className="flex items-center justify-between px-5 py-3.5 gap-4">
+                  <p className="text-sm font-semibold text-[#1e293b]">Project Cost</p>
+                  <p className="text-sm font-bold text-[#1e293b] tabular-nums">
+                    {fmtINR(p.pricing?.subtotal ?? p.totalAmount)}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Subtotal separator — only when 2+ items */}
+            {p.pricing && (p.pricing.source !== 'invoice_simple') &&
+              ((p.pricing.lineItems || p.pricing.requirements || []).length > 1) && (
+              <div className="flex items-center justify-between px-5 py-3 bg-slate-50 border-t border-slate-200">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Subtotal</p>
+                <p className="text-xs font-bold text-slate-600 tabular-nums">{fmtINR(p.pricing.subtotal)}</p>
+              </div>
+            )}
+
+            {/* Discount */}
+            {(p.pricing?.discountAmt > 0) && (
+              <div className="flex items-center justify-between px-5 py-3 bg-emerald-50 border-t border-emerald-100">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-600">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </span>
+                  <p className="text-xs font-bold text-emerald-700">
+                    Discount
+                    {p.pricing.discountMode === 'Percentage' && p.pricing.discountValue
+                      ? ` (${p.pricing.discountValue}%)`
+                      : (p.pricing.discountMode === 'Rupees' || p.pricing.discountMode === 'Flat')
+                      ? ' (Flat)'
+                      : ''}
+                  </p>
+                </div>
+                <p className="text-xs font-bold text-emerald-700 tabular-nums">− {fmtINR(p.pricing.discountAmt)}</p>
+              </div>
+            )}
+
+            {/* GST */}
+            {p.pricing?.gstPercent != null && p.pricing.gstAmount > 0 && (
+              <div className="flex items-center justify-between px-5 py-3 bg-blue-50 border-t border-blue-100">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-blue-600">
+                      <path d="M12 2v20M2 12h20"/>
+                    </svg>
+                  </span>
+                  <p className="text-xs font-bold text-blue-700">GST ({p.pricing.gstPercent}%)</p>
+                </div>
+                <p className="text-xs font-bold text-blue-700 tabular-nums">+ {fmtINR(p.pricing.gstAmount)}</p>
+              </div>
+            )}
+
+            {/* Total */}
+            <div className="flex items-center justify-between px-5 py-4 bg-[#1a2e3f] border-t border-[#1a2e3f]">
+              <p className="text-sm font-black text-white uppercase tracking-wide">Total</p>
+              <p className="text-xl font-black text-white tabular-nums">
+                {fmtINR(p.pricing?.total ?? p.totalAmount)}
+              </p>
+            </div>
+
+            {/* Paid */}
+            <div className="flex items-center justify-between px-5 py-3 bg-white border-t border-slate-100">
+              <p className="text-xs font-semibold text-slate-500">Amount Paid</p>
+              <p className="text-sm font-bold text-emerald-600 tabular-nums">{fmtINR(p.paidAmount)}</p>
+            </div>
+
+            {/* Remaining */}
+            {remaining > 0 && (
+              <div className="flex items-center justify-between px-5 py-3 bg-white border-t border-slate-100">
+                <p className="text-xs font-semibold text-slate-500">Remaining</p>
+                <p className="text-sm font-bold text-rose-500 tabular-nums">{fmtINR(remaining)}</p>
+              </div>
+            )}
+
+            {/* Status */}
+            <div className="flex items-center justify-between px-5 py-3 bg-white border-t border-slate-100 rounded-b-2xl">
+              <p className="text-xs font-semibold text-slate-500">Payment Status</p>
+              <span className="text-[11px] font-black px-3 py-1 rounded-full"
+                style={{ color: payColor, backgroundColor: `${payColor}18`, border: `1px solid ${payColor}30` }}>
+                {payLabel}
+              </span>
+            </div>
+          </div>
+
+          {/* ── Payment History ── */}
           {payRows.length > 0 && (
             <DataTable
               title="Payment History"
@@ -366,6 +610,138 @@ function ProjectDetail({ p, onBack }) {
           </div>
         </Section>
       )}
+
+      {/* Company & Contact */}
+      {(company || manager) && (
+        <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[#2a465a]/10 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#2a465a]">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </div>
+            <span className="text-sm font-bold text-[#1e293b]">Company & Contact</span>
+          </div>
+
+          <div className="px-6 py-5 space-y-5">
+            {/* Company details */}
+            {company && (
+              <div className="space-y-3">
+                {company.name && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#2a465a] flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-black">{company.name.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <p className="text-base font-black text-[#1e293b]">{company.name}</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Your service provider</p>
+                    </div>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  {company.email && (
+                    <a href={`mailto:${company.email}`}
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-[#2a465a]/30 hover:bg-[#2a465a]/5 transition-all group">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#2a465a] flex-shrink-0">
+                        <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                      </svg>
+                      <span className="text-xs text-slate-600 group-hover:text-[#2a465a] font-medium truncate">{company.email}</span>
+                    </a>
+                  )}
+                  {company.phone && (
+                    <a href={`tel:${company.phone}`}
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-[#2a465a]/30 hover:bg-[#2a465a]/5 transition-all group">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#2a465a] flex-shrink-0">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.58 3.44 2 2 0 0 1 3.54 1.25h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l1.14-1.83a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                      </svg>
+                      <span className="text-xs text-slate-600 group-hover:text-[#2a465a] font-medium">{company.phone}</span>
+                    </a>
+                  )}
+                  {company.website && (
+                    <a href={company.website} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-[#2a465a]/30 hover:bg-[#2a465a]/5 transition-all group sm:col-span-2">
+                      <ExternalLink size={14} className="text-[#2a465a] flex-shrink-0" />
+                      <span className="text-xs text-slate-600 group-hover:text-[#2a465a] font-medium truncate">{company.website}</span>
+                    </a>
+                  )}
+                  {company.address && (company.address.line1 || company.address.city) && (
+                    <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 sm:col-span-2">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#2a465a] flex-shrink-0 mt-0.5">
+                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>
+                      </svg>
+                      <span className="text-xs text-slate-600 font-medium leading-relaxed">
+                        {[company.address.line1, company.address.line2, company.address.city, company.address.state, company.address.pincode]
+                          .filter(Boolean).join(', ')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Manager */}
+            {manager && (
+              <>
+                <div className="border-t border-slate-100" />
+                <div className="space-y-2">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Your Account Manager</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#f59e0b]/15 flex items-center justify-center flex-shrink-0">
+                      <span className="text-[#f59e0b] text-sm font-black">{manager.name?.charAt(0)?.toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[#1e293b]">{manager.name}</p>
+                      <p className="text-[11px] text-slate-400">Management Manager</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    {manager.email && (
+                      <a href={`mailto:${manager.email}`}
+                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-[#f59e0b]/40 hover:bg-[#f59e0b]/5 transition-all group">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#f59e0b] flex-shrink-0">
+                          <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                        </svg>
+                        <span className="text-xs text-slate-600 group-hover:text-[#f59e0b] font-medium truncate">{manager.email}</span>
+                      </a>
+                    )}
+                    {manager.phone && (
+                      <a href={`tel:${manager.phone}`}
+                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-[#f59e0b]/40 hover:bg-[#f59e0b]/5 transition-all group">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#f59e0b] flex-shrink-0">
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.58 3.44 2 2 0 0 1 3.54 1.25h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l1.14-1.83a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                        </svg>
+                        <span className="text-xs text-slate-600 group-hover:text-[#f59e0b] font-medium">{manager.phone}</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Contact us message */}
+            <div className="border-t border-slate-100 pt-4">
+              <div className="rounded-2xl bg-gradient-to-br from-[#2a465a]/8 to-[#2a465a]/4 border border-[#2a465a]/15 px-4 py-3.5 flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg bg-[#2a465a]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-[#2a465a]">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-[#2a465a] mb-0.5">Have a question or concern?</p>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Reach out to us at any time — we're here to help. Contact your account manager directly or email us at{" "}
+                    {company?.email
+                      ? <a href={`mailto:${company.email}`} className="font-bold text-[#2a465a] hover:underline">{company.email}</a>
+                      : <span className="font-bold text-[#2a465a]">the address above</span>
+                    } and we'll get back to you promptly.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -395,10 +771,10 @@ export default function ClientTrackingPage() {
 
   if (state === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0f172a]">
-        <div className="flex flex-col items-center gap-4 text-white">
-          <Loader2 size={40} className="animate-spin text-[#38bdf8]" />
-          <p className="text-sm font-semibold text-slate-400">Loading your projects…</p>
+      <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_top,_#fff7ed_0%,_#f7f8f0_40%,_#eef4f7_100%)]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 size={40} className="animate-spin text-[#2a465a]" />
+          <p className="text-sm font-semibold text-slate-500">Loading your projects…</p>
         </div>
       </div>
     );
@@ -406,53 +782,67 @@ export default function ClientTrackingPage() {
 
   if (state === "error") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0f172a] p-4">
-        <div className="max-w-md w-full bg-[#1e293b] rounded-3xl p-8 text-center border border-slate-700">
-          <XCircle size={48} className="text-rose-400 mx-auto mb-4" />
-          <h1 className="text-xl font-black text-white mb-2">Link Invalid or Expired</h1>
-          <p className="text-slate-400 text-sm leading-relaxed">{error}</p>
-          <p className="text-slate-500 text-xs mt-4">Please contact your account manager to get a new tracking link.</p>
+      <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_top,_#fff7ed_0%,_#f7f8f0_40%,_#eef4f7_100%)] p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 text-center border border-slate-200 shadow-lg">
+          <XCircle size={48} className="text-rose-500 mx-auto mb-4" />
+          <h1 className="text-xl font-black text-[#1e293b] mb-2">Link Invalid or Expired</h1>
+          <p className="text-slate-500 text-sm leading-relaxed">{error}</p>
+          <p className="text-slate-400 text-xs mt-4">Please contact your account manager to get a new tracking link.</p>
         </div>
       </div>
     );
   }
 
-  const { client, company, stats, projects } = pageData;
+  const { client, company, stats, projects, manager } = pageData;
   const selectedProject = selectedId ? projects.find((p) => p.id === selectedId) : null;
 
   return (
-    <div className="min-h-screen bg-[#0f172a]">
-      {/* Header */}
-      <header className="border-b border-white/8 bg-[#1a2e3f]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {company.logo ? (
-              <img src={company.logo} alt={company.name} className="h-8 w-auto" />
-            ) : (
-              <img src={GraphuraLogo} alt="Graphura" className="h-8 w-auto" />
-            )}
-            <span className="text-white font-bold text-sm hidden sm:block">{company.name}</span>
-          </div>
-          <div className="text-right">
-            <p className="text-white font-bold text-sm">{client.name}</p>
-            <p className="text-slate-400 text-xs">{client.companyName || client.email}</p>
+    <div className="flex h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_#fff7ed_0%,_#f7f8f0_40%,_#eef4f7_100%)]">
+      <div className="flex min-w-0 flex-1 flex-col">
+
+        {/* Header — matches ClientHeader in MainLayout */}
+        <div className="border-b border-white/60 bg-white/45 shadow-sm backdrop-blur">
+          <div className="flex h-16 w-full items-center justify-between px-4 md:px-6">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              {company.logo ? (
+                <img src={company.logo} alt={company.name} className="h-16 w-auto" />
+              ) : (
+                <img src={GraphuraLogo} alt="Graphura" className="h-16 w-auto" />
+              )}
+            </div>
+
+            {/* Client info — replaces Logout button */}
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-sm font-bold text-[#1e293b] leading-tight">{client.name}</p>
+                {(client.companyName || company.name) && (
+                  <p className="text-xs text-slate-500 leading-tight">{client.companyName || company.name}</p>
+                )}
+              </div>
+              {/* Avatar circle */}
+              <div className="w-9 h-9 rounded-xl bg-[#2a465a] flex items-center justify-center flex-shrink-0 shadow-md shadow-[#2a465a]/20">
+                <span className="text-white text-sm font-black">
+                  {client.name?.charAt(0)?.toUpperCase() ?? "C"}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      </header>
 
-      {/* Body */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-        {selectedProject ? (
-          <ProjectDetail p={selectedProject} onBack={() => setSelectedId(null)} />
-        ) : (
-          <ProjectList projects={projects} stats={stats} onSelect={setSelectedId} />
-        )}
+        {/* Body */}
+        <div className="flex-1 w-full overflow-x-hidden overflow-y-auto p-4 md:p-6">
+          <div className="min-h-full rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,_rgba(255,255,255,0.88)_0%,_rgba(250,252,253,0.96)_100%)] p-4 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur md:p-6">
+            {selectedProject ? (
+              <ProjectDetail p={selectedProject} onBack={() => setSelectedId(null)} company={company} manager={manager} />
+            ) : (
+              <ProjectList projects={projects} stats={stats} onSelect={setSelectedId} company={company} manager={manager} />
+            )}
+          </div>
+
+        </div>
+
       </div>
-
-      {/* Footer */}
-      <footer className="border-t border-white/8 py-4 text-center">
-        <p className="text-xs text-slate-600">Secured tracking link · Powered by {company.name}</p>
-      </footer>
     </div>
   );
 }

@@ -30,10 +30,62 @@ const STATUS_MAP = {
 const PRIORITY_MAP = { LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', URGENT: 'Urgent' };
 
 // ── shape a project for the client-facing view ────────────────────────────────
-function mapProjectForClient(p, payments = []) {
+function mapProjectForClient(p, payments = [], invoice = null) {
   const tl  = p.teamLeader  || {};
-  const mgr = p.manager     || {};
-  const cl  = p.client      || {};
+  const wo  = p.workOrder   || null;
+
+  // ── Pricing breakdown — merge WorkOrder items + Invoice GST ───────────────
+  let pricing = null;
+
+  const woReqs    = (wo?.requirements || []).filter((r) => r.title && Number(r.cost) > 0);
+  const hasWO     = woReqs.length > 0;
+  const hasInvoice = invoice && (invoice.lineItems || []).length > 0;
+
+  if (hasInvoice) {
+    // Invoice-based: line items + GST
+    const items = invoice.lineItems.map((li) => ({
+      name: li.name, qty: li.qty || 1, price: li.price || 0, amount: li.amount || 0,
+    }));
+    pricing = {
+      source:       'invoice',
+      lineItems:    items,
+      subtotal:     invoice.amount     || 0,
+      discountAmt:  invoice.discount   || 0,
+      gstPercent:   invoice.gstPercent ?? 18,
+      gstAmount:    invoice.gstAmount  || 0,
+      total:        invoice.totalAmount || 0,
+    };
+  } else if (hasWO) {
+    // WorkOrder requirements — pull GST from invoice if available
+    const subtotal  = woReqs.reduce((s, r) => s + (Number(r.cost) || 0), 0);
+    const discAmt   = wo.discountAmt   || 0;
+    const afterDisc = Math.max(0, subtotal - discAmt);
+    // If there's an invoice (even without line items), use its GST
+    const gstPct    = invoice?.gstPercent ?? null;
+    const gstAmt    = invoice?.gstAmount  ?? 0;
+    pricing = {
+      source:        'workorder',
+      requirements:  woReqs.map((r) => ({ title: r.title, cost: Number(r.cost) })),
+      subtotal,
+      discountMode:  wo.discountMode  || 'None',
+      discountValue: wo.discountValue || '',
+      discountAmt:   discAmt,
+      gstPercent:    gstPct,
+      gstAmount:     gstAmt,
+      total:         gstAmt > 0 ? afterDisc + gstAmt : (wo.netPayable || afterDisc),
+    };
+  } else if (invoice) {
+    // Invoice exists but no line items — just amounts + GST
+    pricing = {
+      source:      'invoice_simple',
+      subtotal:    invoice.amount     || 0,
+      discountAmt: invoice.discount   || 0,
+      gstPercent:  invoice.gstPercent ?? 18,
+      gstAmount:   invoice.gstAmount  || 0,
+      total:       invoice.totalAmount || 0,
+    };
+  }
+  // else: pricing stays null — frontend falls back to plain totalAmount
 
   return {
     id:             String(p._id),
@@ -71,6 +123,7 @@ function mapProjectForClient(p, payments = []) {
       signed:     p.workOrder.isSigned  || false,
       signedDate: p.workOrder.signedAt ? new Date(p.workOrder.signedAt).toISOString().slice(0, 10) : null,
     } : null,
+    pricing,
   };
 }
 
@@ -103,8 +156,17 @@ exports.getTrackingData = catchAsync(async (req, res, next) => {
     { $inc: { accessCount: 1 }, $set: { lastAccessedAt: new Date() } },
   ).catch(() => {});
 
-  // 4. Load admin's company branding
+  // 4. Load admin's company branding + management manager
   const admin = await Admin.findOne({ _id: record.admin }).select('company').lean();
+
+  // Find the management manager for this admin
+  const { User } = require('../models');
+  const manager = await User.findOne({
+    admin: record.admin,
+    role: 'MANAGEMENT_MANAGER',
+    isActive: true,
+    isDeleted: false,
+  }).select('name email phone').lean();
 
   // 5. Load all projects for this client under this admin
   const projects = await Project.find({
@@ -113,7 +175,7 @@ exports.getTrackingData = catchAsync(async (req, res, next) => {
     isDeleted: false,
   })
     .populate('teamLeader', 'name email phone')
-    .populate('workOrder',  'woNumber isSigned signedAt')
+    .populate('workOrder',  'woNumber isSigned signedAt requirements discountMode discountValue discountAmt netPayable totalCost')
     .sort({ createdAt: -1 })
     .lean();
 
@@ -125,6 +187,20 @@ exports.getTrackingData = catchAsync(async (req, res, next) => {
     status:  'SUCCESS',
   }).lean();
 
+  // 6b. Load invoices — try by project directly first (new invoices),
+  //     then fall back to payment chain for older invoices that have project: null
+  const { Invoice } = require('../models');
+  const paymentIds = allPayments.map((p) => p._id);
+
+  const allInvoices = await Invoice.find({
+    admin: record.admin,
+    $or: [
+      { project: { $in: projectIds } },
+      ...(paymentIds.length > 0 ? [{ payment: { $in: paymentIds } }] : []),
+    ],
+  }).sort({ createdAt: -1 }).lean();
+
+  // Index payments by project id
   const paymentsByProject = {};
   for (const pay of allPayments) {
     const pid = String(pay.project);
@@ -132,10 +208,26 @@ exports.getTrackingData = catchAsync(async (req, res, next) => {
     paymentsByProject[pid].push(pay);
   }
 
+  // Build payment→project map for the fallback
+  const projectByPaymentId = {};
+  for (const pay of allPayments) {
+    projectByPaymentId[String(pay._id)] = String(pay.project);
+  }
+
+  // Map invoice → project (prefer direct project link, fall back via payment)
+  const invoiceByProject = {};
+  for (const inv of allInvoices) {
+    let projId = inv.project ? String(inv.project) : null;
+    if (!projId && inv.payment) projId = projectByPaymentId[String(inv.payment)];
+    if (projId && !invoiceByProject[projId]) {
+      invoiceByProject[projId] = inv;
+    }
+  }
+
   // 7. Shape response
   const client = record.client;
   const mappedProjects = projects.map((p) =>
-    mapProjectForClient(p, paymentsByProject[String(p._id)] || []),
+    mapProjectForClient(p, paymentsByProject[String(p._id)] || [], invoiceByProject[String(p._id)] || null),
   );
 
   const ACTIVE = ['NOT_STARTED', 'WORK_STARTED', 'IN_PROGRESS', 'REVIEW', 'FINALIZATION', 'DELAYED'];
@@ -150,12 +242,18 @@ exports.getTrackingData = catchAsync(async (req, res, next) => {
         companyName: client.companyName,
       },
       company: {
-        name:    admin?.company?.name  || 'Graphura CRM',
-        logo:    admin?.company?.logo  || null,
-        email:   admin?.company?.email || null,
-        phone:   admin?.company?.phone || null,
+        name:    admin?.company?.name    || 'Graphura CRM',
+        logo:    admin?.company?.logo    || null,
+        email:   admin?.company?.email   || null,
+        phone:   admin?.company?.phone   || null,
         website: admin?.company?.website || null,
+        address: admin?.company?.address || null,
       },
+      manager: manager ? {
+        name:  manager.name,
+        email: manager.email  || null,
+        phone: manager.phone  || null,
+      } : null,
       stats: {
         total:     mappedProjects.length,
         active:    mappedProjects.filter((p) => ACTIVE.includes(projects.find((x) => String(x._id) === p.id)?.status)).length,

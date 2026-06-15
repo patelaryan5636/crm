@@ -1304,10 +1304,9 @@ export default function Clients() {
               size={12}
               value={addForm.status}
               onChange={(e) => af("status", e.target.value)}
+              disabled={true}
             >
-              {manualStatusOptions.map((o) => (
-                <Option key={o} value={o} label={o} />
-              ))}
+              <Option value="Interested" label="Interested" />
             </SelectField>
           </div>
 

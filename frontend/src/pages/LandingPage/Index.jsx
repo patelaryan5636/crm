@@ -237,7 +237,14 @@ function Hero({ onWatchTutorial }) {
                 className="btn-primary"
                 style={{ cursor: "pointer" }}
               >
-                🚀 Start Free Trial
+                ✨ Start Free Trial
+              </a>
+              <a
+                onClick={() => handleExternalLink("/how-to-use")}
+                className="btn-outline"
+                style={{ cursor: "pointer" }}
+              >
+                📖 How to Use
               </a>
               <a
                 onClick={() =>
@@ -1719,7 +1726,18 @@ function CTA({ onWatchTutorial }) {
                 cursor: "pointer",
               }}
             >
-              🚀 Start Free Trial
+              ✨ Start Free Trial
+            </a>
+            <a
+              onClick={() => handleExternalLink("/how-to-use")}
+              className="btn-outline"
+              style={{
+                fontSize: "1rem",
+                padding: "16px 32px",
+                cursor: "pointer",
+              }}
+            >
+              📖 How to Use
             </a>
             <a
               onClick={() =>
@@ -1751,8 +1769,13 @@ function Footer() {
       links: ["Features", "Modules", "Contact"],
     },
     {
-      title: "Legal",
-      links: ["Privacy Policy", "Terms of Service", "Cookie Policy"],
+      title: "Legal & Help",
+      links: [
+        { label: "How to Use",       href: "/how-to-use"           },
+        { label: "Privacy Policy",   href: "/privacy-policy"       },
+        { label: "Terms of Service", href: "/terms-and-conditions" },
+        { label: "Cookie Policy",    href: "/cookie-policy"        },
+      ],
     },
   ];
 
@@ -1761,16 +1784,19 @@ function Footer() {
       icon: "📧",
       label: "Email",
       value: "official@graphura.in",
+      href: "mailto:official@graphura.in",
     },
     {
       icon: "📞",
       label: "Phone",
       value: "+91 73780 21327",
+      href: "tel:+917378021327",
     },
     {
       icon: "📍",
       label: "Address",
       value: "Graphura India Private Limited, near RSF, Pataudi, Gurgaon, Haryana 122503",
+      href: "https://maps.google.com/?q=Pataudi,Gurgaon,Haryana+122503",
     },
   ];
 
@@ -1822,6 +1848,19 @@ function Footer() {
             <div className="footer-col" key={col.title}>
               <h4>{col.title}</h4>
               {col.links.map((l) => {
+                // Object link → navigate to a page route
+                if (typeof l === "object") {
+                  return (
+                    <a
+                      key={l.label}
+                      onClick={() => window.location.href = l.href}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {l.label}
+                    </a>
+                  );
+                }
+                // String link → scroll to section id
                 const handleClick = () => {
                   const targetId = l.toLowerCase().replace(" ", "-");
                   const el = document.getElementById(targetId);
@@ -1843,7 +1882,14 @@ function Footer() {
                 <span className="footer-contact-icon">{item.icon}</span>
                 <div>
                   <div className="footer-contact-label">{item.label}</div>
-                  <div className="footer-contact-value">{item.value}</div>
+                  <a
+                    href={item.href}
+                    target={item.href.startsWith("http") ? "_blank" : undefined}
+                    rel={item.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                    className="footer-contact-value footer-contact-link"
+                  >
+                    {item.value}
+                  </a>
                 </div>
               </div>
             ))}

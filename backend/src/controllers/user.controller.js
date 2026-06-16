@@ -61,9 +61,10 @@ const buildDefaultUserPassword = (email, phone) => {
   const lastFiveDigits = String(phone || "")
     .trim()
     .slice(-5);
-  return `${String(email || "")
-    .toLowerCase()
-    .trim()}@${lastFiveDigits}`;
+  // Use only the part before "@" so the password is "prefix@last5digits"
+  const emailStr  = String(email || "").toLowerCase().trim();
+  const emailPrefix = emailStr.includes("@") ? emailStr.split("@")[0] : emailStr;
+  return `${emailPrefix}@${lastFiveDigits}`;
 };
 
 exports.getRoleDepartmentMap = catchAsync(async (req, res, next) => {

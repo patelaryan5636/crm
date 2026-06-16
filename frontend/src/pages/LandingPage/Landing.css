@@ -138,7 +138,7 @@ html.landing-page-root *::-webkit-scrollbar-corner {
 
 /* Global utility */
 .container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px;
 }
@@ -1984,6 +1984,18 @@ footer {
   line-height: 1.4;
 }
 
+.footer-contact-link {
+  text-decoration: none;
+  transition: color 0.2s, opacity 0.2s;
+  cursor: pointer;
+  display: block;
+}
+
+.footer-contact-link:hover {
+  color: #38bdf8;
+  opacity: 0.9;
+}
+
 .social-btn {
   width: 40px;
   height: 40px;
@@ -2111,6 +2123,46 @@ footer {
   .footer-grid {
     grid-template-columns: 1fr;
     gap: 24px;
+  }
+
+  /* Social icons: horizontal row on mobile */
+  .footer-social {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: auto;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  /* Last footer col (Follow Us): align content left */
+  .footer-col:last-child {
+    align-items: flex-start;
+  }
+
+  /* Regular footer links: horizontal pill row on mobile */
+  .footer-col a {
+    display: inline-flex;
+    width: auto;
+    margin: 3px 6px 3px 0;
+    padding: 5px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--glass-border);
+    font-size: 0.78rem;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.04);
+    vertical-align: middle;
+  }
+
+  /* Make each footer-col a block so inline-flex links wrap naturally */
+  .footer-col {
+    display: block;
+  }
+
+  /* Restore last-child to flex for social section */
+  .footer-col:last-child {
+    display: flex;
+    flex-direction: column;
   }
 }
 

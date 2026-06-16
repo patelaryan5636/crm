@@ -250,9 +250,15 @@ export default function AllUsers() {
   const handleCreateUser = async () => {
     setIsCreating(true);
     try {
+      // Build the auto-password: emailPrefix@last5digits
+      const emailPrefix = quickEmail.includes("@") ? quickEmail.split("@")[0] : quickEmail;
+      const last5       = quickMobile.slice(-5);
+      const autoPassword = `${emailPrefix}@${last5}`;
+
       await userService.createUser({
         name: quickName, email: quickEmail, phone: quickMobile,
         role: quickRole, departmentId: quickDept,
+        password: autoPassword,
       });
       showToast("User created", `${quickName} has been added.`, "success");
       closeModal("create-user-quick-modal");
@@ -466,13 +472,15 @@ export default function AllUsers() {
             <DataField label="Email" id="c-email" type="email" size={6}
               placeholder="user@company.com" value={quickEmail}
               onChange={(e) => setQuickEmail(e.target.value)} />
-            <DataField label="Mobile" id="c-mobile" type="tel" size={6}
-              placeholder="9876543210" value={quickMobile}
+            <DataField label="Mobile" id="c-mobile" type="number" size={6}
+              placeholder="9876543210" value={quickMobile} min={10} max={10}
               onChange={(e) => setQuickMobile(e.target.value)} />
             <DataField label="Auto Password" id="c-pass" size={12} readOnly
-              value={quickMobile.length >= 5
-                ? `${quickEmail.split("@")[0]}@${quickMobile.slice(-5)}`
-                : "Fill email & mobile"} />
+              value={
+                quickEmail.includes("@") && quickMobile.length >= 5
+                  ? `${quickEmail.split("@")[0]}@${quickMobile.slice(-5)}`
+                  : "Fill email & mobile"
+              } />
             <SelectField label="Department" id="c-dept" size={6}
               placeholder="Select department" value={quickDept}
               onChange={(e) => { setQuickDept(e.target.value); setQuickRole(""); }}>

@@ -39,6 +39,7 @@ import LandingPage        from '../pages/LandingPage/Index';
 const TermsAndConditions = lazy(() => import('../pages/Policies/Terms&Conditions'));
 const PrivacyPolicy      = lazy(() => import('../pages/Policies/PrivacyPolicy'));
 const CookiePolicy       = lazy(() => import('../pages/Policies/CookiePolicy'));
+const HowToUse           = lazy(() => import('../pages/Policies/HowToUse'));
 
 // ── Department workspace (legacy) ───────────────────────────
 import DepartmentWorkspace from '../pages/department/DepartmentWorkspace';
@@ -86,6 +87,14 @@ function AppRoutes() {
           element={
             <Suspense fallback={<PolicyFallback />}>
               <CookiePolicy />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/how-to-use"
+          element={
+            <Suspense fallback={<PolicyFallback />}>
+              <HowToUse />
             </Suspense>
           }
         />

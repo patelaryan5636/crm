@@ -15,6 +15,7 @@ import {
   FolderOpen,
   GitBranch,
   Globe,
+  HelpCircle,
   History,
   LayoutDashboard,
   LifeBuoy,
@@ -94,7 +95,7 @@ const MENUS = {
         items: [
           {
             name: "Dashboard",
-            path: "/admin/",
+            path: "/admin",
             icon: LayoutDashboard,
             end: true,
           },
@@ -129,6 +130,12 @@ const MENUS = {
         items: [
           { name: "Support", path: "/admin/support", icon: LifeBuoy },
           { name: "API Config", path: "/admin/api-config", icon: Webhook },
+        ],
+      },
+      {
+        label: "Help",
+        items: [
+          { name: "How to Use", path: "/how-to-use", icon: HelpCircle, external: true },
         ],
       },
     ],
@@ -665,6 +672,43 @@ const NavItem = memo(function NavItem({
     item.path === "/super-admin/admins" &&
     (location.pathname === "/super-admin/departments" ||
       location.pathname === "/super-admin/company");
+
+  // ── External link (opens in new tab) ──────────────────────────────────────
+  if (item.external) {
+    const baseClass = expanded
+      ? `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-all duration-150 text-slate-400 hover:bg-white/6 hover:text-slate-200`
+      : `relative flex items-center justify-center w-10 h-10 rounded-xl mx-auto transition-all duration-150 text-slate-500 hover:bg-white/6 hover:text-slate-300`;
+
+    const inner = expanded ? (
+      <>
+        <span className="flex-shrink-0 text-slate-500 group-hover:text-slate-300 transition-colors duration-150">
+          <Icon size={17} />
+        </span>
+        <span>{item.name}</span>
+        <span className="ml-auto opacity-40">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M1.5 8.5L8.5 1.5M8.5 1.5H3.5M8.5 1.5V6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </span>
+      </>
+    ) : (
+      <Icon size={17} />
+    );
+
+    const anchor = (
+      <a
+        href={item.path}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={handleClick}
+        className={baseClass}
+      >
+        {inner}
+      </a>
+    );
+
+    return expanded ? anchor : <Tooltip label={item.name}>{anchor}</Tooltip>;
+  }
 
   if (expanded) {
     return (

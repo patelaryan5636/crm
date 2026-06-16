@@ -246,19 +246,93 @@ export const DataField = ({
   icon: Icon,
   rows = 3,
   error,
+  // Number / length constraints
+  min,          // minimum numeric value  (number inputs)
+  max,          // maximum numeric value  (number inputs) — also used as maxLength for digit count
+  minLength,    // minimum string length  (text inputs)
+  maxLength,    // maximum string length  (text inputs)
 }) => {
   const [showPassword, setShowPassword] = useState(false);
+  // Internal validation warning shown on blur when value violates min/minLength
+  const [rangeWarning, setRangeWarning] = useState("");
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  // For number inputs: block every key that isn't a digit, minus sign,
+  // decimal point, or a browser control key (arrows, backspace, tab, etc.)
+  // Also hard-blocks input when the digit count already equals `max`.
+  const handleNumberKeyDown = (e) => {
+    const controlKeys = [
+      "Backspace", "Delete", "Tab", "Escape", "Enter",
+      "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+      "Home", "End",
+    ];
+    const isCtrl = e.ctrlKey || e.metaKey; // Ctrl+A / Ctrl+C / Ctrl+V etc.
+    if (isCtrl) return;
+    if (controlKeys.includes(e.key)) return;
+
+    // Block non-digit characters (excluding contextual minus / decimal)
+    if (e.key === "-" && e.target.selectionStart === 0 && (min === undefined || min < 0)) return;
+    if (e.key === "." && !e.target.value.includes(".")) return;
+    if (!/^\d$/.test(e.key)) { e.preventDefault(); return; }
+
+    // Hard-cap: if max is defined, treat it as a maximum character/digit count.
+    // Count only digit characters in the current value so signs/dots don't
+    // eat into the limit.
+    if (max !== undefined) {
+      const digitsOnly = e.target.value.replace(/\D/g, "");
+      if (digitsOnly.length >= max) {
+        e.preventDefault();
+      }
+    }
+  };
+
+  // Pass value through on every change; clear the warning while typing.
+  const handleNumberChange = (e) => {
+    if (rangeWarning) setRangeWarning("");
+    if (onChange) onChange(e);
+  };
+
+  // On blur: warn if the digit count is below `min` (e.g. phone must be exactly 10 digits).
+  const handleNumberBlur = () => {
+    const raw = String(value ?? "");
+    if (raw === "") { setRangeWarning(""); return; }
+
+    const digitsOnly = raw.replace(/\D/g, "");
+
+    if (min !== undefined && digitsOnly.length < min) {
+      setRangeWarning(`Must be at least ${min} digit${min !== 1 ? "s" : ""}`);
+    } else {
+      setRangeWarning("");
+    }
+  };
+
+  // ── Derived state ──────────────────────────────────────────────────────────
+
+  const hasError  = !!error;
+  const hasWarn   = !!rangeWarning && !hasError;
+
+  const borderCls = hasError
+    ? "border-rose-300 bg-rose-50/20 focus:ring-rose-500/20 focus:border-rose-400"
+    : hasWarn
+    ? "border-amber-300 bg-amber-50/20 focus:ring-amber-500/20 focus:border-amber-400"
+    : "border-slate-200 bg-slate-50/90 focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40";
 
   const sharedCls = `
-    w-full rounded-2xl border ${error ? "border-rose-300 bg-rose-50/20" : "border-slate-200 bg-slate-50/90"}
+    w-full rounded-2xl border ${borderCls}
     text-[#2a465a] placeholder:text-slate-400 text-sm font-medium
-    focus:outline-none focus:ring-2 ${error ? "focus:ring-rose-500/20 focus:border-rose-400" : "focus:ring-[#2a465a]/20 focus:border-[#2a465a]/40"}
+    focus:outline-none focus:ring-2
     disabled:opacity-50 disabled:cursor-not-allowed
     transition duration-200
     ${className}
   `;
 
   const inputType = type === "password" ? (showPassword ? "text" : "password") : type;
+
+  // Resolve effective maxLength for text inputs
+  const effectiveMaxLength = type !== "number"
+    ? (maxLength ?? undefined)
+    : undefined;
 
   return (
     <div className={`${colSpan(size)} flex flex-col gap-1.5`}>
@@ -271,7 +345,7 @@ export const DataField = ({
         </label>
       )}
       <div className="relative">
-        {/* Icon — only shown for non-textarea types */}
+        {/* Icon */}
         {Icon && type !== "textarea" && (
           <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
             <Icon size={18} />
@@ -288,7 +362,24 @@ export const DataField = ({
             disabled={disabled}
             readOnly={readOnly}
             rows={rows}
+            maxLength={effectiveMaxLength}
             className={`${sharedCls} px-4 py-3.5 resize-y`}
+          />
+        ) : type === "number" ? (
+          // ── Number input with full guard ────────────────────────────────
+          <input
+            id={id}
+            type="text"          /* use text to gain full keydown control */
+            inputMode="numeric"  /* shows numeric keyboard on mobile       */
+            placeholder={placeholder}
+            autoFocus={autoFocus}
+            value={value}
+            onKeyDown={handleNumberKeyDown}
+            onChange={handleNumberChange}
+            onBlur={handleNumberBlur}
+            disabled={disabled}
+            readOnly={readOnly}
+            className={`${sharedCls} ${Icon ? "pl-12" : "pl-4"} pr-4 py-3.5`}
           />
         ) : (
           <>
@@ -301,6 +392,8 @@ export const DataField = ({
               onChange={onChange}
               disabled={disabled}
               readOnly={readOnly}
+              maxLength={effectiveMaxLength}
+              minLength={minLength}
               className={`${sharedCls} ${Icon ? "pl-12" : "pl-4"} ${type === "password" ? "pr-12" : "pr-4"} py-3.5`}
             />
             {type === "password" && (
@@ -315,14 +408,24 @@ export const DataField = ({
           </>
         )}
       </div>
+
+      {/* External error (from parent) */}
       {error && (
-        <span className="text-xs font-semibold text-rose-500 mt-0.5 ml-1 animate-fade-in flex items-center gap-1">
+        <span className="text-xs font-semibold text-rose-500 mt-0.5 ml-1 flex items-center gap-1">
           <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
+            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
           {error}
+        </span>
+      )}
+
+      {/* Internal range warning (shown on blur, cleared on typing) */}
+      {!error && rangeWarning && (
+        <span className="text-xs font-semibold text-amber-600 mt-0.5 ml-1 flex items-center gap-1">
+          <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          {rangeWarning}
         </span>
       )}
     </div>

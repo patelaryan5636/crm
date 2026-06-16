@@ -1,20 +1,17 @@
 import { useState } from "react";
-import { ArrowLeft, Menu, X } from "lucide-react";
+import { ArrowLeft, Menu, X, BookOpen, FileText, Shield, Cookie, HelpCircle } from "lucide-react";
 import { useNavigate, NavLink, Link } from "react-router-dom";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
 
 const NAV_LINKS = [
-  { to: "/terms-and-conditions", label: "Terms & Conditions" },
-  { to: "/privacy-policy",       label: "Privacy Policy"     },
-  { to: "/cookie-policy",        label: "Cookie Policy"      },
+  { to: "/how-to-use",           label: "How to Use",        icon: HelpCircle  },
+  { to: "/terms-and-conditions", label: "Terms",             icon: FileText    },
+  { to: "/privacy-policy",       label: "Privacy",           icon: Shield      },
+  { to: "/cookie-policy",        label: "Cookies",           icon: Cookie      },
 ];
 
 /**
  * Shared layout for all legal/policy pages.
- * Props:
- *   title     – page heading
- *   subtitle  – optional date/tagline beneath the heading
- *   children  – page sections
  */
 export default function PolicyLayout({ title, subtitle, children }) {
   const navigate = useNavigate();
@@ -23,79 +20,76 @@ export default function PolicyLayout({ title, subtitle, children }) {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       {/* ── Header ───────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
-        {/* Main header row */}
+      <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
 
           {/* Back button */}
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-100 hover:border-slate-300 transition-all duration-200 shrink-0"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-100 hover:border-slate-300 hover:text-[#2a465a] transition-all duration-200 shrink-0"
             aria-label="Go back"
           >
-            <ArrowLeft size={15} />
+            <ArrowLeft size={14} />
             <span className="hidden sm:inline">Back</span>
           </button>
 
           {/* Logo */}
           <Link to="/" className="flex items-center shrink-0">
-            <img
-              src={GraphuraLogo}
-              alt="Graphura CRM"
-              className="h-12 w-auto"
-            />
+            <img src={GraphuraLogo} alt="Graphura CRM" className="h-11 w-auto" />
           </Link>
 
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Desktop nav links — hidden on small screens */}
-          <nav className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map(({ to, label }) => (
+          {/* Desktop nav links */}
+          <nav className="hidden md:flex items-center gap-1 p-1 bg-slate-100 rounded-2xl">
+            {NAV_LINKS.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}
                 className={({ isActive }) =>
                   [
-                    "px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 whitespace-nowrap",
+                    "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap",
                     isActive
-                      ? "bg-[#2a465a] text-white shadow-sm"
-                      : "text-slate-500 hover:text-[#2a465a] hover:bg-slate-100",
+                      ? "bg-[#2a465a] text-white shadow-md"
+                      : "text-slate-500 hover:text-[#2a465a] hover:bg-white",
                   ].join(" ")
                 }
               >
+                <Icon size={13} />
                 {label}
               </NavLink>
             ))}
           </nav>
 
-          {/* Hamburger — visible only on small screens */}
+          {/* Hamburger */}
           <button
             onClick={() => setMenuOpen((v) => !v)}
             className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all duration-200 shrink-0"
             aria-label="Toggle menu"
           >
-            {menuOpen ? <X size={18} /> : <Menu size={18} />}
+            {menuOpen ? <X size={17} /> : <Menu size={17} />}
           </button>
         </div>
 
-        {/* Mobile dropdown menu */}
+        {/* Mobile dropdown */}
         {menuOpen && (
           <div className="md:hidden border-t border-slate-100 bg-white px-4 py-3 flex flex-col gap-1">
-            {NAV_LINKS.map(({ to, label }) => (
+            {NAV_LINKS.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}
                 onClick={() => setMenuOpen(false)}
                 className={({ isActive }) =>
                   [
-                    "px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
+                    "flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
                     isActive
                       ? "bg-[#2a465a] text-white"
                       : "text-slate-600 hover:bg-slate-100 hover:text-[#2a465a]",
                   ].join(" ")
                 }
               >
+                <Icon size={15} />
                 {label}
               </NavLink>
             ))}

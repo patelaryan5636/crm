@@ -197,6 +197,7 @@ export default function Clients() {
       formData.append("notInterestedReason", addForm.notInterestedReason);
       formData.append("conversationNotes", addForm.conversationNotes);
       formData.append("notTalkReason", addForm.notTalkReason);
+      formData.append("gstPercent", String(gstPercent));
       if (tcFile) {
         formData.append("tcFile", tcFile);
       }
@@ -238,6 +239,7 @@ export default function Clients() {
     notInterestedReason: "",
     conversationNotes: "",
     notTalkReason: "",
+    gstPercent: 0,
     totalPaid: 0,
     totalUnpaid: 0,
   });
@@ -256,6 +258,7 @@ export default function Clients() {
     notInterestedReason: "",
     conversationNotes: "",
     notTalkReason: "",
+    gstPercent: 0,
     // Real-time payment info from backend
     totalPaid: 0,
     totalUnpaid: 0,
@@ -277,7 +280,8 @@ export default function Clients() {
   const totalDiscount  = currentForm ? (currentForm.requirements || []).reduce((sum, r) => sum + (parseFloat(r.discountAmt) || 0), 0) : 0;
   const netPayable     = currentForm ? (currentForm.requirements || []).reduce((sum, r) => sum + (parseFloat(r.netCost) || 0), 0) : 0;
   
-  const gstAmount      = Math.round(netPayable * 0.18);
+  const gstPercent     = currentForm ? (Number(currentForm.gstPercent) || 0) : 0;
+  const gstAmount      = Math.round(netPayable * gstPercent / 100);
   const totalProjectValue = netPayable + gstAmount;
 
   // Real-time totals from active form
@@ -325,6 +329,7 @@ export default function Clients() {
           totalPaid: p.totalPaid || 0,
           totalUnpaid: p.totalUnpaid || 0,
           netPayable: p.netPayable || 0,
+          gstPercent: p.gstPercent !== undefined && p.gstPercent !== null ? p.gstPercent : 0,
           termsAndConditionsPdf: p.termsAndConditionsPdf || null,
           clientEmailStatus: p.clientEmailStatus || 'PENDING',
           sentToClientAt: p.sentToClientAt || null,
@@ -384,6 +389,7 @@ export default function Clients() {
       notInterestedReason: row.notInterestedReason || "",
       conversationNotes: row.conversationNotes || "",
       notTalkReason: row.notTalkReason || "",
+      gstPercent: row.gstPercent !== undefined && row.gstPercent !== null ? Number(row.gstPercent) : 0,
       totalPaid: row.totalPaid || 0,
       totalUnpaid: row.totalUnpaid || 0,
     });
@@ -504,6 +510,7 @@ export default function Clients() {
       formData.append("notInterestedReason", actionForm.notInterestedReason);
       formData.append("conversationNotes", actionForm.conversationNotes);
       formData.append("notTalkReason", actionForm.notTalkReason);
+      formData.append("gstPercent", String(gstPercent));
       if (tcFile) {
         formData.append("tcFile", tcFile);
       }
@@ -529,9 +536,13 @@ export default function Clients() {
       }
 
       closeModal("client-action");
-      toast.success("Client status updated successfully!");
+      if (actionForm.status === "Interested") {
+        toast.success("Quotation sent to client successfully!");
+      } else {
+        toast.success("Client status saved successfully!");
+      }
     } catch (saveError) {
-      setError(saveError?.message || 'Failed to send quotation to client');
+      setError(saveError?.message || (actionForm.status === "Interested" ? 'Failed to send quotation to client' : 'Failed to save client status'));
     }
   };
 
@@ -892,11 +903,12 @@ export default function Clients() {
             {(currentForm.requirements || []).length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 col-span-12">
                 <DataField
-                  label="GST"
+                  label="GST Percentage (%)"
                   id="client-gst"
-                  value="18% (Added on top)"
-                  readOnly
-                  disabled
+                  type="number"
+                  placeholder="Default: 0%"
+                  value={currentForm.gstPercent !== undefined && currentForm.gstPercent !== null ? currentForm.gstPercent : ""}
+                  onChange={(e) => af("gstPercent", e.target.value)}
                   size={12}
                 />
               </div>
@@ -1094,7 +1106,7 @@ export default function Clients() {
                     <span>{fmt(netPayable)}</span>
                   </div>
                   <div className="flex justify-between text-sm font-semibold text-slate-600 border-b border-slate-100 pb-2.5">
-                    <span>GST (18%)</span>
+                    <span>GST ({gstPercent}%)</span>
                     <span>{fmt(gstAmount)}</span>
                   </div>
                   <div className="flex justify-between text-sm font-bold text-[#2a465a] pt-1">
@@ -1292,10 +1304,9 @@ export default function Clients() {
               size={12}
               value={addForm.status}
               onChange={(e) => af("status", e.target.value)}
+              disabled={true}
             >
-              {manualStatusOptions.map((o) => (
-                <Option key={o} value={o} label={o} />
-              ))}
+              <Option value="Interested" label="Interested" />
             </SelectField>
           </div>
 
@@ -1460,7 +1471,7 @@ export default function Clients() {
                 onClick={() => closeModal("client-action")}
               />
               <Button
-                text="Send To Client"
+                text={actionForm.status === "Interested" ? "Send To Client" : "Save"}
                 variant="primary"
                 size={3}
                 onClick={saveActionForm}

@@ -7,6 +7,11 @@ const apiConfigService = {
     return response.data;
   },
 
+  getRazorpayHistory: async () => {
+    const response = await apiClient.get('/api-config/razorpay/history');
+    return response.data;
+  },
+
   updateRazorpayConfig: async (configData) => {
     // baseURL already includes /api
     const response = await apiClient.post('/api-config/razorpay', configData);

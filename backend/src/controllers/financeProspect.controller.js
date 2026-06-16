@@ -119,6 +119,7 @@ const formatForFrontend = (p, paidAmount = 0) => {
     clientEmailStatus: p.clientEmailStatus || 'PENDING',
     clientEmailMessageId: p.clientEmailMessageId || null,
     termsAndConditionsPdf: p.termsAndConditionsPdf || null,
+    gstPercent: p.gstPercent !== undefined && p.gstPercent !== null ? p.gstPercent : 0,
     createdAt: p.createdAt,
   };
 };
@@ -209,6 +210,7 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
     notInterestedReason = '',
     conversationNotes = '',
     notTalkReason = '',
+    gstPercent = 0,
   } = req.body || {};
 
   // If sent via FormData, arrays/objects might be JSON strings
@@ -259,7 +261,12 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
   const totalCost = finalServices.reduce((sum, s) => sum + s.price, 0);
   const totalDiscount = finalServices.reduce((sum, s) => sum + s.discountAmount, 0);
   const baseCost = Math.max(0, totalCost - totalDiscount);
-  const gstAmount = Math.round(baseCost * 0.18);
+  
+  const gstP = Number(gstPercent) !== undefined && Number(gstPercent) !== null && !isNaN(Number(gstPercent)) 
+    ? Number(gstPercent) 
+    : (prospect.gstPercent || 0);
+    
+  const gstAmount = Math.round(baseCost * gstP / 100);
   const finalAmount = baseCost + gstAmount;
 
   const leadStatusMap = {
@@ -273,6 +280,8 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
   prospect.finalServices = finalServices;
   prospect.totalAmount = totalCost;
   prospect.discount = totalDiscount;
+  prospect.gstPercent = gstP;
+  prospect.gstAmount = gstAmount;
   prospect.finalAmount = finalAmount;
   prospect.paymentType = Number(advanceAmount || 0) > 0 || (advancePayments && advancePayments.length > 0) ? 'PARTIAL' : 'FULL';
   prospect.paymentStatus = 'PENDING';
@@ -304,42 +313,45 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
   }
 
   let emailResult = null;
-  try {
-    const recipientEmail = String(prospect.client?.email || '').trim();
-    if (!recipientEmail) {
-      throw new AppError('Client email is missing. Please update the client record before sending the quotation.', 400);
+  if (normalizedStatus === 'Interested') {
+    try {
+      const recipientEmail = String(prospect.client?.email || '').trim();
+      if (!recipientEmail) {
+        throw new AppError('Client email is missing. Please update the client record before sending the quotation.', 400);
+      }
+
+      const pdfUrl = prospect.termsAndConditionsPdf || null;
+
+      emailResult = await sendProspectQuotationEmail({
+        email: recipientEmail,
+        clientName: prospect.client.name || 'Client',
+        companyName: prospect.client.companyName || prospect.company || '',
+        serviceName: selectedService || finalServices[0]?.name || 'Custom package',
+        requirements: finalServices.map(s => ({
+          title: s.name,
+          cost: s.price,
+          description: s.discountAmount > 0 ? `Discount: ₹${s.discountAmount}` : ''
+        })),
+        baseCost: totalCost,
+        discountAmount: totalDiscount,
+        gstAmount: gstAmount,
+        finalAmount,
+        paymentStatus,
+        termsAndConditions,
+        pdfPath: prospect.termsAndConditionsPdf,
+        pdfUrl: prospect.termsAndConditionsPdf?.startsWith('http') ? prospect.termsAndConditionsPdf : null,
+      });
+
+      prospect.clientEmailStatus = 'SENT';
+      prospect.clientEmailMessageId = emailResult.messageId || null;
+      prospect.clientEmailError = null;
+      await prospect.save();
+    } catch (error) {
+      prospect.clientEmailStatus = 'FAILED';
+      prospect.clientEmailError = error.message;
+      await prospect.save();
+      return next(new AppError(error.message || 'Failed to send quotation email', 502));
     }
-
-    const pdfUrl = prospect.termsAndConditionsPdf || null;
-
-    emailResult = await sendProspectQuotationEmail({
-      email: recipientEmail,
-      clientName: prospect.client.name || 'Client',
-      companyName: prospect.client.companyName || prospect.company || '',
-      serviceName: selectedService || finalServices[0]?.name || 'Custom package',
-      requirements: finalServices.map(s => ({
-        title: s.name,
-        cost: s.price,
-        description: s.discountAmount > 0 ? `Discount: ₹${s.discountAmount}` : ''
-      })),
-      baseCost: totalCost,
-      discountAmount: totalDiscount,
-      finalAmount,
-      paymentStatus,
-      termsAndConditions,
-      pdfPath: prospect.termsAndConditionsPdf,
-      pdfUrl: prospect.termsAndConditionsPdf?.startsWith('http') ? prospect.termsAndConditionsPdf : null,
-    });
-
-    prospect.clientEmailStatus = 'SENT';
-    prospect.clientEmailMessageId = emailResult.messageId || null;
-    prospect.clientEmailError = null;
-    await prospect.save();
-  } catch (error) {
-    prospect.clientEmailStatus = 'FAILED';
-    prospect.clientEmailError = error.message;
-    await prospect.save();
-    return next(new AppError(error.message || 'Failed to send quotation email', 502));
   }
 
   res.status(200).json(
@@ -354,7 +366,7 @@ exports.sendToClient = catchAsync(async (req, res, next) => {
         }),
         email: emailResult ? { success: true, messageId: emailResult.messageId || null } : { success: false },
       },
-      'Quotation sent to client successfully'
+      normalizedStatus === 'Interested' ? 'Quotation sent to client successfully' : 'Client status saved successfully'
     )
   );
 });
@@ -418,6 +430,7 @@ exports.addClient = catchAsync(async (req, res, next) => {
     notInterestedReason = '',
     conversationNotes = '',
     notTalkReason = '',
+    gstPercent = 0,
   } = req.body || {};
 
   if (!clientId) {
@@ -459,6 +472,7 @@ exports.addClient = catchAsync(async (req, res, next) => {
   let baseCost = 0;
   let gstAmount = 0;
   let finalAmount = 0;
+  const gstP = Number(gstPercent) || 0;
 
   if (normalizedStatus === 'Interested') {
     finalServices = (parsedRequirements || []).map((item) => {
@@ -485,7 +499,7 @@ exports.addClient = catchAsync(async (req, res, next) => {
     totalCost = finalServices.reduce((sum, s) => sum + s.price, 0);
     totalDiscount = finalServices.reduce((sum, s) => sum + s.discountAmount, 0);
     baseCost = Math.max(0, totalCost - totalDiscount);
-    gstAmount = Math.round(baseCost * 0.18);
+    gstAmount = Math.round(baseCost * gstP / 100);
     finalAmount = baseCost + gstAmount;
   }
 
@@ -525,6 +539,8 @@ exports.addClient = catchAsync(async (req, res, next) => {
       finalServices: finalServices,
       totalAmount: totalCost,
       discount: totalDiscount,
+      gstPercent: gstP,
+      gstAmount: gstAmount,
       finalAmount: finalAmount,
       paymentType: Number(advanceAmount || 0) > 0 || (parsedAdvancePayments && parsedAdvancePayments.length > 0) ? 'PARTIAL' : 'FULL',
       paymentStatus: 'PENDING',

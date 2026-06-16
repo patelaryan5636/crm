@@ -1190,6 +1190,8 @@ const ProspectFormSchema = new Schema(
     // ── Financials ──
     totalAmount: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
+    gstPercent: { type: Number, default: 0 },
+    gstAmount: { type: Number, default: 0 },
     finalAmount: { type: Number, default: 0 },
     advanceAmount: { type: Number, default: 0 },
     advancePayments: [
@@ -1601,6 +1603,8 @@ const WorkOrderSchema = new Schema(
     },
     discountValue: { type: String, default: "" },
     discountAmt: { type: Number, default: 0 },
+    gstPercent: { type: Number, default: 0 },
+    gstAmount: { type: Number, default: 0 },
     netPayable: { type: Number, default: 0 },
     paymentStatus: {
       type: String,
@@ -1706,7 +1710,7 @@ const InvoiceSchema = new Schema(
 
     amount: { type: Number, required: true, min: 0 },
     discount: { type: Number, default: 0, min: 0 },
-    gstPercent: { type: Number, default: 18, min: 0 },
+    gstPercent: { type: Number, default: 0, min: 0 },
     gstAmount: { type: Number, default: 0, min: 0 },
     isCustomGst: { type: Boolean, default: false },
     totalAmount: { type: Number, required: true, min: 0 },
@@ -2137,17 +2141,25 @@ FinanceNotificationReadSchema.index({ admin: 1, eventId: 1 }, { unique: true });
 const ApiConfigSchema = new Schema(
   {
     admin: { type: Schema.Types.ObjectId, ref: "Admin", required: true },
-    key: { type: String, required: true, trim: true }, // Removed unique: true
+    key: { type: String, required: true, trim: true },
     value: { type: String, required: true },
     description: { type: String, trim: true },
+    nickname: { type: String, trim: true },
+    environment: { type: String, enum: ["test", "live", "none"], default: "none" },
+    status: { type: String, enum: ["ACTIVE", "REVOKED"], default: "ACTIVE" },
     isEncrypted: { type: Boolean, default: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true },
 );
 
-// Ensure keys are unique per tenant
-ApiConfigSchema.index({ admin: 1, key: 1 }, { unique: true });
+// Indexes for performance
+ApiConfigSchema.index({ admin: 1, key: 1, status: 1 });
+ApiConfigSchema.index({ admin: 1, environment: 1 });
+ApiConfigSchema.index(
+  { admin: 1, key: 1 },
+  { unique: true, partialFilterExpression: { status: "ACTIVE" } }
+);
 
 // ════════════════════════════════════════════════════════════
 // MODEL 43A — PROJECT TASK

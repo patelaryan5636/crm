@@ -33,7 +33,7 @@ async function nextInvoiceNumber(adminId) {
 /** Calculate GST and total */
 function calcAmounts(amount, gstPercent, discount) {
   const totalAmount = Number(amount) || 0;
-  const gst = Number(gstPercent) || 18;
+  const gst = gstPercent !== undefined && gstPercent !== null ? Number(gstPercent) : 0;
   const gstAmount = Math.round((totalAmount * gst) / (100 + gst));
   return { gstAmount, totalAmount };
 }
@@ -50,7 +50,7 @@ function mapInvoice(inv) {
     email: inv.clientEmail || '',
     companyName: inv.clientCompany || '',
     amount: inv.amount || 0,
-    gstPct: inv.gstPercent || 18,
+    gstPct: inv.gstPercent !== undefined && inv.gstPercent !== null ? inv.gstPercent : 0,
     gstAmount: inv.gstAmount || 0,
     discount: inv.discount || 0,
     total: inv.totalAmount || 0,
@@ -252,6 +252,7 @@ exports.sendInvoice = catchAsync(async (req, res, next) => {
       senderAddress: admin?.company?.address
         ? `${admin.company.address.line1 || ''}, ${admin.company.address.city || ''}`
         : '',
+      pdfBase64: req.body.pdfBase64,
     });
 
     // Update invoice status to SENT if it was DRAFT
@@ -350,9 +351,17 @@ exports.autoCreateInvoice = async ({ adminId, paymentId, prospectId, createdBy =
 
     const client = prospect?.client || {};
     const amount = payment.amount || prospect?.finalAmount || 0;
-    const gstPercent = 18;
     const discount = 0;
-    const { gstAmount, totalAmount } = calcAmounts(amount, gstPercent, discount);
+
+    const gstAmount = prospect && prospect.gstAmount !== undefined && prospect.gstAmount !== null
+      ? prospect.gstAmount
+      : Math.round((amount * 18) / 118);
+
+    const gstPercent = prospect && prospect.gstAmount !== undefined && prospect.gstAmount !== null && (amount - gstAmount) > 0
+      ? Math.round((gstAmount / (amount - gstAmount)) * 100)
+      : 18;
+
+    const totalAmount = amount;
 
     // Build line items from prospect's finalServices
     const lineItems = (prospect?.finalServices || []).map((s) => ({

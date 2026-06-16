@@ -54,11 +54,8 @@ exports.listPayments = catchAsync(async (req, res, next) => {
 
   const q = {
     admin: req.admin._id,
-    $or: [
-      { finalAmount: { $gt: 0 } },
-      { status: 'SENT_TO_FINANCE' },
-      { stage: 'Interested' },
-    ],
+    stage: 'Interested',
+    clientEmailStatus: 'SENT',
   };
   const rows = await ProspectForm.find(q).populate('client', 'name email mobile companyName').lean();
 
@@ -410,7 +407,9 @@ exports.searchProspectByEmail = catchAsync(async (req, res, next) => {
   // Find all prospects for all these clients
   const prospects = await ProspectForm.find({ 
     admin: req.admin._id, 
-    client: { $in: clientIds } 
+    client: { $in: clientIds },
+    stage: 'Interested',
+    clientEmailStatus: 'SENT'
   })
   .populate('filledBy', 'name email')
   .sort({ createdAt: -1 });

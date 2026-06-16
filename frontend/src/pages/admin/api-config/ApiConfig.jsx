@@ -347,6 +347,9 @@ export default function ApiConfig() {
                   <input
                     type={showWebhook ? 'text' : 'password'}
                     value={webhookSecretVal}
+                    onFocus={() => {
+                      if (webhookSecretVal.includes('•')) setWebhookSecretVal('');
+                    }}
                     onChange={(e) => setWebhookSecretVal(e.target.value)}
                     placeholder="Click 'Generate Secret' to create one, then paste it in Razorpay Dashboard"
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50/90 py-3.5 px-4 text-slate-800 placeholder:text-slate-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#2a465a]/20 transition"
@@ -456,6 +459,7 @@ export default function ApiConfig() {
               </div>
             ))}
           </div>
+          
         </div>
 
         {/* Connection Status */}
@@ -474,6 +478,7 @@ export default function ApiConfig() {
                   {item.status}
                 </span>
               </div>
+              
             ))}
           </div>
         </div>

@@ -100,8 +100,13 @@ export default function AllUsers() {
   const [quickMobile, setQuickMobile] = useState("");
   const [quickRole,   setQuickRole]   = useState("");
   const [quickDept,   setQuickDept]   = useState("");
-  const [isCreating,  setIsCreating]  = useState(false);
+  const [isCreating,      setIsCreating]      = useState(false);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
+
+  // Bulk preview state
+  const [bulkPreview,     setBulkPreview]     = useState(null);  // { valid, invalid, duplicate, totalLimit }
+  const [bulkFile,        setBulkFile]        = useState(null);
+  const bulkInputRef = useRef(null);
 
   // ── Fetch users ────────────────────────────────────────────────────────────
   const fetchUsers = useCallback(async () => {
@@ -271,43 +276,186 @@ export default function AllUsers() {
     }
   };
 
-  // ── Export ─────────────────────────────────────────────────────────────────
-  const handleExport = () => {
-    const csv = "Name,Email,Role,Department,Status\n" +
-      usersList.map((u) => `${u.name},${u.email},${u.role},${u.department},${u.status}`).join("\n");
+  // ── Manager roles that must be unique (only 1 per company) ───────────────
+  const MANAGER_ROLES = ["SALES_MANAGER", "MANAGEMENT_MANAGER", "FINANCE_MANAGER"];
+
+  // ── Download sample CSV ────────────────────────────────────────────────────
+  const handleDownloadSample = () => {
+    const header  = "Name,Email,Phone,Department,Role";
+    const example = "Rahul Sharma,rahul@company.com,9876543210,Sales,SALES_EXECUTIVE";
+    const csv = `${header}\n${example}\n`;
     const a = document.createElement("a");
-    a.href = encodeURI("data:text/csv;charset=utf-8," + csv);
-    a.download = "users_export.csv";
+    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+    a.download = "sample_users_import.csv";
     a.click();
   };
 
-  // ── Bulk upload ────────────────────────────────────────────────────────────
-  const handleBulkUpload = () => {
-    if (isBulkUploading) return;
-    const input = document.createElement("input");
-    input.type = "file"; input.accept = ".csv,.xlsx";
-    input.onchange = async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      setIsBulkUploading(true);
-      try {
-        const pre = await userService.uploadBulkUsers(file, { skipDuplicates: true });
-        const preData = pre?.data ?? pre;
-        if (!preData?.summary?.validRows) {
-          showToast("No valid rows", "Check your CSV format.", "error");
-          return;
+  // ── Parse CSV text into array of row objects ───────────────────────────────
+  const parseCSV = (text) => {
+    const lines = text.trim().split(/\r?\n/);
+    if (lines.length < 2) return [];
+    // Normalise header keys
+    const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+    return lines.slice(1).map((line) => {
+      const vals = line.split(",").map((v) => v.trim());
+      return headers.reduce((obj, h, i) => { obj[h] = vals[i] ?? ""; return obj; }, {});
+    });
+  };
+
+  // ── Validate a single CSV row against all rules ────────────────────────────
+  const validateRow = (row, existingEmails, seenEmailsInFile, existingManagers) => {
+    const warnings = [];
+    const name  = row["name"]  || "";
+    const email = row["email"] || "";
+    const phone = row["phone"] || "";
+    const dept  = row["department"] || "";
+    const role  = (row["role"] || "").toUpperCase().replace(/ /g, "_");
+
+    if (!name.trim()) warnings.push("Name is required");
+    if (!/^\S+@\S+\.\S+$/.test(email)) warnings.push("Invalid email address");
+    if (!/^\d{10}$/.test(phone)) warnings.push("Phone must be exactly 10 digits");
+    if (!dept.trim()) warnings.push("Department is required");
+    if (!role.trim()) warnings.push("Role is required");
+
+    // Duplicate email in existing users
+    if (existingEmails.has(email.toLowerCase())) warnings.push("Email already exists (duplicate)");
+    // Duplicate email within this file
+    if (seenEmailsInFile.has(email.toLowerCase())) warnings.push("Duplicate email within file");
+
+    // Manager uniqueness rule
+    if (MANAGER_ROLES.includes(role)) {
+      const alreadyHasManager = existingManagers.has(role);
+      const fileHasManager    = seenEmailsInFile.size > 0 &&
+        // We track manager roles found so far in the file via a separate set passed in
+        existingManagers.has(`__file__${role}`);
+      if (alreadyHasManager) warnings.push(`A ${role.replace(/_/g, " ")} already exists — only 1 allowed`);
+      if (fileHasManager)    warnings.push(`Duplicate ${role.replace(/_/g, " ")} in file — only 1 allowed`);
+    }
+
+    return { name, email, phone, dept, role, warnings };
+  };
+
+  // ── Open file picker → parse → show preview modal ─────────────────────────
+  const handleBulkUploadClick = () => {
+    if (bulkInputRef.current) bulkInputRef.current.click();
+  };
+
+  const handleFileSelected = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBulkFile(file);
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target.result;
+      const rows = parseCSV(text);
+
+      // Build sets for fast lookup
+      const existingEmails   = new Set(usersList.map((u) => u.email.toLowerCase()));
+      const existingManagers = new Set(
+        usersList.filter((u) => MANAGER_ROLES.includes(u.role)).map((u) => u.role)
+      );
+
+      const MAX_USERS = 40;
+      const currentCount = usersList.length;
+      const remainingSlots = Math.max(0, MAX_USERS - currentCount);
+
+      const seenEmailsInFile = new Set();
+      const seenManagersInFile = new Set();
+
+      const validRows   = [];
+      const invalidRows = [];
+
+      rows.forEach((row, idx) => {
+        const email = (row["email"] || "").toLowerCase();
+        const role  = (row["role"]  || "").toUpperCase().replace(/ /g, "_");
+
+        // Inject file-level manager tracking into existingManagers temporarily
+        const checkManagers = new Set([...existingManagers]);
+        seenManagersInFile.forEach((mr) => checkManagers.add(`__file__${mr}`));
+
+        const result = validateRow(row, existingEmails, seenEmailsInFile, checkManagers);
+        result.rowIndex = idx + 2; // 1-based + header row
+
+        if (result.warnings.length === 0) {
+          // Check total user cap
+          if (validRows.length >= remainingSlots) {
+            result.warnings.push(`User limit reached (max ${MAX_USERS} total users)`);
+            invalidRows.push(result);
+          } else {
+            validRows.push(result);
+            seenEmailsInFile.add(email);
+            if (MANAGER_ROLES.includes(role)) seenManagersInFile.add(role);
+          }
+        } else {
+          invalidRows.push(result);
+          seenEmailsInFile.add(email); // still track to catch downstream dupes
         }
-        const res = await userService.commitBulkUsers(preData.uploadId, "VALID_ONLY");
-        const resData = res?.data ?? res;
-        showToast("Bulk upload done", `${resData?.importedCount || 0} users imported.`, "success");
-        fetchUsers();
-      } catch (err) {
-        showToast("Bulk upload failed", err?.message, "error");
-      } finally {
-        setIsBulkUploading(false);
-      }
+      });
+
+      setBulkPreview({
+        validRows,
+        invalidRows,
+        totalInFile: rows.length,
+        remainingSlots,
+        currentCount,
+      });
+      openModal("bulk-preview-modal");
     };
-    input.click();
+    reader.readAsText(file);
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  };
+
+  // ── Commit the valid rows ──────────────────────────────────────────────────
+  const handleCommitBulk = async () => {
+    if (!bulkPreview?.validRows?.length) return;
+    setIsBulkUploading(true);
+
+    let imported = 0;
+    const failed = [];
+
+    for (const row of bulkPreview.validRows) {
+      try {
+        // Find department id by name
+        const dept = departments.find(
+          (d) => d.name?.toLowerCase() === row.dept?.toLowerCase() ||
+                 d.displayName?.toLowerCase() === row.dept?.toLowerCase()
+        );
+
+        const emailPrefix  = row.email.includes("@") ? row.email.split("@")[0] : row.email;
+        const last5        = row.phone.slice(-5);
+        const autoPassword = `${emailPrefix}@${last5}`;
+
+        await userService.createUser({
+          name:         row.name,
+          email:        row.email,
+          phone:        row.phone,
+          role:         row.role,
+          departmentId: dept?._id ?? "",
+          password:     autoPassword,
+        });
+        imported++;
+      } catch (err) {
+        failed.push(row.email);
+      }
+    }
+
+    setIsBulkUploading(false);
+    closeModal("bulk-preview-modal");
+    setBulkPreview(null);
+    setBulkFile(null);
+    fetchUsers();
+
+    if (failed.length === 0) {
+      showToast("Import done", `${imported} user${imported !== 1 ? "s" : ""} imported successfully.`, "success");
+    } else {
+      showToast(
+        `${imported} imported, ${failed.length} failed`,
+        `Failed: ${failed.slice(0, 3).join(", ")}${failed.length > 3 ? "…" : ""}`,
+        "info",
+      );
+    }
   };
 
   const actions = [
@@ -326,13 +474,21 @@ export default function AllUsers() {
           <p className="text-sm text-slate-500 mt-0.5">Manage and monitor all system users</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={handleExport}
+          {/* Hidden file input */}
+          <input
+            ref={bulkInputRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handleFileSelected}
+          />
+          <button onClick={handleDownloadSample}
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition active:scale-95">
-            <Download size={14} /> Export CSV
+            <Download size={14} /> Sample CSV
           </button>
-          <button onClick={handleBulkUpload} disabled={isBulkUploading}
+          <button onClick={handleBulkUploadClick} disabled={isBulkUploading}
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition active:scale-95 disabled:opacity-60">
-            <Upload size={14} /> {isBulkUploading ? "Uploading…" : "Bulk Upload"}
+            <Upload size={14} /> {isBulkUploading ? "Importing…" : "Bulk Import"}
           </button>
           <button onClick={() => openModal("create-user-quick-modal")}
             className="flex items-center gap-2 rounded-xl bg-[#2a465a] px-4 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-[#1e3a52] transition active:scale-95">
@@ -349,30 +505,53 @@ export default function AllUsers() {
         <EnhancedDashCard title="Sales Team"     value={String(salesTeam)}     icon={<Target size={22}/>}    accentColor="#7AAACE" size={3} />
       </DashGrid>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200/60 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Status:</span>
-            {["All","Active","Inactive"].map((s) => (
-              <button key={s} onClick={() => setStatusFilter(s)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
-                  statusFilter === s ? "bg-[#2a465a] text-white shadow-md" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                }`}>{s}</button>
-            ))}
+      {/* Login info banner */}
+      <div className="relative overflow-hidden rounded-2xl border border-[#2a465a]/20 bg-gradient-to-r from-[#2a465a] to-[#1a3347] px-5 py-4 shadow-md">
+        {/* Decorative background circles */}
+        <div className="pointer-events-none absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -right-2 top-6 w-12 h-12 rounded-full bg-white/5" />
+
+        <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
+          {/* Icon */}
+          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m0 0a2 2 0 01-2 2m2-2H7m8 0V7m0 4v2M9 11H7m2 0v2m0-2V9m6 8l-3-3m0 0l-3 3m3-3V4" />
+            </svg>
           </div>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Dept:</span>
-            <button onClick={() => setDeptFilter("All")}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
-                deptFilter === "All" ? "bg-[#2a465a] text-white shadow-md" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-              }`}>All</button>
-            {departments.map((d) => (
-              <button key={d._id} onClick={() => setDeptFilter(d.name)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
-                  deptFilter === d.name ? "bg-[#2a465a] text-white shadow-md" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                }`}>{d.name.charAt(0) + d.name.slice(1).toLowerCase()}</button>
-            ))}
+
+          {/* Text block */}
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-bold text-sm mb-1">Department User Login Info</p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                Login via
+                <a
+                  href="/login"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white font-bold underline underline-offset-2 hover:text-sky-300 transition-colors"
+                >
+                  Department Login
+                </a>
+              </span>
+              <span className="hidden sm:inline text-white/20">|</span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                Default password:
+                <code className="px-2 py-0.5 rounded-md bg-white/10 border border-white/20 text-white font-mono text-[11px] tracking-wide">
+                  emailprefix@last5digits
+                </code>
+              </span>
+              <span className="hidden sm:inline text-white/20">|</span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" />
+                Example:
+                <code className="px-2 py-0.5 rounded-md bg-white/10 border border-white/20 text-white font-mono text-[11px]">
+                  user@12345
+                </code>
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -380,13 +559,29 @@ export default function AllUsers() {
       {/* Table */}
       <DataTable
         title="User Records"
+        exportable
+        exportFileName="User Record"
         columns={columns}
-        rows={filteredUsers}
+        rows={usersList}
         actions={actions}
-        pageSize={5}
+        pageSize={10}
         searchable
         size={12}
         loading={isLoading}
+        filters={[
+          {
+            title: "Status",
+            type: "toggle",
+            key: "status",
+            options: ["Active", "Inactive"],
+          },
+          {
+            title: "Department",
+            type: "toggle",
+            key: "department",
+            options: departments.map((d) => d.name),
+          },
+        ]}
       />
 
       {/* ── Edit Modal ── */}
@@ -460,6 +655,104 @@ export default function AllUsers() {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* ── Bulk Import Preview Modal ── */}
+      <Modal id="bulk-preview-modal" title="Bulk Import Preview">
+        {bulkPreview && (
+          <div className="space-y-4">
+            {/* Summary chips */}
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+                <CheckCircle2 size={13}/> {bulkPreview.validRows.length} Valid
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+                <AlertTriangle size={13}/> {bulkPreview.invalidRows.length} Invalid
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold">
+                Total in file: {bulkPreview.totalInFile}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold">
+                Slots remaining: {bulkPreview.remainingSlots} / 40
+              </span>
+            </div>
+
+            {/* Limit warning */}
+            {bulkPreview.currentCount >= 40 && (
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5"/>
+                <p className="text-xs font-semibold text-amber-700">
+                  User limit reached (40/40). No new users can be imported.
+                </p>
+              </div>
+            )}
+
+            {/* Valid rows */}
+            {bulkPreview.validRows.length > 0 && (
+              <div>
+                <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
+                  ✅ Valid rows — will be imported
+                </p>
+                <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100">
+                  {bulkPreview.validRows.map((r) => (
+                    <div key={r.rowIndex} className="flex items-center gap-3 px-3 py-2.5">
+                      <span className="text-[10px] text-slate-400 font-bold w-6 shrink-0">#{r.rowIndex}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-[#2a465a] truncate">{r.name}</p>
+                        <p className="text-[10px] text-slate-400 truncate">{r.email} · {r.phone}</p>
+                      </div>
+                      <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold shrink-0">{r.role}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Invalid rows */}
+            {bulkPreview.invalidRows.length > 0 && (
+              <div>
+                <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
+                  ❌ Invalid rows — will be skipped
+                </p>
+                <div className="max-h-44 overflow-y-auto rounded-xl border border-rose-200 divide-y divide-rose-100">
+                  {bulkPreview.invalidRows.map((r) => (
+                    <div key={r.rowIndex} className="px-3 py-2.5 bg-rose-50/40">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] text-slate-400 font-bold w-6 shrink-0">#{r.rowIndex}</span>
+                        <p className="text-xs font-semibold text-slate-700 truncate">{r.email || "—"}</p>
+                      </div>
+                      <div className="ml-8 flex flex-wrap gap-1">
+                        {r.warnings.map((w, wi) => (
+                          <span key={wi} className="text-[10px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-semibold">
+                            {w}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                onClick={() => { closeModal("bulk-preview-modal"); setBulkPreview(null); setBulkFile(null); }}
+                className="px-4 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition"
+                disabled={isBulkUploading}>
+                Cancel
+              </button>
+              <button
+                onClick={handleCommitBulk}
+                disabled={isBulkUploading || bulkPreview.validRows.length === 0}
+                className="px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-[#2a465a] shadow-lg hover:bg-[#1e3a52] transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isBulkUploading
+                  ? "Importing…"
+                  : `Import ${bulkPreview.validRows.length} User${bulkPreview.validRows.length !== 1 ? "s" : ""}`}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* ── Create User Modal ── */}

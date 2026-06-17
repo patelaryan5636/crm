@@ -73,4 +73,12 @@ export const userService = {
     const response = await apiClient.patch('/users/me', profileData);
     return response.data;
   },
+  bulkUpdateStatus: async (userIds, isActive) => {
+    const response = await apiClient.patch('/users/bulk-status', { userIds, isActive });
+    return response.data;
+  },
+  bulkDeleteUsers: async (userIds) => {
+    const response = await apiClient.post('/users/bulk-delete', { userIds });
+    return response.data;
+  },
 };

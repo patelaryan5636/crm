@@ -115,18 +115,100 @@ exports.createUser = catchAsync(async (req, res, next) => {
     );
   }
 
-  // 3. Email uniqueness per tenant
+  // 3. Email uniqueness per tenant - check if active or deleted
   const existingUser = await User.findOne({
     email: email.toLowerCase(),
     admin: adminId,
   });
+
   if (existingUser) {
-    return next(
-      new AppError("Email is already registered in your organization", 409),
-    );
+    if (existingUser.isDeleted) {
+      // 4. One Manager per Department Constraint for restoration
+      if (role.endsWith('_MANAGER')) {
+        const existingManager = await User.findOne({
+          admin: adminId,
+          department: departmentId,
+          role: role,
+          isDeleted: false
+        });
+
+        if (existingManager) {
+          return next(new AppError(`A manager for the ${department.name} department already exists.`, 409));
+        }
+      }
+
+      // 5. Team validation (Optional)
+      if (teamId) {
+        const team = await Team.findOne({
+          _id: teamId,
+          admin: adminId,
+          department: departmentId,
+        });
+        if (!team)
+          return next(
+            new AppError("Team not found in the selected department", 400),
+          );
+      }
+
+      // Generate default password
+      const defaultPasswordStr = buildDefaultUserPassword(email, phone);
+      const hashedPassword = await hashPassword(defaultPasswordStr);
+
+      // Restore user instead of creating new
+      existingUser.isDeleted = false;
+      existingUser.deletedAt = null;
+      existingUser.deletedBy = null;
+      existingUser.name = name;
+      existingUser.phone = phone;
+      existingUser.role = role;
+      existingUser.department = departmentId;
+      existingUser.team = teamId || null;
+      existingUser.leadDataLimit = leadDataLimit || null;
+      existingUser.password = hashedPassword;
+      existingUser.tempPassword = defaultPasswordStr;
+      existingUser.isActive = true;
+      existingUser.isProfileComplete = false;
+      existingUser.mustChangePassword = true;
+      existingUser.isFirstLogin = true;
+      existingUser.approvalStatus = "APPROVED";
+
+      await existingUser.save();
+
+      // Write AuditLog entry
+      await AuditLog.create({
+        admin: adminId,
+        performedBy: adminId,
+        performerType: "ADMIN",
+        action: "USER_CREATED",
+        targetModel: "User",
+        targetId: existingUser._id,
+        note: "User restored from soft-deleted state",
+        after: { name, email: email.toLowerCase(), role, departmentId },
+      });
+
+      return res.status(201).json(
+        new ApiResponse(
+          201,
+          {
+            user: {
+              id: existingUser._id,
+              name: existingUser.name,
+              email: existingUser.email,
+              role: existingUser.role,
+              department: department.name,
+            },
+          },
+          "User restored and imported successfully",
+        ),
+      );
+    } else {
+      return next(
+        new AppError("Email is already registered in your organization", 409),
+      );
+    }
   }
 
-  // 4. One Manager per Department Constraint
+  // 4. One Manager per Department Constraint for new user
   if (role.endsWith('_MANAGER')) {
     const existingManager = await User.findOne({
       admin: adminId,
@@ -860,6 +942,72 @@ exports.adminDeleteUser = catchAsync(async (req, res, next) => {
 
   res.status(200).json(new ApiResponse(200, null, `User "${user.name}" deleted successfully`));
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN: BULK UPDATE STATUS  PATCH /api/users/bulk-status
+// ─────────────────────────────────────────────────────────────────────────────
+exports.adminBulkUpdateStatus = catchAsync(async (req, res, next) => {
+  const adminId = req.admin?._id;
+  if (!adminId) return next(new AppError('Admin authentication required', 401));
+
+  const { userIds, isActive } = req.body;
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    return next(new AppError('userIds must be a non-empty array', 400));
+  }
+  if (isActive === undefined) {
+    return next(new AppError('isActive is required', 400));
+  }
+
+  const users = await User.find({ _id: { $in: userIds }, admin: adminId, isDeleted: false });
+
+  for (const user of users) {
+    const before = { isActive: user.isActive };
+    user.isActive = Boolean(isActive);
+    await user.save();
+
+    await AuditLog.create({
+      admin: adminId, performedBy: adminId, performerType: 'ADMIN',
+      action: 'USER_UPDATED', targetModel: 'User', targetId: user._id,
+      before, after: { isActive: user.isActive },
+      note: 'Bulk status update',
+    }).catch(() => {});
+  }
+
+  res.status(200).json(
+    new ApiResponse(200, null, `Successfully updated status for ${users.length} user(s)`)
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN: BULK DELETE USER (soft)  POST /api/users/bulk-delete
+// ─────────────────────────────────────────────────────────────────────────────
+exports.adminBulkDelete = catchAsync(async (req, res, next) => {
+  const adminId = req.admin?._id;
+  if (!adminId) return next(new AppError('Admin authentication required', 401));
+
+  const { userIds } = req.body;
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    return next(new AppError('userIds must be a non-empty array', 400));
+  }
+
+  const users = await User.find({ _id: { $in: userIds }, admin: adminId, isDeleted: false });
+
+  for (const user of users) {
+    await user.softDelete(adminId);
+
+    await AuditLog.create({
+      admin: adminId, performedBy: adminId, performerType: 'ADMIN',
+      action: 'USER_DELETED', targetModel: 'User', targetId: user._id,
+      before: { name: user.name, email: user.email, role: user.role },
+      note: 'Bulk delete',
+    }).catch(() => {});
+  }
+
+  res.status(200).json(
+    new ApiResponse(200, null, `Successfully deleted ${users.length} user(s)`)
+  );
+});
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ADMIN: GET LOGIN LOGS  GET /api/users/login-logs

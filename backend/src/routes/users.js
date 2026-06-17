@@ -16,6 +16,8 @@ router.get('/stats', requireAuth, userController.getUserStats);
 router.get('/profile', requireUser, userController.getCurrentUserProfile);
 router.get('/me', requireUser, userController.getCurrentUserProfile);
 router.post('/', requireAdmin, validate(createUserSchema, 'body'), userController.createUser);
+router.patch('/bulk-status', requireAdmin, userController.adminBulkUpdateStatus);
+router.post('/bulk-delete', requireAdmin, userController.adminBulkDelete);
 router.put('/:id', requireAdmin, userController.adminUpdateUser);
 router.delete('/:id', requireAdmin, userController.adminDeleteUser);
 

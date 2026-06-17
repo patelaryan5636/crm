@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import ReactDOM from 'react-dom/client';
 import { Fragment } from "react";
 import { useNavigate, Link } from "react-router-dom";
@@ -68,17 +68,6 @@ function Navbar() {
     const fn = () => {
       const currentScrollY = window.scrollY;
       setScrolled(currentScrollY > 40);
-
-      // Hide header on scroll down, show on scroll up
-      if (currentScrollY > 150) {
-        if (currentScrollY > lastScrollY.current && !menuOpen) {
-          setHidden(true);
-        } else {
-          setHidden(false);
-        }
-      } else {
-        setHidden(false);
-      }
       lastScrollY.current = currentScrollY;
     };
     window.addEventListener("scroll", fn, { passive: true });
@@ -101,7 +90,7 @@ function Navbar() {
         onClick={() => setMenuOpen(false)}
       />
       <nav
-        className={`nav ${scrolled ? "scrolled" : ""} ${hidden ? "nav-hidden" : ""}`}
+        className={`nav ${scrolled ? "scrolled" : ""}`}
       >
         <div className="container">
           <div className="nav-inner">
@@ -183,14 +172,14 @@ function Hero({ onWatchTutorial }) {
 
   const bars = [40, 65, 50, 80, 70, 90, 75, 95];
   const colors = [
-    "#2563eb",
-    "#3b82f6",
-    "#2563eb",
-    "#60a5fa",
-    "#3b82f6",
-    "#22d3ee",
-    "#3b82f6",
-    "#60a5fa",
+    "#2a465a",
+    "#3a5c74",
+    "#2a465a",
+    "#7AAACE",
+    "#3a5c74",
+    "#7AAACE",
+    "#3a5c74",
+    "#9bbedd",
   ];
 
   return (
@@ -215,10 +204,6 @@ function Hero({ onWatchTutorial }) {
             }}
           >
             <style>{`@keyframes fadeSlideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}`}</style>
-            <div className="hero-badge">
-              <div className="hero-badge-dot" />
-              Now with AI-powered lead scoring
-            </div>
             <h1 className="heading-xl hero-title">
               The CRM that
               <br />
@@ -435,15 +420,15 @@ function TrustSection() {
       num: 2400,
       suffix: "+",
       label: "Companies Using GraphuraCRM",
-      color: "#3b82f6",
+      color: "#7AAACE",
     },
     {
       num: 1200000,
       suffix: "+",
       label: "Total Leads Managed",
-      color: "#22d3ee",
+      color: "#9bbedd",
     },
-    { num: 18500, suffix: "+", label: "Active Users", color: "#a78bfa" },
+    { num: 18500, suffix: "+", label: "Active Users", color: "#7AAACE" },
     {
       num: 850,
       suffix: "M+",
@@ -484,14 +469,14 @@ function ProductShowcase() {
       label: "Dashboard",
       icon: "📊",
       desc: "Real-time KPI overview",
-      color: "#2563eb",
+      color: "#2a465a",
       image: Dashboard,
     },
     {
       label: "Lead Management",
       icon: "🎯",
       desc: "Full lead lifecycle",
-      color: "#7c3aed",
+      color: "#3a5c74",
       image: Leads,
     },
     {
@@ -519,7 +504,7 @@ function ProductShowcase() {
       label: "Reports",
       icon: "📋",
       desc: "Advanced analytics",
-      color: "#0891b2",
+      color: "#2a465a",
       image: Reports,
     },
   ];
@@ -663,6 +648,8 @@ function ProductShowcase() {
 
 // ─── HOW IT WORKS ─────────────────────────────────────────────────────────────
 function HowItWorks() {
+  const [hoveredStep, setHoveredStep] = useState(null);
+
   const steps = [
     [
       "Register Your Company",
@@ -701,6 +688,14 @@ function HowItWorks() {
       "Extract deep department analytics to review overall performance.",
     ],
   ];
+
+  // odd-indexed items (0,2,4…) render content on the RIGHT side
+  // even-indexed items (1,3,5…) render content on the LEFT side
+  // arrow should point toward the center node:
+  //   right-side content → arrow on LEFT edge pointing left (→ toward node)
+  //   left-side content  → arrow on RIGHT edge pointing right (→ toward node)
+  const isRightSide = (i) => i % 2 === 0; // odd item = right content
+
   return (
     <section className="section section-bg-900" id="workflow">
       <div className="container">
@@ -717,21 +712,33 @@ function HowItWorks() {
           </p>
         </div>
         <div className="timeline">
-          {steps.map(([title, desc], i) => (
-            <div
-              className="timeline-item reveal"
-              key={title}
-              style={{ transitionDelay: `${i * 0.08}s` }}
-            >
-              <div className="timeline-node">
-                {i + 1 < 10 ? `0${i + 1}` : i + 1}
+          {steps.map(([title, desc], i) => {
+            const isActive = hoveredStep === i;
+            const rightSide = isRightSide(i);
+            return (
+              <div
+                className="timeline-item reveal"
+                key={title}
+                style={{ transitionDelay: `${i * 0.08}s` }}
+                onMouseEnter={() => setHoveredStep(i)}
+                onMouseLeave={() => setHoveredStep(null)}
+              >
+                {/* Step number node */}
+                <div className={`timeline-node${isActive ? " timeline-node--active" : ""}`}>
+                  {i + 1 < 10 ? `0${i + 1}` : i + 1}
+                </div>
+
+                {/* Step content card */}
+                <div className={`timeline-content${isActive ? " timeline-content--active" : ""}${rightSide ? " timeline-content--right" : " timeline-content--left"}`}>
+                  {/* Arrow pointing toward center node */}
+                  <div className={`timeline-arrow${rightSide ? " timeline-arrow--left" : " timeline-arrow--right"}${isActive ? " timeline-arrow--active" : ""}`} />
+
+                  <div className="timeline-title">{title}</div>
+                  <div className="timeline-desc">{desc}</div>
+                </div>
               </div>
-              <div className="timeline-content">
-                <div className="timeline-title">{title}</div>
-                <div className="timeline-desc">{desc}</div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
@@ -751,19 +758,19 @@ function ModulesSection() {
       icon: "📈",
       name: "Sales Manager",
       desc: "Overviews sales targets, manages lead allocation rules, and monitors manager pipelines.",
-      color: "#3b82f6",
+      color: "#7AAACE",
     },
     {
       icon: "🎯",
       name: "Sales Team Leader",
       desc: "Sets team objectives, assigns pipeline leads, and tracks executive daily conversion rates.",
-      color: "#60a5fa",
+      color: "#9bbedd",
     },
     {
       icon: "👤",
       name: "Sales Executive / Employee",
       desc: "Conducts lead follow-ups, updates deal stages, schedules calls, and closes contracts.",
-      color: "#3b82f6",
+      color: "#7AAACE",
     },
     {
       icon: "💰",
@@ -966,13 +973,13 @@ function WorkflowViz() {
       icon: "📥",
       name: "Lead Intake",
       sub: "Web, CSV, API",
-      color: "#3b82f6",
+      color: "#7AAACE",
     },
     {
       icon: "📈",
       name: "Sales",
       sub: "Pipeline & Deals",
-      color: "#7c3aed",
+      color: "#3a5c74",
     },
     {
       icon: "💰",
@@ -996,7 +1003,7 @@ function WorkflowViz() {
       icon: "📊",
       name: "Report",
       sub: "Unified Analytics",
-      color: "#22d3ee",
+      color: "#9bbedd",
     },
   ];
   return (
@@ -1173,19 +1180,19 @@ function BusinessGrowth() {
       label: "Lead Conversion Improvement",
       val: "64%",
       pct: 64,
-      color: "#3b82f6",
+      color: "#7AAACE",
     },
     {
       label: "Reduction in Admin Work",
       val: "78%",
       pct: 78,
-      color: "#a78bfa",
+      color: "#7AAACE",
     },
     {
       label: "Faster Sales Cycle",
       val: "52%",
       pct: 52,
-      color: "#22d3ee",
+      color: "#9bbedd",
     },
     {
       label: "Team Productivity Gain",
@@ -1268,19 +1275,19 @@ function Testimonials() {
       name: "Alex Reeves",
       company: "ScaleBridge Capital",
       text: "GraphuraCRM replaced four separate tools for us. The lead pipeline alone saved our reps 3 hours a day. The finance module generates invoices we used to spend a week on.",
-      color: "#3b82f6",
+      color: "#7AAACE",
     },
     {
       name: "Priya Kapoor",
       company: "Pinnacle Realty Group",
       text: "We manage 200+ agents across 12 cities and GraphuraCRM handles it effortlessly. The attendance module and role permissions are the best I've seen in any CRM.",
-      color: "#a78bfa",
+      color: "#7AAACE",
     },
     {
       name: "Marcus Williams",
       company: "FuturaTech Solutions",
       text: "Migrated from Salesforce. Implementation took 2 days, not 2 months. The reporting dashboards are genuinely beautiful and our leadership actually uses them.",
-      color: "#22d3ee",
+      color: "#9bbedd",
     },
     {
       name: "Hana Müller",
@@ -1396,7 +1403,7 @@ function Testimonials() {
                     height: 8,
                     borderRadius: 4,
                     background:
-                      offset === i ? "var(--blue-400)" : "var(--text-muted)",
+                      offset === i ? "var(--accent)" : "var(--text-muted)",
                     cursor: "pointer",
                     transition: "all 0.3s",
                   }}
@@ -2255,3 +2262,4 @@ export default function LandingPage() {
     </>
   );
 }
+

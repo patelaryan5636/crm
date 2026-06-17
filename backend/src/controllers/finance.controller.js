@@ -72,31 +72,40 @@ exports.getDashboardData = catchAsync(async (req, res, next) => {
     date: formatDate(inv.createdAt),
   }));
 
-  // 3. Recent Activities (Merged from multiple sources)
+  // 3. Recent Activities — only finance-relevant actions
+
   const [auditLogs, latestWorkOrders, latestExpenses] = await Promise.all([
-    AuditLog.find({ admin: adminId })
+    AuditLog.find({
+      admin: adminId,
+      // Only fetch finance-relevant audit actions — blocks TEAM_*, LEAD_*, USER_*, etc.
+      action: { $regex: /^(PAYMENT|INVOICE|WORK_ORDER|EXPENSE|PROJECT)/i },
+    })
       .sort({ createdAt: -1 })
-      .limit(10)
-      .populate("performedBy", "name")
+      .limit(20)
+      .populate('performedBy', 'name')
       .lean(),
     WorkOrder.find({ admin: adminId }).sort({ createdAt: -1 }).limit(10).lean(),
     Expense.find({ admin: adminId, isDeleted: false })
       .sort({ createdAt: -1 })
       .limit(10)
-      .populate("addedBy", "name")
+      .populate('addedBy', 'name')
       .lean(),
   ]);
 
   let activities = [];
 
-  // From Audit Logs
+  // From Audit Logs — only include entries that map to a known finance type
   auditLogs.forEach((log) => {
-    let type = "General";
-    if (log.action.includes("PAYMENT")) type = "Payment";
-    else if (log.action.includes("INVOICE")) type = "Invoice";
-    else if (log.action.includes("WORK_ORDER")) type = "Work Order";
-    else if (log.action.includes("PROJECT")) type = "Project";
-    else if (log.action.includes("EXPENSE")) type = "Expense";
+    let type = null; // null = discard
+    const action = (log.action || '').toUpperCase();
+    if (action.includes('PAYMENT')) type = 'Payment';
+    else if (action.includes('INVOICE')) type = 'Invoice';
+    else if (action.includes('WORK_ORDER')) type = 'Work Order';
+    else if (action.includes('PROJECT')) type = 'Project';
+    else if (action.includes('EXPENSE')) type = 'Expense';
+
+    // Skip anything that doesn't map to a finance category
+    if (!type) return;
 
     activities.push({
       id: String(log._id).slice(-6).toUpperCase(),

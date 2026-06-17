@@ -71,13 +71,40 @@ const invoiceColumns = [
   { key: "date", label: "Date" },
 ];
 
+const TYPE_BADGE_COLOR = {
+  Payment:    "bg-emerald-100 text-emerald-700",
+  Invoice:    "bg-blue-100 text-blue-700",
+  "Work Order": "bg-amber-100 text-amber-700",
+  Project:    "bg-violet-100 text-violet-700",
+  Expense:    "bg-rose-100 text-rose-700",
+};
+
 const activityColumns = [
-  { key: "id", label: "Activity ID" },
+  {
+    key: "type",
+    label: "Category",
+    render: (v) => (
+      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+        TYPE_BADGE_COLOR[v] || "bg-slate-100 text-slate-600"
+      }`}>
+        {v}
+      </span>
+    ),
+  },
   { key: "activity", label: "Activity" },
-  { key: "type", label: "Type" },
-  { key: "user", label: "User" },
-  { key: "date", label: "Date" },
-  { key: "status", label: "Status" },
+  { key: "user",     label: "Performed By" },
+  { key: "date",     label: "Date" },
+  {
+    key: "status",
+    label: "Status",
+    render: (v) => (
+      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+        v === "Completed" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+      }`}>
+        {v}
+      </span>
+    ),
+  },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────

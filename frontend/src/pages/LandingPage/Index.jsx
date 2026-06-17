@@ -1,5 +1,5 @@
-﻿import React from "react";
-import ReactDOM from 'react-dom/client';
+import React from "react";
+import ReactDOM from "react-dom/client";
 import { Fragment } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -14,14 +14,12 @@ import {
 } from "react-icons/fa6";
 import "./Landing.css";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
-import Dashboard from "../../assets/Images/Dashboard.png"
-import Leads from "../../assets/Images/Leads.png"
-import Finance from "../../assets/Images/Finance.png"
-import HRM from "../../assets/Images/HRM.png"
-import Projects from "../../assets/Images/Projects.png"
-import Reports from "../../assets/Images/Reports.png"
-
-
+import Dashboard from "../../assets/Images/Dashboard.png";
+import Leads from "../../assets/Images/Leads.png";
+import Finance from "../../assets/Images/Finance.png";
+import HRM from "../../assets/Images/HRM.png";
+import Projects from "../../assets/Images/Projects.png";
+import Reports from "../../assets/Images/Reports.png";
 
 const { useState, useEffect, useRef, useCallback } = React;
 
@@ -82,20 +80,22 @@ function Navbar() {
     }
   };
 
-  const links = ["Features", "Modules", "Workflow", "Contact"];
+  const links = ["Workflow", "Modules", "Features", "Contact"];
   return (
     <>
       <div
         className={`nav-overlay ${menuOpen ? "open" : ""}`}
         onClick={() => setMenuOpen(false)}
       />
-      <nav
-        className={`nav ${scrolled ? "scrolled" : ""}`}
-      >
+      <nav className={`nav ${scrolled ? "scrolled" : ""}`}>
         <div className="container">
           <div className="nav-inner">
             <a onClick={() => handleScrollTo("hero")} className="nav-logo">
-              <img src={GraphuraLogo} alt="Graphura CRM" className="nav-logo-img" />
+              <img
+                src={GraphuraLogo}
+                alt="Graphura CRM"
+                className="nav-logo-img"
+              />
             </a>
             <div className={`nav-links ${menuOpen ? "open" : ""}`}>
               {links.map((l) => (
@@ -509,17 +509,34 @@ function ProductShowcase() {
     },
   ];
 
+  const sectionRef = useRef(null);
+  const isVisible = useRef(false);
+
   const startTimer = useCallback(() => {
     clearInterval(timerRef.current);
-    timerRef.current = setInterval(
-      () => setActiveSlide((p) => (p + 1) % slides.length),
-      6000,
-    );
+    timerRef.current = setInterval(() => {
+      if (isVisible.current) {
+        setActiveSlide((p) => (p + 1) % slides.length);
+      }
+    }, 6000);
   }, []);
 
   useEffect(() => {
+    // Only auto-advance slides when the section is visible in the viewport.
+    // This prevents React state updates from causing the browser to jump
+    // scroll position when the user is reading another section.
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisible.current = entry.isIntersecting;
+      },
+      { threshold: 0.1 },
+    );
+    if (sectionRef.current) observer.observe(sectionRef.current);
     startTimer();
-    return () => clearInterval(timerRef.current);
+    return () => {
+      clearInterval(timerRef.current);
+      observer.disconnect();
+    };
   }, [startTimer]);
 
   const goto = (i) => {
@@ -553,7 +570,7 @@ function ProductShowcase() {
           </span>
         </div>
         <div
-          className={`showcase-frame-body ${isVisible ? 'fade-in' : ''}`}
+          className={`showcase-frame-body ${isVisible ? "fade-in" : ""}`}
           style={{
             background: "var(--navy-800)",
             padding: 0,
@@ -584,8 +601,8 @@ function ProductShowcase() {
 
   return (
     <section
+      ref={sectionRef}
       className="section"
-      id="features"
       style={{
         background:
           "linear-gradient(180deg, transparent, rgba(7,20,40,0.8), transparent)",
@@ -724,14 +741,20 @@ function HowItWorks() {
                 onMouseLeave={() => setHoveredStep(null)}
               >
                 {/* Step number node */}
-                <div className={`timeline-node${isActive ? " timeline-node--active" : ""}`}>
+                <div
+                  className={`timeline-node${isActive ? " timeline-node--active" : ""}`}
+                >
                   {i + 1 < 10 ? `0${i + 1}` : i + 1}
                 </div>
 
                 {/* Step content card */}
-                <div className={`timeline-content${isActive ? " timeline-content--active" : ""}${rightSide ? " timeline-content--right" : " timeline-content--left"}`}>
+                <div
+                  className={`timeline-content${isActive ? " timeline-content--active" : ""}${rightSide ? " timeline-content--right" : " timeline-content--left"}`}
+                >
                   {/* Arrow pointing toward center node */}
-                  <div className={`timeline-arrow${rightSide ? " timeline-arrow--left" : " timeline-arrow--right"}${isActive ? " timeline-arrow--active" : ""}`} />
+                  <div
+                    className={`timeline-arrow${rightSide ? " timeline-arrow--left" : " timeline-arrow--right"}${isActive ? " timeline-arrow--active" : ""}`}
+                  />
 
                   <div className="timeline-title">{title}</div>
                   <div className="timeline-desc">{desc}</div>
@@ -933,7 +956,7 @@ function FeaturesSection() {
     ],
   ];
   return (
-    <section className="section section-bg-grad">
+    <section className="section section-bg-grad" id="features">
       <div className="container">
         <div className="section-header reveal">
           <div className="eyebrow">All Features</div>
@@ -1007,7 +1030,7 @@ function WorkflowViz() {
     },
   ];
   return (
-    <section className="section section-bg-900">
+    <section className="section section-bg-900 dataflow-section">
       <div className="container">
         <div className="section-header reveal">
           <div className="eyebrow">Data Flow</div>
@@ -1309,6 +1332,9 @@ function Testimonials() {
     },
   ];
 
+  const sectionRef = useRef(null);
+  const isSectionVisible = useRef(false);
+
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
     window.addEventListener("resize", handleResize);
@@ -1319,19 +1345,35 @@ function Testimonials() {
   const cardW = width < 600 ? 100 : width < 900 ? 50 : 33.333;
 
   useEffect(() => {
-    const maxOffset = testimonials.length - visibleCount;
-    const t = setInterval(
-      () => setOffset((p) => (p >= maxOffset ? 0 : p + 1)),
-      4000,
+    // Pause auto-scroll when section is not in view to prevent page jump
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isSectionVisible.current = entry.isIntersecting;
+      },
+      { threshold: 0.1 },
     );
-    return () => clearInterval(t);
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    const maxOffset = testimonials.length - visibleCount;
+    const t = setInterval(() => {
+      if (isSectionVisible.current) {
+        setOffset((p) => (p >= maxOffset ? 0 : p + 1));
+      }
+    }, 4000);
+    return () => {
+      clearInterval(t);
+      observer.disconnect();
+    };
   }, [visibleCount, testimonials.length]);
 
   const translateX =
     -(offset % (testimonials.length - visibleCount + 1)) * cardW;
 
   return (
-    <section className="section section-bg-900" style={{ overflow: "hidden" }}>
+    <section
+      ref={sectionRef}
+      className="section section-bg-900"
+      style={{ overflow: "hidden" }}
+    >
       <div className="container">
         <div className="section-header reveal">
           <div className="eyebrow">Customer Stories</div>
@@ -1499,27 +1541,36 @@ function FAQ() {
 
 // ─── CONTACT ──────────────────────────────────────────────────────────────────
 function Contact() {
-  const EMPTY_FORM = { name: "", company: "", email: "", phone: "", message: "" };
+  const EMPTY_FORM = {
+    name: "",
+    company: "",
+    email: "",
+    phone: "",
+    message: "",
+  };
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const setField = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  const setField = (field) => (e) =>
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api");
+      const API_URL =
+        import.meta.env.VITE_API_URL || "http://localhost:5000/api";
       const res = await fetch(`${API_URL}/public/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Submission failed. Please try again.");
+      if (!res.ok)
+        throw new Error(json.message || "Submission failed. Please try again.");
       setSubmitted(true);
       setForm(EMPTY_FORM);
     } catch (err) {
@@ -1591,7 +1642,9 @@ function Contact() {
               >
                 Enquiry received
               </h3>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}>
+              <p
+                style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}
+              >
                 Our team will reply within 2 business hours. Check your inbox
                 for a confirmation.
               </p>
@@ -1680,7 +1733,13 @@ function Contact() {
 
               {/* Inline error */}
               {error && (
-                <p style={{ color: "#f87171", fontSize: "0.85rem", marginBottom: 12 }}>
+                <p
+                  style={{
+                    color: "#f87171",
+                    fontSize: "0.85rem",
+                    marginBottom: 12,
+                  }}
+                >
                   ⚠ {error}
                 </p>
               )}
@@ -1778,10 +1837,10 @@ function Footer() {
     {
       title: "Legal & Help",
       links: [
-        { label: "How to Use",       href: "/how-to-use"           },
-        { label: "Privacy Policy",   href: "/privacy-policy"       },
+        { label: "How to Use", href: "/how-to-use" },
+        { label: "Privacy Policy", href: "/privacy-policy" },
         { label: "Terms of Service", href: "/terms-and-conditions" },
-        { label: "Cookie Policy",    href: "/cookie-policy"        },
+        { label: "Cookie Policy", href: "/cookie-policy" },
       ],
     },
   ];
@@ -1802,7 +1861,8 @@ function Footer() {
     {
       icon: "📍",
       label: "Address",
-      value: "Graphura India Private Limited, near RSF, Pataudi, Gurgaon, Haryana 122503",
+      value:
+        "Graphura India Private Limited, near RSF, Pataudi, Gurgaon, Haryana 122503",
       href: "https://maps.google.com/?q=Pataudi,Gurgaon,Haryana+122503",
     },
   ];
@@ -1844,7 +1904,11 @@ function Footer() {
               className="nav-logo"
               style={{ textDecoration: "none", cursor: "pointer" }}
             >
-              <img src={GraphuraLogo} alt="Graphura CRM" className="nav-logo-img" />
+              <img
+                src={GraphuraLogo}
+                alt="Graphura CRM"
+                className="nav-logo-img"
+              />
             </a>
             <p>
               The CRM platform that runs your entire business — sales, finance,
@@ -1860,7 +1924,7 @@ function Footer() {
                   return (
                     <a
                       key={l.label}
-                      onClick={() => window.location.href = l.href}
+                      onClick={() => (window.location.href = l.href)}
                       style={{ cursor: "pointer" }}
                     >
                       {l.label}
@@ -1892,7 +1956,11 @@ function Footer() {
                   <a
                     href={item.href}
                     target={item.href.startsWith("http") ? "_blank" : undefined}
-                    rel={item.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                    rel={
+                      item.href.startsWith("http")
+                        ? "noopener noreferrer"
+                        : undefined
+                    }
                     className="footer-contact-value footer-contact-link"
                   >
                     {item.value}
@@ -2238,7 +2306,9 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <>
+    <div
+      style={{ overflowX: "hidden", maxWidth: "100vw", position: "relative" }}
+    >
       <Navbar />
       <Hero onWatchTutorial={() => setShowTutorial(true)} />
       <TrustSection />
@@ -2259,7 +2329,6 @@ export default function LandingPage() {
         onClose={() => setShowTutorial(false)}
       />
       <ScrollToTop />
-    </>
+    </div>
   );
 }
-

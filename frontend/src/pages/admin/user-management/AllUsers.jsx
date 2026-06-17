@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Users,
   UserCheck,
@@ -45,7 +46,7 @@ import apiClient from "../../../services/apiClient";
 
 // ── Right-side Toast ──────────────────────────────────────────────────────────
 function ToastContainer({ toasts, onRemove }) {
-  return (
+  return createPortal(
     <div
       className="fixed top-4 right-4 z-[9999] flex flex-col gap-2.5 pointer-events-none"
       style={{ minWidth: 300 }}
@@ -109,7 +110,8 @@ function ToastContainer({ toasts, onRemove }) {
           </button>
         </div>
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -723,25 +725,31 @@ export default function AllUsers() {
     },
   ];
 
-  const handleBulkDelete = async (selectedRows) => {
+  // Bulk delete state
+  const [bulkDeletePending, setBulkDeletePending] = useState(null); // selectedRows array
+  const [isBulkDeleting,   setIsBulkDeleting]   = useState(false);
+
+  const handleBulkDelete = (selectedRows) => {
     const ids = selectedRows.map((r) => r.id);
     if (!ids.length) return;
-    if (
-      window.confirm(
-        `Are you sure you want to delete/terminate the ${ids.length} selected user(s)?`,
-      )
-    ) {
-      try {
-        await userService.bulkDeleteUsers(ids);
-        showToast(
-          "Success",
-          `Successfully deleted ${ids.length} user(s).`,
-          "success",
-        );
-        fetchUsers();
-      } catch (err) {
-        showToast("Error", err.message || "Failed to delete users.", "error");
-      }
+    setBulkDeletePending(selectedRows);
+    openModal("bulk-delete-confirm-modal");
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (!bulkDeletePending?.length) return;
+    const ids = bulkDeletePending.map((r) => r.id);
+    setIsBulkDeleting(true);
+    try {
+      await userService.bulkDeleteUsers(ids);
+      showToast("Success", `Successfully deleted ${ids.length} user(s).`, "success");
+      closeModal("bulk-delete-confirm-modal");
+      setBulkDeletePending(null);
+      fetchUsers();
+    } catch (err) {
+      showToast("Error", err.message || "Failed to delete users.", "error");
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -1260,6 +1268,65 @@ export default function AllUsers() {
               className="px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-rose-500 shadow-lg hover:bg-rose-600 transition active:scale-95 disabled:opacity-60"
             >
               {isDeleting ? "Deleting…" : "Delete User"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Bulk Delete Confirmation Modal ── */}
+      <Modal id="bulk-delete-confirm-modal" title="Delete Selected Users">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-rose-50 border border-rose-200 rounded-xl">
+            <AlertTriangle size={20} className="text-rose-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-rose-700">This action cannot be undone</p>
+              <p className="text-sm text-rose-600 mt-1">
+                You are about to permanently delete{" "}
+                <strong>{bulkDeletePending?.length ?? 0} user{(bulkDeletePending?.length ?? 0) !== 1 ? "s" : ""}</strong>.
+                All their data will be removed from the system.
+              </p>
+            </div>
+          </div>
+
+          {/* User list preview */}
+          {bulkDeletePending && bulkDeletePending.length > 0 && (
+            <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100">
+              {bulkDeletePending.slice(0, 8).map((u) => (
+                <div key={u.id} className="flex items-center gap-3 px-3 py-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-[#2a465a]/10 flex items-center justify-center text-[#2a465a] font-black text-xs flex-shrink-0">
+                    {u.avatar || u.name?.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-[#2a465a] truncate">{u.name}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{u.email}</p>
+                  </div>
+                  <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold flex-shrink-0">
+                    {u.role?.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </span>
+                </div>
+              ))}
+              {bulkDeletePending.length > 8 && (
+                <div className="px-3 py-2.5 text-center text-xs text-slate-400 font-semibold">
+                  + {bulkDeletePending.length - 8} more user{bulkDeletePending.length - 8 !== 1 ? "s" : ""}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => { closeModal("bulk-delete-confirm-modal"); setBulkDeletePending(null); }}
+              disabled={isBulkDeleting}
+              className="px-4 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition">
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmBulkDelete}
+              disabled={isBulkDeleting}
+              className="px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-rose-500 shadow-lg hover:bg-rose-600 transition active:scale-95 disabled:opacity-60">
+              {isBulkDeleting
+                ? "Deleting…"
+                : `Delete ${bulkDeletePending?.length ?? 0} User${(bulkDeletePending?.length ?? 0) !== 1 ? "s" : ""}`}
             </button>
           </div>
         </div>

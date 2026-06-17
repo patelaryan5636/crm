@@ -25,7 +25,6 @@ import AdminLogin      from '../pages/auth/AdminLogin';
 import AdminRegister   from '../pages/auth/AdminRegister';
 import DepartmentLogin from '../pages/auth/DepartmentLogin';
 import SuperAdminLogin from '../pages/auth/SuperAdminLogin';
-import ClientLogin     from '../pages/auth/ClientLogin';
 import ForgotPassword  from '../pages/auth/ForgotPassword';
 import Unauthorized    from '../pages/auth/Unauthorized';
 
@@ -54,7 +53,6 @@ import FinanceRoutes          from './financeRoutes';
 import ManagementManagerRoutes    from './Manager/ManagementManagerRoutes';
 import ManagementTeamLeaderRoutes from './Manager/ManagementTeamLeaderRoutes';
 import ManagementEmployeeRoutes   from './Manager/ManagementEmployeeRoutes';
-import ClientRoutes           from './clientRoutes';
 
 function AppRoutes() {
   return (
@@ -111,7 +109,6 @@ function AppRoutes() {
         <Route path="/admin-login"       element={<AdminLogin />} />
         <Route path="/admin-register"    element={<AdminRegister />} />
         <Route path="/login"             element={<DepartmentLogin />} />
-        <Route path="/client-login"      element={<ClientLogin />} />
         <Route path="/forgot-password"   element={<ForgotPassword />} />
         <Route path="/unauthorized"      element={<Unauthorized />} />
 
@@ -335,10 +332,6 @@ function AppRoutes() {
             </PrivateRoute>
           }
         />
-
-        {/* ══ CLIENT PORTAL ════════════════════════════════════ */}
-        <Route path="/client"   element={<ClientRoutes />} />
-        <Route path="/client/*" element={<ClientRoutes />} />
 
         {/* ══ CATCH-ALL → /login ═══════════════════════════════ */}
         <Route path="*" element={<Navigate to="/login" replace />} />

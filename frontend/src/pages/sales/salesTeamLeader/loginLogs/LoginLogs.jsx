@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import {
   Heading, DashGrid, EnhancedDashCard, DataTable,
   openModal, closeModal, Modal, ModalData, ModalProfile, Button,
@@ -99,7 +99,7 @@ export default function LoginLogs() {
         exportable
         exportFileName="my_login_logs"
         filters={[
-          { title: "Status", type: "toggle", key: "status", options: ["Active", "Rejected"] },
+          { title: "Status", type: "toggle", key: "status", options: ["Success", "Failed"] },
         ]}
       />
 
@@ -118,7 +118,7 @@ export default function LoginLogs() {
         exportable
         exportFileName="team_login_logs"
         filters={[
-          { title: "Status", type: "toggle", key: "status", options: ["Active", "Rejected"] },
+          { title: "Status", type: "toggle", key: "status", options: ["Success", "Failed"] },
         ]}
       />
 
@@ -151,3 +151,4 @@ export default function LoginLogs() {
     </div>
   );
 }
+

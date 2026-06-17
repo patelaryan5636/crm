@@ -426,7 +426,9 @@ exports.adminLogin = catchAsync(async (req, res, next) => {
     blockRecord.blockedUntil > new Date()
   ) {
     return next(
-      new AppError("Too many failed attempts. Please try again later.", 429),
+      new AppError("Too many failed attempts. Please try again later.", 429, {
+        blockedUntil: blockRecord.blockedUntil.toISOString(),
+      }),
     );
   }
 

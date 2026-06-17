@@ -381,7 +381,9 @@ exports.loginUser = catchAsync(async (req, res, next) => {
     blockedAttempt.blockedUntil > new Date()
   ) {
     return next(
-      new AppError("Too many failed attempts. Please try again later.", 429),
+      new AppError("Too many failed attempts. Please try again later.", 429, {
+        blockedUntil: blockedAttempt.blockedUntil.toISOString(),
+      }),
     );
   }
 

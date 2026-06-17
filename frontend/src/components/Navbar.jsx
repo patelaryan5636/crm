@@ -423,7 +423,7 @@ function Navbar({ onToggleDesktop, onToggleMobile }) {
             className="shrink-0"
           />
           <span className="hidden text-sm pr-1.5 font-medium text-slate-700 sm:block">
-            {label}
+            {displayName || label}
           </span>
         </button>
       </div>

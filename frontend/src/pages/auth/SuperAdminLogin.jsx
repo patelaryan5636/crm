@@ -13,6 +13,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
+import BlockedBanner from "../../components/shared/BlockedBanner";
 import { loginSuperAdmin } from "../../services/authService";
 
 const FloatingBackground = () => (
@@ -77,6 +78,7 @@ const SuperAdminLogin = () => {
   const [passwordError, setPasswordError] = useState("");
   const [statusType, setStatusType] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [blockedUntil, setBlockedUntil] = useState(null);
   const [captchaCode, setCaptchaCode] = useState(generateCaptcha());
   const [captchaInput, setCaptchaInput] = useState("");
   const [captchaError, setCaptchaError] = useState("");
@@ -91,7 +93,7 @@ const SuperAdminLogin = () => {
   const validateEmail = (value) => /^\S+@\S+\.\S+$/.test(value);
 
   useEffect(() => {
-    if (!statusType) return;
+    if (!statusType || statusType === "blocked") return;
     const timeout = setTimeout(() => {
       setStatusType("");
       setStatusMessage("");
@@ -155,10 +157,16 @@ const SuperAdminLogin = () => {
       setStatusMessage("Sign in successful. Redirecting...");
       setTimeout(() => navigate("/super-admin"), 900);
     } catch (error) {
-      setStatusType("error");
-      setStatusMessage(
-        error?.message || "Unable to sign in. Please try again.",
-      );
+      const isBlocked = error?.statusCode === 429 || error?.data?.data?.blockedUntil;
+      if (isBlocked && error?.data?.data?.blockedUntil) {
+        setBlockedUntil(error.data.data.blockedUntil);
+        setStatusType("blocked");
+        setStatusMessage("");
+      } else {
+        setBlockedUntil(null);
+        setStatusType("error");
+        setStatusMessage(error?.message || "Unable to sign in. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -236,7 +244,12 @@ const SuperAdminLogin = () => {
             </h1>
 
             <form className="space-y-5" onSubmit={handleSubmit}>
-              {statusType ? (
+              {statusType === "blocked" && blockedUntil ? (
+                <BlockedBanner
+                  blockedUntil={blockedUntil}
+                  onExpire={() => { setStatusType(""); setBlockedUntil(null); }}
+                />
+              ) : statusType ? (
                 <div
                   className={`rounded-2xl px-4 py-3 text-sm ${
                     statusType === "success"

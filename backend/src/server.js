@@ -273,6 +273,7 @@ app.use((err, _req, res, _next) => {
 	res.status(err.statusCode).json({
 		success: false,
 		message: err.message,
+		...(err.data && { data: err.data }),
 		...(NODE_ENV === 'development' && { stack: err.stack }),
 	});
 });

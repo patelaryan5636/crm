@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const ApiResponse = require("../utils/apiResponse");
-const { User, Team, UserLoginLog } = require("../models/index");
+const { User, Team, UserLoginLog, AdminLoginLog } = require("../models/index");
 
 const formatLatitude = (lat) => {
   if (lat === null || lat === undefined || isNaN(lat)) return "Unknown";
@@ -52,7 +52,7 @@ const mapLog = (l) => {
     ip: l.ipAddress || "—",
     latitude: formatLatitude(l.latitude),
     longitude: formatLongitude(l.longitude),
-    status: l.isSuccess ? "Active" : "Rejected",
+    status: l.isSuccess ? "Success" : "Failed",
     device: l.device || l.userAgent || "Unknown",
   };
 };
@@ -120,16 +120,30 @@ exports.getLoginLogs = catchAsync(async (req, res, next) => {
   }
 
   // 2. Fetch My Login Logs
-  const myLogsRaw = await UserLoginLog.find({
-    admin: adminId,
-    user: userId,
-  })
-    .populate("user", "name")
-    .sort({ loginAt: -1 })
-    .lean();
-  // 3. Fetch Team/Department Login Logs
+  // Admins use AdminLoginLog; department users use UserLoginLog
+  let myLogsRaw = [];
+
+  if (userType === "ADMIN") {
+    myLogsRaw = await AdminLoginLog.find({ admin: adminId })
+      .sort({ loginAt: -1 })
+      .lean();
+    // Normalise shape to match UserLoginLog structure expected by mapLog
+    myLogsRaw = myLogsRaw.map((l) => ({
+      ...l,
+      user: null,          // AdminLoginLog has no .user ref
+      email: l.email || "",
+      role:  "ADMIN",
+    }));
+  } else {
+    myLogsRaw = await UserLoginLog.find({ admin: adminId, user: userId })
+      .populate("user", "name")
+      .sort({ loginAt: -1 })
+      .lean();
+  }
+
+  // 3. Fetch Team/Department Login Logs (only applicable for non-admin roles)
   let teamLogsRaw = [];
-  if (targetUserIds.length > 0) {
+  if (userType !== "ADMIN" && targetUserIds.length > 0) {
     teamLogsRaw = await UserLoginLog.find({
       admin: adminId,
       user: { $in: targetUserIds, $ne: userId },

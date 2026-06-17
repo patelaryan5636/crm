@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import GraphuraLogo from "../../assets/Logo/Graphura_Logo.webp";
 import { DataField, Button } from "../../components/shared/Common_Components";
+import BlockedBanner from "../../components/shared/BlockedBanner";
 import { loginDepartment } from "../../services/authService";
 
 const FloatingBackground = () => (
@@ -77,6 +78,7 @@ const DepartmentLogin = () => {
   const [passwordError, setPasswordError] = useState("");
   const [statusType, setStatusType] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [blockedUntil, setBlockedUntil] = useState(null);
   const [captchaCode, setCaptchaCode] = useState(generateCaptcha());
   const [captchaInput, setCaptchaInput] = useState("");
   const [captchaError, setCaptchaError] = useState("");
@@ -132,7 +134,7 @@ const DepartmentLogin = () => {
     });
   // Auto-clear status banner after 4 s
   useEffect(() => {
-    if (!statusType) return;
+    if (!statusType || statusType === "blocked") return;
     const t = setTimeout(() => {
       setStatusType("");
       setStatusMessage("");
@@ -201,10 +203,16 @@ const DepartmentLogin = () => {
       setStatusMessage("Sign in successful. Loading your workspace...");
       setTimeout(() => navigate(response?.nextRoute || "/department"), 900);
     } catch (error) {
-      setStatusType("error");
-      setStatusMessage(
-        error?.message || "Unable to sign in. Please try again.",
-      );
+      const isBlocked = error?.statusCode === 429 || error?.data?.data?.blockedUntil;
+      if (isBlocked && error?.data?.data?.blockedUntil) {
+        setBlockedUntil(error.data.data.blockedUntil);
+        setStatusType("blocked");
+        setStatusMessage("");
+      } else {
+        setBlockedUntil(null);
+        setStatusType("error");
+        setStatusMessage(error?.message || "Unable to sign in. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -286,7 +294,12 @@ const DepartmentLogin = () => {
 
             <form className="space-y-5" onSubmit={handleSubmit}>
               {/* Status banner */}
-              {statusType && (
+              {statusType === "blocked" && blockedUntil ? (
+                <BlockedBanner
+                  blockedUntil={blockedUntil}
+                  onExpire={() => { setStatusType(""); setBlockedUntil(null); }}
+                />
+              ) : statusType && (
                 <div
                   className={`rounded-2xl px-4 py-3 text-sm ${
                     statusType === "success"

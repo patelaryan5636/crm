@@ -222,7 +222,7 @@ function Hero({ onWatchTutorial }) {
                 className="btn-primary"
                 style={{ cursor: "pointer" }}
               >
-                ✨ Start Free Trial
+                Start Free Trial
               </a>
               <a
                 onClick={() => handleExternalLink("/how-to-use")}
@@ -1733,7 +1733,7 @@ function CTA({ onWatchTutorial }) {
                 cursor: "pointer",
               }}
             >
-              ✨ Start Free Trial
+              Start Free Trial
             </a>
             <a
               onClick={() => handleExternalLink("/how-to-use")}
